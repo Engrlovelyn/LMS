@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Assign Assessment{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Assign: {{ assessment.title }}</h1>
+    <p class="page-sub">Select virtual classrooms to assign this assessment to.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-share-nodes"></i> Virtual Classrooms ({{ assessment.subject.name }})</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if form.virtual_classrooms.field.queryset %}
+      <div class="form-group">
+        {% for vc in form.virtual_classrooms %}
+        <label style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1.5px solid var(--card-border); border-radius:9px; margin-bottom:8px; cursor:pointer; transition:all .2s;">
+          {{ vc }}
+          <span style="font-size:13px; font-weight:600; color:var(--text-primary);">{{ vc.choice_label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% for error in form.virtual_classrooms.errors %}
+      <div class="help-text">{{ error }}</div>
+      {% endfor %}
+      {% else %}
+      <div class="empty-state">
+        <i class="fa-solid fa-chalkboard-user"></i>
+        <p>No available virtual classrooms for this subject.</p>
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1.5px solid var(--card-border); border-radius:9px; margin-bottom:8px; cursor:pointer;">
+          {{ form.assign_entire_subject }}
+          <span style="font-size:13px; font-weight:600; color:var(--text-primary);">{{ form.assign_entire_subject.label }}</span>
+        </label>
+        <div class="help-text">{{ form.assign_entire_subject.help_text }}</div>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-share-nodes"></i> Assign Assessment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Virtual Classrooms{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Virtual Classrooms</h1>
+    <p class="page-sub">Manage the virtual classrooms for this account.</p>
+  </div>
+  {% if perms.virtual_classrooms.create_virtual_classroom %}
+  <a class="btn btn-primary" href="{% url 'classrooms:classroom_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Classroom
+  </a>
+  {% endif %}
+</div>
+
+{% if classrooms %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> Classrooms</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Academic Year</th>
+          <th>Teacher</th>
+          <th>Grading Period</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in classrooms %}
+        <tr>
+          <td>{{ c.subject.name }}</td>
+          <td>{{ c.section.name }}</td>
+          <td>{{ c.academic_year.label }}</td>
+          <td>{{ c.teacher.email|default:"Unassigned" }}</td>
+          <td>{{ c.grading_period|default:"—" }}</td>
+          <td>
+            <span class="pill {{ c.status }}">
+              {% if c.status == "active" %}Active{% else %}Archived{% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_detail' c.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              {% if perms.virtual_classrooms.update_virtual_classroom %}
+              <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_update' c.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chalkboard-user"></i>
+      <p>No virtual classrooms available.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

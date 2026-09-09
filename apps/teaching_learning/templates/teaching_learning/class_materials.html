@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ vc.subject.name }} - {{ vc.section.name }} Materials{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ vc.subject.name }}</h1>
+    <p class="page-sub">{{ vc.section }} &middot; {{ vc.academic_year.label }} &middot; Class Materials</p>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' vc.pk %}">
+      <i class="fa-solid fa-arrow-left"></i> Back to Class
+    </a>
+    {% if is_teacher and perms.teaching_learning.add_topic_custom %}
+    <a class="btn btn-outline" href="{% url 'teaching:topic_add' vc.pk %}">
+      <i class="fa-solid fa-plus"></i> Add Topic
+    </a>
+    {% endif %}
+    {% if is_teacher and perms.teaching_learning.upload_learning_resource %}
+    <a class="btn btn-primary" href="{% url 'teaching:resource_attach' vc.pk %}">
+      <i class="fa-solid fa-paperclip"></i> Attach Resource
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list"></i> Topics</div>
+  </div>
+  <div class="card-body">
+    {% if topics %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Name</th>
+            <th>Type</th>
+            {% if is_teacher %}
+            <th>Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for topic in topics %}
+          <tr>
+            <td>{{ topic.order }}</td>
+            <td>{{ topic.name }}</td>
+            <td>
+              {% if topic.is_supplementary %}
+              <span class="pill pending">Supplementary</span>
+              {% else %}
+              <span class="pill active">Regular</span>
+              {% endif %}
+            </td>
+            {% if is_teacher %}
+            <td>
+              <div class="row-actions">
+                <a class="btn btn-outline btn-sm" href="{% url 'teaching:topic_update' topic.pk %}">
+                  <i class="fa-solid fa-pen"></i> Edit
+                </a>
+                <form method="post" action="{% url 'teaching:topic_archive' topic.pk %}" onsubmit="return confirm('Delete this topic?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="fa-solid fa-trash"></i> Delete
+                  </button>
+                </form>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-list"></i>
+      <p>No topics have been added to this class yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-folder"></i> Materials</div>
+  </div>
+  <div class="card-body">
+    {% if placements %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>Title</th>
+            <th>Subject</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for placement in placements %}
+          <tr>
+            <td>{{ placement.topic.name }}</td>
+            <td>{{ placement.resource.title }}</td>
+            <td>{{ placement.resource.subject.name }}</td>
+            <td>{{ placement.resource.get_resource_type_display }}</td>
+            <td>
+              <div class="row-actions">
+                {% if placement.resource.file %}
+                <a class="btn btn-outline btn-sm" href="{{ placement.resource.file.url }}">
+                  <i class="fa-solid fa-download"></i> Download
+                </a>
+                {% elif placement.resource.external_link %}
+                <a class="btn btn-outline btn-sm" href="{{ placement.resource.external_link }}" target="_blank">
+                  <i class="fa-solid fa-up-right-from-square"></i> Open
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-folder"></i>
+      <p>No materials have been attached to this class yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

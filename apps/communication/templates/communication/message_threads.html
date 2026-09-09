@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Messages</h1>
+    <p class="page-sub">Your conversations across classes and private chats.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-comments"></i> Conversations</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Conversation</th>
+          <th>Last Message</th>
+          <th>Unread</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conv in conversations %}
+        <tr>
+          <td>
+            <span class="pill {% if conv.0 == 'group' %}active{% else %}pending{% endif %}">
+              {% if conv.0 == 'group' %}Class{% else %}Private{% endif %}
+            </span>
+          </td>
+          <td>
+            <a href="{{ conv.2 }}">{{ conv.1 }}</a>
+          </td>
+          <td>{{ conv.3|truncatechars:80 }}</td>
+          <td>
+            {% if conv.4 %}
+            <span class="pill active">{{ conv.4 }}</span>
+            {% else %}
+            <span class="pill archived">0</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <i class="fa-solid fa-comments"></i>
+              <p>No conversations yet.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

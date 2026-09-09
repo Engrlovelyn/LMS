@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Attach Resources{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attach Resource</h1>
+    <p class="page-sub">{{ vc.subject.name }} &middot; {{ vc.section.name }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'teaching:class_materials' vc.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Materials
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-paperclip"></i> Add Resources to This Class</div>
+  </div>
+  <div class="card-body">
+    {% if not topics %}
+    <div class="messages">
+      <div class="message error"><i class="fa-solid fa-circle-info"></i>This class has no topics yet. Add a topic first so resources can be placed under it.</div>
+    </div>
+    {% endif %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+        <div class="help-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'teaching:class_materials' vc.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-paperclip"></i> Attach Resources
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

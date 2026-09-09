@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Backups{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Backups</h1>
+    <p class="page-sub">Create and manage database backups.</p>
+  </div>
+  <form method="post" action="{% url 'settings:backup_create' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create Backup</button>
+  </form>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total }}</div>
+    <div class="lbl">Total Backups</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ completed }}</div>
+    <div class="lbl">Completed</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ failed }}</div>
+    <div class="lbl">Failed</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-database"></i> Backup Records</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Reference</th>
+          <th>Initiated By</th>
+          <th>Created At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td>{{ record.get_backup_type_display }}</td>
+          <td>{{ record.file_reference|default:"—" }}</td>
+          <td>{{ record.initiated_by }}</td>
+          <td>{{ record.created_at|date:"M d, Y H:i" }}</td>
+          <td>
+            {% if record.status == "completed" %}
+            <span class="pill completed">Completed</span>
+            {% elif record.status == "restored" %}
+            <span class="pill active">Restored</span>
+            {% else %}
+            <span class="pill failed">Failed</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'settings:backup_download' record.pk %}">
+                <i class="fa-solid fa-download"></i> Download
+              </a>
+              <form method="post" action="{% url 'settings:backup_restore' record.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="fa-solid fa-rotate-left"></i> Restore
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="fa-solid fa-database"></i>
+              <p>No backups found yet.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

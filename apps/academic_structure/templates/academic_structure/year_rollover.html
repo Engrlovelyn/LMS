@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Year Rollover - {{ source_year.label }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Year Rollover</h1>
+    <p class="page-sub">Copy sections and subjects from {{ source_year.label }} to a target academic year.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to List
+  </a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ source_year.sections.count }}</div>
+    <div class="lbl">Source Sections</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ source_year.subjects.count }}</div>
+    <div class="lbl">Source Subjects</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-copy"></i> Rollover Details</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+        <div class="help-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-copy"></i> Rollover
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

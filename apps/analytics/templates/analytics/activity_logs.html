@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Activity Logs{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Student Activity Logs</h1>
+    <p class="page-sub">Monitor recent user activity across the system.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Filter by User</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="form-row" style="grid-template-columns:repeat(2,1fr);">
+      <div class="form-group">
+        <label class="form-label" for="id_user">User</label>
+        <select name="user" id="id_user" class="form-control">
+          <option value="">All Users</option>
+          {% for u in users %}
+          <option value="{{ u.pk }}" {% if selected_user == u.pk %}selected{% endif %}>{{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Apply</button>
+          {% if selected_user %}
+          <a class="btn btn-outline" href="{% url 'analytics:activity_logs' %}">Clear</a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Activity Log</div>
+  </div>
+  {% if page_obj.object_list %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Related Entity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in page_obj %}
+        <tr>
+          <td>{{ log.timestamp|date:"M d, Y H:i" }}</td>
+          <td>{{ log.user.email }}</td>
+          <td>{{ log.action }}</td>
+          <td>
+            {% if log.related_entity_type %}
+            {{ log.related_entity_type }} #{{ log.related_entity_id|default:"—" }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><p>No activity logs found.</p></div>
+  </div>
+  {% endif %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="form-actions" style="justify-content:center;">
+  {% if page_obj.has_previous %}
+  <a class="btn btn-outline btn-sm" href="?{% if selected_user %}user={{ selected_user }}&{% endif %}page={{ page_obj.previous_page_number }}"><i class="fa-solid fa-chevron-left"></i> Previous</a>
+  {% endif %}
+  <span class="help-text">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+  <a class="btn btn-outline btn-sm" href="?{% if selected_user %}user={{ selected_user }}&{% endif %}page={{ page_obj.next_page_number }}">Next <i class="fa-solid fa-chevron-right"></i></a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

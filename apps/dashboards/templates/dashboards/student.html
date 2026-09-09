@@ -1,0 +1,219 @@
+﻿{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Student Dashboard</h1>
+    {% if has_profile %}
+    <p class="page-sub">Welcome back, {{ student_name }} (LRN: {{ lrn }}).</p>
+    {% else %}
+    <p class="page-sub">Welcome back, {{ user.email }}.</p>
+    {% endif %}
+  </div>
+  <div class="form-actions">
+    <a class="btn btn-outline btn-sm" href="{% url 'analytics:analytics_index' %}">
+      <i class="fa-solid fa-chart-column"></i> Analytics
+    </a>
+  </div>
+</div>
+
+{% if stats %}
+<div class="stats-grid">
+  {% for s in stats %}
+  <div class="stat-card">
+    <i class="fa-solid {{ s.icon }}"></i>
+    <div>
+      <div class="stat-value">{{ s.value }}</div>
+      <div class="stat-label">{{ s.label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> My Virtual Classrooms</div>
+  </div>
+  {% if my_classes %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Subject</th><th>Section</th><th>Teacher</th><th>Academic Year</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for vc in my_classes %}
+        <tr>
+          <td>{{ vc.subject.name }}</td>
+          <td>{{ vc.section.name }}</td>
+          <td>{{ vc.teacher.email }}</td>
+          <td>{{ vc.academic_year.label }}</td>
+          <td>
+            <a class="btn btn-outline btn-sm" href="{% url 'teaching:class_materials' vc.pk %}">
+              <i class="fa-solid fa-folder-open"></i> Open
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chalkboard"></i>
+      <p>No virtual classrooms assigned yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-list"></i> Pending Assessments</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'assessments:list' %}">
+      <i class="fa-solid fa-list"></i> View Assessments
+    </a>
+  </div>
+  {% if pending_assessments %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Title</th><th>Classroom</th><th>Deadline</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for item in pending_assessments %}
+        <tr>
+          <td>{{ item.title }}</td>
+          <td>{{ item.vc.subject.name }}</td>
+          <td>{% if item.deadline %}{{ item.deadline|date:"M d, Y H:i" }}{% else %}No deadline{% endif %}</td>
+          <td>
+            {% if item.submitted %}
+            <span class="pill submitted">Submitted</span>
+            {% else %}
+            <span class="pill pending">Pending</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-clipboard-check"></i>
+      <p>No pending assessments right now.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Attendance Summary</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'attendance:attendance_index' %}">
+      <i class="fa-solid fa-clipboard-user"></i> View Attendance
+    </a>
+  </div>
+  <div class="card-body">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <i class="fa-solid fa-check-circle"></i>
+        <div>
+          <div class="stat-value">{{ attendance.present }}</div>
+          <div class="stat-label">Present</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <i class="fa-solid fa-xmark-circle"></i>
+        <div>
+          <div class="stat-value">{{ attendance.absent }}</div>
+          <div class="stat-label">Absent</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <i class="fa-solid fa-percent"></i>
+        <div>
+          <div class="stat-value">{{ attendance.rate }}%</div>
+          <div class="stat-label">Attendance Rate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-graduation-cap"></i> Recent Grades</div>
+  </div>
+  {% if grades %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Subject</th><th>Grading Period</th><th>Grade</th></tr>
+      </thead>
+      <tbody>
+        {% for g in grades %}
+        <tr>
+          <td>{{ g.subject.name }}</td>
+          <td>{{ g.grading_period }}</td>
+          <td>{{ g.grade_value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chart-simple"></i>
+      <p>No grades available yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-bullhorn"></i> Announcements</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'communication:announcements' %}">
+      <i class="fa-solid fa-bullhorn"></i> View All
+    </a>
+  </div>
+  <div class="card-body">
+    <h3 style="font-size:13px; font-weight:700; color:var(--navy); margin-bottom:10px;"><i class="fa-solid fa-school"></i> School Announcements</h3>
+    {% if announcements.school %}
+    {% for ann in announcements.school %}
+    <div style="padding:10px 0; border-bottom:1px solid var(--gray-100);">
+      <div style="font-size:13px; font-weight:600;">{{ ann.title }}</div>
+      <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">{{ ann.content }}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">{{ ann.posted_at|date:"M d, Y H:i" }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-school"></i>
+      <p>No school announcements at the moment.</p>
+    </div>
+    {% endif %}
+
+    <h3 style="font-size:13px; font-weight:700; color:var(--navy); margin-bottom:10px; margin-top:16px;"><i class="fa-solid fa-chalkboard"></i> Class Announcements</h3>
+    {% if announcements.class %}
+    {% for ann in announcements.class %}
+    <div style="padding:10px 0; border-bottom:1px solid var(--gray-100);">
+      <div style="font-size:12.5px; color:var(--text-muted);">{{ ann.virtual_classroom.subject.name }}</div>
+      <div style="font-size:13px; margin-top:2px;">{{ ann.content }}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">{{ ann.posted_at|date:"M d, Y H:i" }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-chalkboard"></i>
+      <p>No class announcements at the moment.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

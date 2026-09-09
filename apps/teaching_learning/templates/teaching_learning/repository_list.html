@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Materials Repository{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Subject Repository</h1>
+    <p class="page-sub">Browse and manage learning resources across your subjects.</p>
+  </div>
+  {% if perms.teaching_learning.upload_learning_resource %}
+  <a class="btn btn-primary" href="{% url 'teaching:resource_add' %}">
+    <i class="fa-solid fa-plus"></i> Upload Resource
+  </a>
+  {% endif %}
+</div>
+
+<form method="get" action="{% url 'teaching:repository_list' %}" class="form-row" style="margin-bottom:20px;">
+  <div class="form-group">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by title...">
+  </div>
+  <div class="form-group">
+    <button type="submit" class="btn btn-outline">
+      <i class="fa-solid fa-magnifying-glass"></i> Search
+    </button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-folder-open"></i> Learning Resources</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Subject</th>
+          <th>Type</th>
+          <th>Uploaded By</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for resource in resources %}
+        <tr>
+          <td>{{ resource.title }}</td>
+          <td>{{ resource.subject.name }}</td>
+          <td>{{ resource.get_resource_type_display }}</td>
+          <td>{{ resource.uploaded_by.email }}</td>
+          <td>
+            <span class="pill {{ resource.status }}">
+              {{ resource.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              {% if resource.file %}
+              <a class="btn btn-outline btn-sm" href="{{ resource.file.url }}">
+                <i class="fa-solid fa-download"></i> Download
+              </a>
+              {% elif resource.external_link %}
+              <a class="btn btn-outline btn-sm" href="{{ resource.external_link }}" target="_blank">
+                <i class="fa-solid fa-up-right-from-square"></i> Open
+              </a>
+              {% endif %}
+              {% if perms.teaching_learning.manage_learning_resources %}
+              <a class="btn btn-outline btn-sm" href="{% url 'teaching:resource_update' resource.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% if resource.status == "active" %}
+              <form method="post" action="{% url 'teaching:resource_archive' resource.pk %}" onsubmit="return confirm('Archive this resource?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-box-archive"></i> Archive
+                </button>
+              </form>
+              {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="fa-solid fa-folder-open"></i>
+              <p>No learning resources found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

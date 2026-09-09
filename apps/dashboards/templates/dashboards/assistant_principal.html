@@ -1,0 +1,152 @@
+﻿{% extends "base.html" %}
+{% block title %}Academic Coordinator Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Academic Coordinator Dashboard</h1>
+    <p class="page-sub">Welcome back, {{ user.email }}. Manage academic structure, virtual classrooms, and oversight.</p>
+    {% if active_year %}
+    <p class="page-sub">Active Academic Year: {{ active_year.label }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if stats %}
+<div class="stats-grid">
+  {% for s in stats %}
+  <div class="stat-card">
+    <i class="fa-solid {{ s.icon }}"></i>
+    <div>
+      <div class="stat-value">{{ s.value }}</div>
+      <div class="stat-label">{{ s.label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-bolt"></i> Quick Actions</div>
+  </div>
+  <div class="card-body">
+    <a class="btn btn-primary" href="{% url 'classrooms:classroom_add' %}">
+      <i class="fa-solid fa-plus"></i> Create Virtual Classroom
+    </a>
+    <a class="btn btn-outline" href="{% url 'academic:section_add' %}">
+      <i class="fa-solid fa-users-between-lines"></i> Add Section
+    </a>
+    <a class="btn btn-outline" href="{% url 'academic:subject_add' %}">
+      <i class="fa-solid fa-book-open"></i> Add Subject
+    </a>
+    <a class="btn btn-outline" href="{% url 'academic:academic_year_add' %}">
+      <i class="fa-solid fa-calendar-plus"></i> Add Academic Year
+    </a>
+    {% if active_year %}
+    <a class="btn btn-outline" href="{% url 'academic:structure_finalize' active_year.pk %}">
+      <i class="fa-solid fa-check-double"></i> Finalize Structure
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> Virtual Classrooms</div>
+  </div>
+  {% if recent_vcs %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Teacher</th>
+          <th>Academic Year</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vc in recent_vcs %}
+        <tr>
+          <td>{{ vc.subject.name }}</td>
+          <td>{{ vc.section.name }}</td>
+          <td>{{ vc.teacher.email }}</td>
+          <td>{{ vc.academic_year.label }}</td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_detail' vc.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_update' vc.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_add_student' vc.pk %}">
+                <i class="fa-solid fa-user-plus"></i> Add Student
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chalkboard-user"></i>
+      <p>No virtual classrooms found.</p>
+    </div>
+  </div>
+  {% endif %}
+  <div class="card-body">
+    <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_list' %}">
+      <i class="fa-solid fa-list"></i> View all virtual classrooms
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-layer-group"></i> Academic Structure</div>
+  </div>
+  <div class="card-body">
+    <a class="btn btn-outline" href="{% url 'academic:sections' %}">
+      <i class="fa-solid fa-users-between-lines"></i> Sections
+    </a>
+    <a class="btn btn-outline" href="{% url 'academic:subjects' %}">
+      <i class="fa-solid fa-book-open"></i> Subjects
+    </a>
+    <a class="btn btn-outline" href="{% url 'academic:years' %}">
+      <i class="fa-solid fa-calendar-week"></i> Academic Years
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-binoculars"></i> Oversight</div>
+  </div>
+  <div class="card-body">
+    <a class="btn btn-outline" href="{% url 'attendance:attendance_index' %}">
+      <i class="fa-solid fa-clipboard-user"></i> Attendance
+    </a>
+    <a class="btn btn-outline" href="{% url 'analytics:analytics_index' %}">
+      <i class="fa-solid fa-chart-column"></i> Analytics &amp; Reports
+    </a>
+    <a class="btn btn-outline" href="{% url 'analytics:school_analytics' %}">
+      <i class="fa-solid fa-school"></i> School-wide Analytics
+    </a>
+    <a class="btn btn-outline" href="{% url 'assessments:list' %}">
+      <i class="fa-solid fa-clipboard-check"></i> Assessments
+    </a>
+    <a class="btn btn-outline" href="{% url 'teaching:repository_list' %}">
+      <i class="fa-solid fa-folder-open"></i> Materials Repository
+    </a>
+    <a class="btn btn-outline" href="{% url 'communication:announcements' %}">
+      <i class="fa-solid fa-bullhorn"></i> Announcements
+    </a>
+  </div>
+</div>
+{% endblock %}

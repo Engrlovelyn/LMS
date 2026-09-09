@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}{{ assessment.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ assessment.title }}</h1>
+    <p class="page-sub">{{ assessment.subject.name }} &middot; {{ assessment.get_assessment_type_display }}</p>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-outline" href="{% url 'assessments:assessment_list' %}">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+    {% if perms.assessments.update_assessment_custom %}
+    <a class="btn btn-outline" href="{% url 'assessments:assessment_update' assessment.pk %}">
+      <i class="fa-solid fa-pen"></i> Edit
+    </a>
+    {% endif %}
+    {% if perms.assessments.access_assessment_repository %}
+    <a class="btn btn-primary" href="{% url 'assessments:assessment_assign' assessment.pk %}">
+      <i class="fa-solid fa-share-nodes"></i> Assign
+    </a>
+    {% endif %}
+    {% if perms.assessments.complete_assessment_custom and assessment.status == "active" %}
+    <a class="btn btn-primary" href="{% url 'assessments:assessment_submit' assessment.pk %}">
+      <i class="fa-solid fa-paper-plane"></i> Submit
+    </a>
+    {% endif %}
+    {% if perms.assessments.monitor_student_submissions %}
+    <a class="btn btn-outline" href="{% url 'assessments:submissions_monitor' assessment.pk %}">
+      <i class="fa-solid fa-list-check"></i> Submissions
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ parts.count }}</div>
+    <div class="lbl">Parts</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ assignments.count }}</div>
+    <div class="lbl">Assignments</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ submissions_count }}</div>
+    <div class="lbl">Submissions</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ graded_count }}</div>
+    <div class="lbl">Graded</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-circle-info"></i> Details</div>
+  </div>
+  <div class="card-body">
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">Subject</div>
+        <div>{{ assessment.subject.name }}</div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Academic Year</div>
+        <div>{{ assessment.academic_year.label }}</div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Type</div>
+        <div>{{ assessment.get_assessment_type_display }}</div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Deadline</div>
+        <div>{{ assessment.submission_deadline|date:"M d, Y H:i" }}</div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Status</div>
+        <div><span class="pill {{ assessment.status }}">{{ assessment.get_status_display }}</span></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Accepted File Format</div>
+        <div>{{ assessment.accepted_file_format|default:"N/A" }}</div>
+      </div>
+    </div>
+    {% if assessment.instructions %}
+    <div class="form-group" style="margin-top:10px;">
+      <div class="form-label">Instructions</div>
+      <div>{{ assessment.instructions|linebreaksbr }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list-ol"></i> Parts</div>
+  </div>
+  {% if parts %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Question</th>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Objective</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for part in parts %}
+        <tr>
+          <td>{{ part.order }}</td>
+          <td>{{ part.question_text|truncatewords:20 }}</td>
+          <td>{{ part.get_question_type_display }}</td>
+          <td>{{ part.points }}</td>
+          <td>
+            {% if part.is_objective %}
+            <span class="pill active">Objective</span>
+            {% else %}
+            <span class="pill pending">Subjective</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-list-ol"></i>
+      <p>No parts added yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-share-nodes"></i> Assignments</div>
+  </div>
+  {% if assignments %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Virtual Classroom</th>
+          <th>Section</th>
+          <th>Original</th>
+          <th>Assigned At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for assign in assignments %}
+        <tr>
+          <td>{{ assign.virtual_classroom }}</td>
+          <td>{{ assign.virtual_classroom.section.name }}</td>
+          <td>
+            {% if assign.is_original %}
+            <span class="pill active">Yes</span>
+            {% else %}
+            <span class="pill archived">No</span>
+            {% endif %}
+          </td>
+          <td>{{ assign.assigned_at|date:"M d, Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-share-nodes"></i>
+      <p>Not assigned to any classroom yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if has_student_profile %}
+<div style="margin-bottom:20px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-paper-plane"></i> Your Submissions</div>
+    </div>
+    {% if my_submissions %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Classroom</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sub in my_submissions %}
+          <tr>
+            <td>{{ sub.assessment_assignment.virtual_classroom }}</td>
+            <td>{{ sub.submitted_at|date:"M d, Y H:i" }}</td>
+            <td>
+              {% if sub.total_score is not None %}
+              <span class="pill completed">Graded</span>
+              {% elif sub.is_late %}
+              <span class="pill late">Late</span>
+              {% else %}
+              <span class="pill pending">Pending</span>
+              {% endif %}
+            </td>
+            <td>{{ sub.total_score|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+      <div class="empty-state">
+        <i class="fa-solid fa-paper-plane"></i>
+        <p>You have not submitted this assessment yet.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if perms.assessments.monitor_student_submissions and submissions_count > 0 %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-paper-plane"></i> Recent Submissions</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'assessments:submissions_monitor' assessment.pk %}">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Status</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in submissions_recent %}
+        <tr>
+          <td>{{ sub.student.last_name }}, {{ sub.student.first_name }}</td>
+          <td>
+            {% if sub.total_score is not None %}
+            <span class="pill completed">Graded</span>
+            {% elif sub.is_late %}
+            <span class="pill late">Late</span>
+            {% else %}
+            <span class="pill pending">Pending</span>
+            {% endif %}
+          </td>
+          <td>{{ sub.total_score|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if perms.assessments.archive_assessment_custom and assessment.status == "active" %}
+<div style="margin-top:18px;">
+  <form method="post" action="{% url 'assessments:assessment_archive' assessment.pk %}" onsubmit="return confirm('Are you sure you want to archive this assessment?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">
+      <i class="fa-solid fa-box-archive"></i> Archive Assessment
+    </button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

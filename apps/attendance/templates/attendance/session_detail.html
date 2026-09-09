@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Session Details - {{ session.session_date|date:"M d, Y" }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ session.virtual_classroom.subject.name }}</h1>
+    <p class="page-sub">
+      {{ session.virtual_classroom.section }} &middot; {{ session.virtual_classroom.academic_year.label }} &middot;
+      {{ session.session_date|date:"l, F j, Y" }}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if can_update %}
+    <a class="btn btn-primary" href="{% url 'attendance:session_update' session.pk %}">
+      <i class="fa-solid fa-pen"></i> Update Records
+    </a>
+    {% endif %}
+    <a class="btn btn-outline" href="{% url 'attendance:class_sessions' session.virtual_classroom.pk %}">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ stats.present }}</div>
+    <div class="lbl">Present - On Time</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ stats.late }}</div>
+    <div class="lbl">Present - Late</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ stats.excused }}</div>
+    <div class="lbl">Absent - Excused</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ stats.unexcused }}</div>
+    <div class="lbl">Absent - Unexcused</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Attendance Records</div>
+    {% if threshold %}
+    <span class="pill warning">School-wide absence threshold: {{ threshold }}</span>
+    {% endif %}
+  </div>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Student</th>
+          <th>Status</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.student.lrn }}</td>
+          <td>{{ row.student.last_name }}, {{ row.student.first_name }}</td>
+          <td>
+            {% if row.record %}
+            <span class="pill
+              {% if row.record.status == 'present_on_time' %}active
+              {% elif row.record.status == 'present_late' %}late
+              {% elif row.record.status == 'absent_excused' %}pending
+              {% elif row.record.status == 'absent_unexcused' %}absent{% endif %}">
+              {{ row.record.get_status_display }}
+            </span>
+            {% else %}
+            <span class="pill archived">Not Recorded</span>
+            {% endif %}
+          </td>
+          <td>{{ row.record.remark|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-clipboard-user"></i>
+      <p>No students are enrolled in this class.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

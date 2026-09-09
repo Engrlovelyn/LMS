@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}System Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">System Settings</h1>
+    <p class="page-sub">Configure system-wide preferences.</p>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <a class="stat-card" href="{% url 'settings:password_policy' %}">
+    <div class="val"><i class="fa-solid fa-key"></i></div>
+    <div class="lbl">Password Policy</div>
+  </a>
+  <a class="stat-card" href="{% url 'settings:attendance_threshold' %}">
+    <div class="val"><i class="fa-solid fa-user-graduate"></i></div>
+    <div class="lbl">Attendance Threshold</div>
+  </a>
+  <a class="stat-card" href="{% url 'settings:index' %}">
+    <div class="val"><i class="fa-solid fa-gear"></i></div>
+    <div class="lbl">Configure System</div>
+  </a>
+  <a class="stat-card" href="{% url 'settings:backups' %}">
+    <div class="val"><i class="fa-solid fa-database"></i></div>
+    <div class="lbl">Backups</div>
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-gear"></i> System Configuration</div>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'settings:index' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.session_timeout_minutes.id_for_label }}">Session Timeout (min)</label>
+          {{ form.session_timeout_minutes }}
+          {% if form.session_timeout_minutes.help_text %}<div class="help-text">{{ form.session_timeout_minutes.help_text }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.account_lockout_threshold.id_for_label }}">Account Lockout Threshold</label>
+          {{ form.account_lockout_threshold }}
+          {% if form.account_lockout_threshold.help_text %}<div class="help-text">{{ form.account_lockout_threshold.help_text }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.timezone.id_for_label }}">Timezone</label>
+        {{ form.timezone }}
+        {% if form.timezone.help_text %}<div class="help-text">{{ form.timezone.help_text }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.user_registration_policy.id_for_label }}">User Registration Policy</label>
+        {{ form.user_registration_policy }}
+        {% if form.user_registration_policy.help_text %}<div class="help-text">{{ form.user_registration_policy.help_text }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.maintenance_mode.id_for_label }}">
+          {{ form.maintenance_mode }}
+          Maintenance Mode
+        </label>
+        {% if form.maintenance_mode.help_text %}<div class="help-text">{{ form.maintenance_mode.help_text }}</div>{% endif %}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save Configuration</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

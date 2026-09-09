@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Attendance Sessions{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attendance</h1>
+    <p class="page-sub">Attendance sessions recorded across your classes.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Filter by Date</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="date">Session Date</label>
+        <input type="date" name="date" id="date" class="form-control" value="{{ date_filter|default:'' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-magnifying-glass"></i> Apply
+          </button>
+          {% if date_filter %}
+          <a class="btn btn-outline" href="{% url 'attendance:attendance_index' %}">Clear</a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Sessions</div>
+  </div>
+  {% if sessions %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Academic Year</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td>{{ s.session_date|date:"M d, Y" }}</td>
+          <td>{{ s.virtual_classroom.subject.name }}</td>
+          <td>{{ s.virtual_classroom.section }}</td>
+          <td>{{ s.virtual_classroom.academic_year.label }}</td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'attendance:session_detail' s.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              <a class="btn btn-outline btn-sm" href="{% url 'attendance:class_sessions' s.virtual_classroom.pk %}">
+                <i class="fa-solid fa-list"></i> Sessions
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-clipboard-user"></i>
+      <p>No attendance sessions found.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

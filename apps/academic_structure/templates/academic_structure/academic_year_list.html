@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Academic Years{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Academic Years</h1>
+    <p class="page-sub">Manage academic year records and structure templates.</p>
+  </div>
+  {% if perms.academic_structure.add_academic_year_custom %}
+  <a class="btn btn-primary" href="{% url 'academic:academic_year_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Academic Year
+  </a>
+  {% endif %}
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_years }}</div>
+    <div class="lbl">Total Years</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_sections }}</div>
+    <div class="lbl">Active Sections</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_subjects }}</div>
+    <div class="lbl">Active Subjects</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_enrollments }}</div>
+    <div class="lbl">Enrolled Students</div>
+  </div>
+</div>
+
+{% if years %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-calendar-week"></i> Academic Years</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Structure</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for y in years %}
+        <tr>
+          <td>{{ y.label }}</td>
+          <td>{{ y.start_date|date:"M d, Y" }}</td>
+          <td>{{ y.end_date|date:"M d, Y" }}</td>
+          <td>
+            {% if y.structure_version %}
+              {{ y.structure_version.get_grading_period_type_display }}
+              {% if y.structure_version.is_finalized %}
+                <span class="pill active">Finalized</span>
+              {% else %}
+                <span class="pill pending">Not Finalized</span>
+              {% endif %}
+            {% else %}
+              <span class="pill pending">No Template</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="pill {{ y.status|lower }}">
+              {% if y.status == "ACTIVE" %}Active{% else %}Archived{% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              {% if perms.academic_structure.update_academic_year %}
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:academic_year_update' y.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+              {% if perms.academic_structure.manage_academic_structure_template %}
+              {% if not y.structure_version %}
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:structure_finalize' y.pk %}">
+                <i class="fa-solid fa-flag-checkered"></i> Finalize
+              </a>
+              {% else %}
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:structure_finalize' y.pk %}">
+                <i class="fa-solid fa-flag-checkered"></i> Manage
+              </a>
+              {% endif %}
+              {% endif %}
+              {% if perms.academic_structure.rollover_academic_year and y.status == "ACTIVE" %}
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:year_rollover' y.pk %}">
+                <i class="fa-solid fa-copy"></i> Rollover
+              </a>
+              {% endif %}
+              {% if perms.academic_structure.archive_academic_year and y.status == "ACTIVE" %}
+              <form method="post" action="{% url 'academic:academic_year_archive' y.pk %}" onsubmit="return confirm('Archive this academic year? Related active sections, subjects and enrollments will be archived.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-box-archive"></i> Archive
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-calendar-week"></i>
+      <p>No academic years have been created yet.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

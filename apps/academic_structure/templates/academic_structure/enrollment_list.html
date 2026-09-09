@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Enrollments{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Enrollments</h1>
+    <p class="page-sub">Manage student enrollments.</p>
+  </div>
+  {% if perms.academic_structure.create_student_enrollment_inline %}
+  <a class="btn btn-primary" href="{% url 'academic:enrollment_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Enrollment
+  </a>
+  {% endif %}
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_enrolled }}</div>
+    <div class="lbl">Enrolled Students</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-graduate"></i> Enrollments</div>
+  </div>
+  <div class="card-body">
+    <form method="get" action="{% url 'academic:enrollment_list' %}" class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="year">Academic Year</label>
+        <select name="year" id="year" class="form-control">
+          <option value="">All Years</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if year_filter.pk == y.pk %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="section">Section</label>
+        <select name="section" id="section" class="form-control">
+          <option value="">All Sections</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if section_filter.pk == s.pk %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions" style="align-self:flex-end;">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a class="btn btn-outline btn-sm" href="{% url 'academic:enrollment_list' %}">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if enrollments %}
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>LRN</th>
+          <th>Section</th>
+          <th>Academic Year</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in enrollments %}
+        <tr>
+          <td>{{ e.student.last_name }}, {{ e.student.first_name }}</td>
+          <td>{{ e.student.lrn }}</td>
+          <td>{{ e.section.name }}</td>
+          <td>{{ e.academic_year.label }}</td>
+          <td>
+            <span class="pill {{ e.status|lower }}">
+              {% if e.status == "ENROLLED" %}Enrolled{% else %}Archived{% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              {% if perms.academic_structure.archive_student_enrollment_inline and e.status == "ENROLLED" %}
+              <form method="post" action="{% url 'academic:enrollment_archive' e.pk %}" onsubmit="return confirm('Archive this enrollment?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-box-archive"></i> Archive
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-user-graduate"></i>
+      <p>No enrollments found.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

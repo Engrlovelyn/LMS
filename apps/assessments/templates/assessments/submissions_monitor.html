@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Submissions{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Submissions: {{ assessment.title }}</h1>
+    <p class="page-sub">{{ assessment.subject.name }} &middot; {{ submissions.count }} submission(s)</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back
+  </a>
+</div>
+
+{% if submissions %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list-check"></i> Student Submissions</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Student</th>
+          <th>Classroom</th>
+          <th>Submitted</th>
+          <th>Status</th>
+          <th>Score</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in submissions %}
+        <tr>
+          <td>{{ sub.student.lrn }}</td>
+          <td>{{ sub.student.last_name }}, {{ sub.student.first_name }}</td>
+          <td>{{ sub.assessment_assignment.virtual_classroom }}</td>
+          <td>{{ sub.submitted_at|date:"M d, Y H:i" }}</td>
+          <td>
+            {% if sub.total_score is not None %}
+            <span class="pill completed">Graded</span>
+            {% elif sub.is_late %}
+            <span class="pill late">Late</span>
+            {% else %}
+            <span class="pill pending">Pending</span>
+            {% endif %}
+          </td>
+          <td>{{ sub.total_score|default:"—" }}</td>
+          <td>
+            <div class="row-actions">
+              {% if perms.assessments.manually_grade_subjective_assessment %}
+              <a class="btn btn-outline btn-sm" href="{% url 'assessments:grade_submission' assessment.pk sub.pk %}">
+                <i class="fa-solid fa-pen"></i> Grade
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-list-check"></i>
+      <p>No submissions yet.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

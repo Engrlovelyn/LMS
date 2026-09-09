@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Class-Level Analytics{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Class-Level Analytics</h1>
+    <p class="page-sub">{{ classroom.subject.name }} - {{ classroom.section }} ({{ classroom.academic_year.label }})</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'analytics:school_analytics' %}"><i class="fa-solid fa-arrow-left"></i> School-Wide</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_students }}</div>
+    <div class="lbl">Enrolled Students</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">
+      {% if submissions_rate %}{{ submissions_rate }}%{% else %}—{% endif %}
+    </div>
+    <div class="lbl">Submission Rate</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">
+      {% if avg_score %}{{ avg_score }}{% else %}—{% endif %}
+    </div>
+    <div class="lbl">Average Score</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">
+      {% if present_rate %}{{ present_rate }}%{% else %}—{% endif %}
+    </div>
+    <div class="lbl">Attendance Rate</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Attendance Breakdown</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Present</th>
+          <th>Late</th>
+          <th>Excused Absent</th>
+          <th>Unexcused Absent</th>
+          <th>Total Records</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if attendance_stats.total %}
+        <tr>
+          <td><span class="pill active">{{ attendance_stats.present }}</span></td>
+          <td><span class="pill late">{{ attendance_stats.late }}</span></td>
+          <td><span class="pill pending">{{ attendance_stats.excused }}</span></td>
+          <td><span class="pill absent">{{ attendance_stats.unexcused }}</span></td>
+          <td>{{ attendance_stats.total }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-clipboard-user"></i><p>No attendance records found.</p></div></td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+  <div class="stat-card">
+    <div class="val">{{ submitted_count }} / {{ expected_submissions }}</div>
+    <div class="lbl">Submissions Received</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Recent Student Activity</div>
+  </div>
+  {% if recent_logs %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td>{{ log.timestamp|date:"M d, Y H:i" }}</td>
+          <td>{{ log.user.email }}</td>
+          <td>{{ log.action }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><p>No recent activity logs found.</p></div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

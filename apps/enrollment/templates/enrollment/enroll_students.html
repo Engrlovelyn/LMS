@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Enroll Students{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Enroll Students</h1>
+    <p class="page-sub">
+      {{ classroom.subject.name }} &middot; {{ classroom.section }}
+      &middot; {{ classroom.academic_year.label }}
+    </p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'enrollment:classroom_enrollment_detail' classroom.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-plus"></i> Select Students to Enroll</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.students.errors %}
+      <div class="messages">
+        {% for error in form.students.errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if form.students.field.queryset %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th><i class="fa-solid fa-check"></i></th>
+              <th>LRN</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in candidates %}
+            <tr>
+              <td>
+                <input type="checkbox" name="students" value="{{ student.pk }}" id="student_{{ student.pk }}">
+              </td>
+              <td>{{ student.lrn }}</td>
+              <td>
+                <label for="student_{{ student.pk }}">
+                  {{ student.last_name }}, {{ student.first_name }} {{ student.middle_initial }}
+                </label>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="help-text">{{ candidate_count }} student(s) available to enroll.</div>
+      {% else %}
+      <div class="empty-state">
+        <i class="fa-solid fa-check-double"></i>
+        <p>All students are already enrolled in this classroom.</p>
+      </div>
+      {% endif %}
+
+      {% if form.students.field.queryset %}
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'enrollment:classroom_enrollment_detail' classroom.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-user-plus"></i> Enroll Selected Students
+        </button>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

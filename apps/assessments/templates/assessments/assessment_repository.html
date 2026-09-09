@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Assessment Repository{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Assessment Repository</h1>
+    <p class="page-sub">Assessments you created and their placement across classrooms.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'assessments:assessment_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Assessment
+  </a>
+</div>
+
+{% if assessments %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-folder-open"></i> Repository</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Subject</th>
+          <th>Academic Year</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Placements</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assessments %}
+        <tr>
+          <td><strong>{{ a.title }}</strong></td>
+          <td>{{ a.subject.name }}</td>
+          <td>{{ a.academic_year.label }}</td>
+          <td>{{ a.get_assessment_type_display }}</td>
+          <td><span class="pill {{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>
+            <span class="pill {% if a.placement_count %}active{% else %}pending{% endif %}">
+              {{ a.placement_count }} classroom(s)
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_detail' a.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              {% if perms.assessments.access_assessment_repository and a.status == "active" %}
+              <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_assign' a.pk %}">
+                <i class="fa-solid fa-share-nodes"></i> Assign
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-folder-open"></i>
+      <p>No assessments in your repository yet.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

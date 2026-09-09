@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Finalize Structure - {{ year.label }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Finalize Structure</h1>
+    <p class="page-sub">Academic year: {{ year.label }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to List
+  </a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ year.sections.count }}</div>
+    <div class="lbl">Sections</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ year.subjects.count }}</div>
+    <div class="lbl">Subjects</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">
+      {% if version.is_finalized %}Finalized{% else %}Pending{% endif %}
+    </div>
+    <div class="lbl">Status</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-flag-checkered"></i> Structure Configuration</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if version.is_finalized %}
+      <div class="message info"><i class="fa-solid fa-circle-check"></i>This structure has already been finalized.</div>
+      {% endif %}
+
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+        <div class="help-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-flag-checkered"></i> Finalize Structure
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

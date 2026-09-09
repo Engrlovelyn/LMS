@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Class Enrollment{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Class Enrollment</h1>
+    <p class="page-sub">Enroll students into virtual classrooms.</p>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_classrooms }}</div>
+    <div class="lbl">Active Classrooms</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Filters</div>
+  </div>
+  <div class="card-body">
+    <form method="get" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Academic Year</label>
+          {{ form.academic_year }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Section</label>
+          {{ form.section }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          {{ form.subject }}
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-magnifying-glass"></i> Apply Filters
+        </button>
+        <a class="btn btn-outline" href="{% url 'enrollment:dashboard' %}">
+          <i class="fa-solid fa-rotate-left"></i> Reset
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if classroom_rows %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> Classrooms</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Academic Year</th>
+          <th>Teacher</th>
+          <th>Grading Period</th>
+          <th>Enrolled</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in classroom_rows %}
+        <tr>
+          <td>{{ row.classroom.subject.name }}</td>
+          <td>{{ row.classroom.section }}</td>
+          <td>{{ row.classroom.academic_year.label }}</td>
+          <td>{{ row.classroom.teacher.email|default:"Unassigned" }}</td>
+          <td>{{ row.classroom.grading_period|default:"—" }}</td>
+          <td>
+            <span class="pill enrolled">{{ row.enrolled_count }} enrolled</span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'enrollment:classroom_enrollment_detail' row.classroom.pk %}">
+                <i class="fa-solid fa-users"></i> Manage Enrollment
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chalkboard-user"></i>
+      <p>No classrooms found for the selected filters.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

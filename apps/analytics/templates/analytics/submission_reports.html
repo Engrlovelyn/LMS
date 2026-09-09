@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Submission Reports{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Submission &amp; Assessment Reports</h1>
+    <p class="page-sub">Review student submissions across assessments with optional filters.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Filters</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="form-row" style="grid-template-columns:repeat(3,1fr);">
+      <div class="form-group">
+        <label class="form-label" for="id_assessment">Assessment</label>
+        <select name="assessment" id="id_assessment" class="form-control">
+          <option value="">All Assessments</option>
+          {% for a in assessments %}
+          <option value="{{ a.pk }}" {% if selected_assessment == a.pk %}selected{% endif %}>{{ a.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="id_status">Status</label>
+        <select name="status" id="id_status" class="form-control">
+          <option value="">All</option>
+          <option value="late" {% if selected_status == "late" %}selected{% endif %}>Late</option>
+          <option value="on_time" {% if selected_status == "on_time" %}selected{% endif %}>On Time</option>
+          <option value="graded" {% if selected_status == "graded" %}selected{% endif %}>Graded</option>
+          <option value="ungraded" {% if selected_status == "ungraded" %}selected{% endif %}>Ungraded</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Apply</button>
+          {% if selected_assessment or selected_status %}
+          <a class="btn btn-outline" href="{% url 'analytics:submission_reports' %}">Clear</a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(1,1fr);">
+  <div class="stat-card">
+    <div class="val">{{ total }}</div>
+    <div class="lbl">Matching Submissions</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-file-lines"></i> Submissions</div>
+  </div>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Assessment</th>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Student</th>
+          <th>Submitted</th>
+          <th>Status</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.assessment.title }}</td>
+          <td>{{ r.subject.name }}</td>
+          <td>{{ r.section }}</td>
+          <td>{{ r.student.last_name }}, {{ r.student.first_name }}</td>
+          <td>{{ r.submission.submitted_at|date:"M d, Y H:i" }}</td>
+          <td>
+            {% if r.submission.is_late %}
+            <span class="pill late">Late</span>
+            {% else %}
+            <span class="pill active">On Time</span>
+            {% endif %}
+            {% if r.status == "graded" %}
+            <span class="pill active">Graded</span>
+            {% else %}
+            <span class="pill pending">Ungraded</span>
+            {% endif %}
+          </td>
+          <td>{% if r.submission.total_score %}{{ r.submission.total_score }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state"><i class="fa-solid fa-file-lines"></i><p>No submissions found.</p></div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

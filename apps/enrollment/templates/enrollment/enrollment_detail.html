@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Manage Enrollment{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Manage Enrollment</h1>
+    <p class="page-sub">
+      {{ classroom.subject.name }} &middot; {{ classroom.section }}
+      &middot; {{ classroom.academic_year.label }}
+    </p>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-outline" href="{% url 'enrollment:dashboard' %}">
+      <i class="fa-solid fa-arrow-left"></i> Back to Classrooms
+    </a>
+    {% if classroom.status == "active" %}
+    <a class="btn btn-primary" href="{% url 'enrollment:enroll_students' classroom.pk %}">
+      <i class="fa-solid fa-user-plus"></i> Enroll Students
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-users"></i> Enrolled Students
+      <span class="pill enrolled">{{ enrolled_count }}</span>
+    </div>
+  </div>
+
+  {% if enrollments %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Name</th>
+          <th>Enrolled At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in enrollments %}
+        <tr>
+          <td>{{ e.student.lrn }}</td>
+          <td>{{ e.student.last_name }}, {{ e.student.first_name }} {{ e.student.middle_initial }}</td>
+          <td>{{ e.enrolled_at|date:"M d, Y" }}</td>
+          <td><span class="pill {{ e.status }}">{{ e.get_status_display }}</span></td>
+          <td>
+            {% if perms.virtual_classrooms.archive_student_from_class %}
+            <form method="post" action="{% url 'enrollment:remove_student' classroom.pk e.pk %}" onsubmit="return confirm('Remove this student from the classroom?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-user-slash"></i> Remove
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-users-slash"></i>
+      <p>No students are enrolled in this classroom yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

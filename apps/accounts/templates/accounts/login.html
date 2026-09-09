@@ -1,0 +1,1309 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TASS LMS ”“ Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --navy: #0a2463;
+    --blue: #1e5faf;
+    --sky: #3a86d4;
+    --light: #d6e8f7;
+    --white: #ffffff;
+    --off: #f4f7fc;
+    --g200: #dde5f0;
+    --g400: #94a8c4;
+    --g600: #4a637f;
+    --g800: #1e2e42;
+    --success: #22a877;
+    --danger: #d94f4f;
+    --warning: #e99b2a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    background: var(--navy);
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* â”€â”€ LEFT PANEL â”€â”€ */
+  .left-panel {
+    width: 52%;
+    background:
+      linear-gradient(160deg, rgba(10,36,99,0.52) 0%, rgba(30,95,175,0.52) 55%, rgba(14,58,128,0.58) 90%),
+      url('{% static "accounts/img/sanvicente.jpg" %}');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 48px 52px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .left-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(10,36,99,0.2) 0%, rgba(10,36,99,0.55) 100%);
+    pointer-events: none;
+  }
+
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    top: -100px; right: -140px;
+    pointer-events: none;
+  }
+
+  .deco-circle-3 {
+    position: absolute;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: rgba(58,134,212,0.12);
+    filter: blur(60px);
+    bottom: 80px; right: -60px;
+    pointer-events: none;
+  }
+
+  .dot-grid {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+
+  .left-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative; z-index: 1;
+  }
+  .logo-box {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+  .left-title { font-family: 'Fraunces', serif; color: #fff; line-height: 1.2; }
+  .left-title .big { font-size: 40px; font-weight: 600; }
+  .left-title .small { font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.6); letter-spacing: .5px; }
+
+  .left-hero {
+    position: relative; z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 0 20px;
+  }
+  .left-hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 42px; font-weight: 700;
+    color: #fff; line-height: 1.2; margin-bottom: 16px;
+  }
+  .left-hero h1 em { font-style: italic; color: #7eb8f7; }
+  .left-hero p {
+    font-size: 15px; color: rgba(255,255,255,0.65);
+    line-height: 1.7; max-width: 380px; margin-bottom: 36px;
+  }
+
+  .feature-pills { display: flex; flex-direction: column; gap: 12px; }
+  .feature-pill {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 12px 16px;
+    color: rgba(255,255,255,0.85); font-size: 13.5px; font-weight: 500;
+    backdrop-filter: blur(4px);
+    animation: fadeSlideIn .6s ease both;
+    cursor: pointer;
+    transition: background .2s, border-color .2s;
+  }
+  .feature-pill:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.2); }
+  .feature-pill:nth-child(1) { animation-delay: .1s; }
+  .feature-pill:nth-child(2) { animation-delay: .2s; }
+  .feature-pill:nth-child(3) { animation-delay: .3s; }
+  .feature-pill:nth-child(4) { animation-delay: .4s; }
+  .feature-pill:nth-child(5) { animation-delay: .5s; }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(-16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .pill-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #7eb8f7; flex-shrink: 0;
+  }
+
+  .left-footer { position: relative; z-index: 1; font-size: 12px; color: rgba(255,255,255,0.35); }
+
+  /* â”€â”€ RIGHT PANEL â”€â”€ */
+  .right-panel {
+    flex: 1;
+    background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    padding: 44px 48px;
+    position: relative;
+    overflow-y: auto;
+  }
+
+  .auth-container { width: 100%; max-width: 400px; }
+
+  /* PAGE SWITCHER */
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* â”€â”€ FORM STYLES â”€â”€ */
+  .auth-header { margin-bottom: 32px; }
+  .auth-header h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 30px; font-weight: 700;
+    color: var(--navy); margin-bottom: 6px;
+  }
+  .auth-header p { font-size: 14px; color: var(--g600); line-height: 1.6; }
+
+  .form-group { margin-bottom: 18px; position: relative; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px;
+    color: var(--g600); margin-bottom: 7px;
+  }
+  .input-wrap { position: relative; }
+  .input-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--g400); font-size: 14px; pointer-events: none;
+    transition: color .2s;
+  }
+  .input-wrap:focus-within .input-icon { color: var(--blue); }
+
+  .form-control {
+    width: 100%;
+    padding: 12px 14px 12px 42px;
+    border: 1.5px solid var(--g200);
+    border-radius: 11px;
+    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: var(--g800);
+    background: var(--off);
+    outline: none;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .form-control:focus {
+    border-color: var(--sky);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(58,134,212,0.12);
+  }
+  .form-control.error {
+    border-color: var(--danger);
+    background: #fff8f8;
+    box-shadow: 0 0 0 3px rgba(217,79,79,0.1);
+  }
+  .form-control.success {
+    border-color: var(--success);
+    background: #f6fdfb;
+  }
+
+  /* Status icon inside input */
+  .status-icon {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 14px; pointer-events: none;
+    opacity: 0; transition: opacity .2s;
+  }
+  .status-icon.show { opacity: 1; }
+  .status-icon.err-icon { color: var(--danger); }
+  .status-icon.ok-icon { color: var(--success); }
+
+  /* Eye toggle */
+  .eye-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--g400); font-size: 14px;
+    transition: color .2s; padding: 0;
+  }
+  .eye-toggle:hover { color: var(--navy); }
+
+  /* With eye toggle, status icon shifts left */
+  .has-eye .status-icon { right: 40px; }
+
+  /* Error / helper text */
+  .field-msg {
+    font-size: 11.5px; margin-top: 5px;
+    display: none; align-items: center; gap: 5px;
+    animation: msgIn .2s ease;
+  }
+  .field-msg.show { display: flex; }
+  .field-msg.err { color: var(--danger); }
+  .field-msg.hint { color: var(--g400); display: flex; }
+  @keyframes msgIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Forgot / remember row */
+  .forgot-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 22px;
+  }
+  .checkbox-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .checkbox-wrap input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; }
+  .checkbox-wrap span { font-size: 13px; color: var(--g600); }
+  .link-btn {
+    font-size: 13px; color: var(--blue); font-weight: 600;
+    background: none; border: none; cursor: pointer;
+    transition: color .2s; padding: 0;
+  }
+  .link-btn:hover { color: var(--navy); }
+
+  /* â”€â”€ SUBMIT BUTTON â”€â”€ */
+  .btn-submit {
+    width: 100%; padding: 14px;
+    background: var(--navy); color: #fff;
+    border: none; border-radius: 11px;
+    font-size: 15px; font-weight: 700;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    cursor: pointer;
+    transition: background .2s, transform .15s, box-shadow .2s, opacity .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(10,36,99,0.25);
+    margin-bottom: 22px;
+    position: relative; overflow: hidden;
+  }
+  .btn-submit:hover:not(.loading):not(.btn-success-state) {
+    background: var(--blue);
+    box-shadow: 0 6px 20px rgba(10,36,99,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-submit:active:not(.loading) { transform: translateY(0); }
+  .btn-submit.loading {
+    pointer-events: none;
+    background: #1a3d8a;
+    cursor: not-allowed;
+  }
+  .btn-submit.btn-success-state {
+    background: var(--success);
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(34,168,119,0.3);
+  }
+  .btn-submit.btn-error-state {
+    background: var(--danger);
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(217,79,79,0.25);
+  }
+
+  /* Spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* â”€â”€ TOAST NOTIFICATION â”€â”€ */
+  .toast-wrap {
+    position: relative;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .toast {
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px; line-height: 1.5;
+    display: flex; align-items: flex-start; gap: 10px;
+    animation: toastIn .25s ease;
+    position: relative;
+  }
+  @keyframes toastIn {
+    from { opacity:0; transform: translateY(-8px) scale(.98); }
+    to { opacity:1; transform: translateY(0) scale(1); }
+  }
+  .toast.out { animation: toastOut .25s ease forwards; }
+  @keyframes toastOut { to { opacity:0; transform:translateY(-8px); max-height:0; padding:0; } }
+  .toast.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .toast.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .toast.warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .toast-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .toast-body { flex: 1; }
+  .toast-title { font-weight: 700; margin-bottom: 1px; }
+  .toast-close {
+    background: none; border: none; cursor: pointer;
+    color: inherit; opacity: .5; font-size: 13px; padding: 0;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .toast-close:hover { opacity: 1; }
+
+  /* â”€â”€ SHAKE ANIMATION â”€â”€ */
+  .shake { animation: shake .4s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); }
+    40% { transform: translateX(7px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  /* â”€â”€ DIVIDER â”€â”€ */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--g200); }
+  .divider span { font-size: 12px; color: var(--g400); white-space: nowrap; }
+
+  /* Switch page */
+  .switch-page { text-align: center; font-size: 13.5px; color: var(--g600); }
+
+  /* â”€â”€ PASSWORD STRENGTH â”€â”€ */
+  .strength-bar { display: flex; gap: 4px; margin-top: 8px; }
+  .strength-seg { height: 4px; flex: 1; border-radius: 99px; background: var(--g200); transition: background .3s; }
+  .strength-label { font-size: 11px; color: var(--g400); margin-top: 4px; transition: color .3s; }
+
+  /* â”€â”€ SUCCESS SCREEN â”€â”€ */
+  .success-screen { text-align: center; padding: 20px 0; }
+  .success-icon {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: #dcfce7;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--success);
+    margin: 0 auto 20px;
+    animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* Form row */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* Steps indicator */
+  .steps { display: flex; gap: 8px; margin-bottom: 28px; }
+  .step { height: 4px; flex: 1; border-radius: 99px; background: var(--g200); transition: background .3s; }
+  .step.active { background: var(--navy); }
+  .step.done { background: var(--success); }
+
+  select.form-control { appearance: none; padding-left: 42px; }
+
+  /* Progress bar inside loading button */
+  .btn-progress {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: rgba(255,255,255,0.1);
+    width: 0%;
+    transition: width .05s linear;
+    border-radius: 11px;
+  }
+
+  /* Redirect bar */
+  .redirect-notice {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--g400);
+    margin-top: -14px;
+    margin-bottom: 18px;
+    display: none;
+    animation: fadeIn .3s ease;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--g200); border-radius: 99px; }
+
+  @media (max-width: 900px) {
+    .left-panel { display: none; }
+    .right-panel { padding: 32px 24px; }
+  }
+
+  @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ============================= */
+  /* FULL RESPONSIVE FIX - LOGIN */
+  /* ============================= */
+  html {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  .auth-container {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Medium laptops */
+  @media (max-width: 1200px) {
+    .left-panel {
+      width: 48%;
+      padding: 42px 36px;
+    }
+
+    .left-title .big {
+      font-size: 32px;
+    }
+
+    .left-hero h1 {
+      font-size: 36px;
+    }
+
+    .left-hero p {
+      max-width: 340px;
+      font-size: 14px;
+    }
+
+    .right-panel {
+      padding: 38px 36px;
+    }
+  }
+
+  /* Tablets */
+  @media (max-width: 900px) {
+    body {
+      display: block;
+      min-height: 100vh;
+      overflow-y: auto;
+      background: var(--white);
+    }
+
+    .left-panel {
+      display: none;
+    }
+
+    .right-panel {
+      min-height: 100vh;
+      width: 100%;
+      padding: 42px 24px;
+      align-items: center;
+      justify-content: center;
+      overflow-y: visible;
+    }
+
+    .auth-container {
+      max-width: 440px;
+      margin: 0 auto;
+    }
+  }
+
+  /* Phones */
+  @media (max-width: 600px) {
+    body {
+      background: var(--white);
+    }
+
+    .right-panel {
+      padding: 28px 18px;
+      align-items: flex-start;
+    }
+
+    .auth-container {
+      max-width: 100%;
+    }
+
+    .auth-header {
+      margin-bottom: 24px;
+    }
+
+    .auth-header h2 {
+      font-size: 26px;
+    }
+
+    .auth-header p {
+      font-size: 13px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-control {
+      font-size: 13.5px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+
+    .forgot-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-submit {
+      padding: 13px;
+      font-size: 14px;
+    }
+
+    .role-selector,
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .divider {
+      margin-bottom: 18px;
+    }
+
+    .success-screen {
+      padding: 14px 0;
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      font-size: 24px;
+    }
+
+    #aboutModal,
+    #contactModal {
+      padding: 12px !important;
+      align-items: flex-start !important;
+      overflow-y: auto;
+    }
+
+    #aboutModal > div,
+    #contactModal > div {
+      max-height: none !important;
+      border-radius: 16px !important;
+      margin: 10px 0;
+    }
+
+    #aboutModal > div > div,
+    #contactModal > div > div {
+      padding-left: 20px !important;
+      padding-right: 20px !important;
+    }
+
+    #aboutModal [style*="grid-template-columns:1fr 1fr"] {
+      grid-template-columns: 1fr !important;
+      padding-left: 0 !important;
+    }
+
+    #aboutModal p[style*="padding-left:46px"],
+    #contactModal div[style*="padding-left:46px"] {
+      padding-left: 0 !important;
+    }
+
+    #aboutModal div[style*="display:flex;align-items:center;gap:14px"],
+    #contactModal div[style*="display:flex;align-items:center;gap:12px"] {
+      align-items: flex-start !important;
+    }
+  }
+
+  /* Very small phones */
+  @media (max-width: 390px) {
+    .right-panel {
+      padding: 22px 14px;
+    }
+
+    .auth-header h2 {
+      font-size: 24px;
+    }
+
+    .form-label {
+      font-size: 11px;
+    }
+
+    .form-control {
+      border-radius: 10px;
+    }
+
+    .toast {
+      padding: 11px 12px;
+      font-size: 12.5px;
+    }
+
+    .btn-submit {
+      border-radius: 10px;
+    }
+  }
+
+</style>
+</head>
+<body>
+{% csrf_token %}
+
+<!-- LEFT PANEL -->
+<div class="left-panel">
+  <div class="dot-grid"></div>
+  <div class="deco-circle-3"></div>
+
+  <div class="left-logo-row">
+    <img src="{% static 'accounts/img/SVI_logo.png' %}" class="logo-box" alt="SVI Logo">
+    <img src="{% static 'accounts/img/TASS_logo.webp' %}" class="logo-box" alt="TASS Logo">
+    <div class="left-title">
+      <div class="big">San Vicente Institute</div>
+      <div class="small">LEARNING MANAGEMENT SYSTEM</div>
+    </div>
+  </div>
+
+  <div class="left-hero">
+    <h1>Your <em>classroom,</em><br>everywhere you go.</h1>
+    <p>A centralized digital platform for TASS member schools ”” bringing together lessons, assessments, attendance, and communication in one place.</p>
+    <div class="feature-pills">
+      <div class="feature-pill" onclick="openAboutModal()">
+        <div class="pill-icon"><i class="fa-solid fa-book-open"></i></div>
+        About
+      </div>
+      <div class="feature-pill">
+        <div class="pill-icon"><i class="fa-solid fa-file-pen"></i></div>
+        Privacy Policy
+      </div>
+      <div class="feature-pill">
+        <div class="pill-icon"><i class="fa-solid fa-scroll"></i></div>
+        Terms of Use
+      </div>
+      <div class="feature-pill" onclick="openContactModal()">
+        <div class="pill-icon"><i class="fa-solid fa-comments"></i></div>
+        Contact Support
+      </div>
+      <div class="feature-pill">
+        <div class="pill-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+        Teacher's Guide
+      </div>
+    </div>
+  </div>
+
+  <div class="left-footer">
+    Â© 2026 San Vicente Institute Â· TASS LMS Â· All rights reserved.
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right-panel">
+  <div class="auth-container">
+
+    <!-- â”€â”€ LOGIN PAGE â”€â”€ -->
+    <div class="page active" id="page-login">
+      <div class="auth-header">
+        <h2>Welcome back</h2>
+        <p>Sign in to your TASS LMS account to continue.</p>
+      </div>
+
+      <!-- Toast area -->
+      <div id="login-toast-area"></div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <div class="input-wrap">
+          <i class="input-icon fa-solid fa-envelope"></i>
+          <input class="form-control" type="email" id="login-email" placeholder="you@svischool.edu.ph"
+            oninput="clearFieldErr('login-email')"
+            onblur="validateEmailField('login-email')" />
+          <i class="status-icon err-icon fa-solid fa-circle-exclamation" id="login-email-si-err"></i>
+          <i class="status-icon ok-icon fa-solid fa-circle-check" id="login-email-si-ok"></i>
+        </div>
+        <div class="field-msg err" id="login-email-err">
+          <i class="fa-solid fa-circle-exclamation" style="font-size:11px;"></i>
+          <span id="login-email-err-text">Please enter a valid email address.</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-wrap has-eye">
+          <i class="input-icon fa-solid fa-lock"></i>
+          <input class="form-control" type="password" id="login-pass" placeholder="Enter your password"
+            oninput="clearFieldErr('login-pass')"
+            onblur="validatePassField('login-pass')"
+            onkeydown="if(event.key==='Enter') doLogin()" />
+          <i class="status-icon err-icon fa-solid fa-circle-exclamation" id="login-pass-si-err"></i>
+          <i class="status-icon ok-icon fa-solid fa-circle-check" id="login-pass-si-ok"></i>
+          <button class="eye-toggle" onclick="toggleEye('login-pass', this)" type="button" tabindex="-1">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+        <div class="field-msg err" id="login-pass-err">
+          <i class="fa-solid fa-circle-exclamation" style="font-size:11px;"></i>
+          <span id="login-pass-err-text">Password is required.</span>
+        </div>
+      </div>
+
+      <div class="forgot-row">
+        <label class="checkbox-wrap">
+          <input type="checkbox" id="remember-me" />
+          <span>Remember me</span>
+        </label>
+        <button class="link-btn" onclick="showPage('page-forgot')">Forgot password?</button>
+      </div>
+
+      <button class="btn-submit" id="login-btn" onclick="doLogin()">
+        <div class="btn-progress" id="login-progress"></div>
+        <i class="fa-solid fa-right-to-bracket" id="login-btn-icon"></i>
+        <span id="login-btn-text">Sign In</span>
+      </button>
+
+      <div class="redirect-notice" id="redirect-notice">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Redirecting to your dashboard”¦
+      </div>
+
+    </div>
+
+    <!-- â”€â”€ FORGOT PASSWORD PAGE â”€â”€ -->
+    <div class="page" id="page-forgot">
+      <div id="forgot-back-row" style="margin-bottom:28px;">
+        <button class="link-btn" onclick="showPage('page-login')" style="display:flex;align-items:center;gap:6px;font-size:13px;">
+          <i class="fa-solid fa-arrow-left"></i> Back to Sign In
+        </button>
+      </div>
+
+      <div id="forgot-form">
+        <div class="auth-header">
+          <h2>Reset password</h2>
+          <p>Enter your school email and we'll send you a reset link.</p>
+        </div>
+
+        <div id="forgot-toast-area"></div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <div class="input-wrap">
+            <i class="input-icon fa-solid fa-envelope"></i>
+            <input class="form-control" type="email" id="forgot-email" placeholder="you@svischool.edu.ph"
+              oninput="clearFieldErr('forgot-email')"
+              onblur="validateEmailField('forgot-email')"
+              onkeydown="if(event.key==='Enter') doForgot()" />
+            <i class="status-icon err-icon fa-solid fa-circle-exclamation" id="forgot-email-si-err"></i>
+            <i class="status-icon ok-icon fa-solid fa-circle-check" id="forgot-email-si-ok"></i>
+          </div>
+          <div class="field-msg err" id="forgot-email-err">
+            <i class="fa-solid fa-circle-exclamation" style="font-size:11px;"></i> Please enter a valid email address.
+          </div>
+        </div>
+
+        <button class="btn-submit" id="forgot-btn" onclick="doForgot()">
+          <i class="fa-solid fa-paper-plane" id="forgot-btn-icon"></i>
+          <span id="forgot-btn-text">Send Reset Link</span>
+        </button>
+      </div>
+
+      <!-- Success state -->
+      <div id="forgot-success" style="display:none;">
+        <div class="success-screen">
+          <div class="success-icon"><i class="fa-solid fa-envelope-circle-check"></i></div>
+          <h3 style="font-family:'Fraunces',serif;font-size:22px;color:var(--navy);margin-bottom:8px;">Check your inbox</h3>
+          <p style="font-size:14px;color:var(--g600);line-height:1.7;margin-bottom:6px;">
+            We sent a password reset link to
+          </p>
+          <p style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:24px;" id="forgot-sent-email"></p>
+          <p style="font-size:12.5px;color:var(--g400);margin-bottom:24px;">
+            Didn't get it? Check your spam folder or
+            <button class="link-btn" style="font-size:12.5px;" onclick="resetForgotForm()">try again</button>.
+          </p>
+          <button class="btn-submit" onclick="showPage('page-login')">
+            <i class="fa-solid fa-right-to-bracket"></i> Back to Sign In
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- â”€â”€ ROLE SELECTOR (login) styles here if needed â”€â”€ -->
+<style>
+  .role-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .role-card {
+    border: 1.5px solid var(--g200); border-radius: 11px;
+    padding: 14px 12px; cursor: pointer; text-align: center;
+    transition: all .2s; background: var(--off);
+  }
+  .role-card:hover { border-color: var(--sky); background: #f0f7ff; }
+  .role-card.selected { border-color: var(--navy); background: #eef4ff; }
+  .role-card i { font-size: 20px; color: var(--g400); margin-bottom: 6px; display: block; transition: color .2s; }
+  .role-card.selected i { color: var(--navy); }
+  .role-card span { font-size: 12.5px; font-weight: 600; color: var(--g600); transition: color .2s; }
+  .role-card.selected span { color: var(--navy); }
+</style>
+
+<!-- ABOUT MODAL -->
+<div id="aboutModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(10,36,99,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeAboutModal()">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(10,36,99,0.3);animation:slideUp .3s ease;">
+    <div style="background:linear-gradient(135deg,#0a2463 0%,#1e5faf 100%);border-radius:20px 20px 0 0;padding:32px 36px 28px;position:relative;overflow:hidden;">
+      <div style="position:absolute;width:200px;height:200px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.07);top:-60px;right:-60px;"></div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+        <img src="{% static 'accounts/img/SVI_logo.png' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
+        <img src="{% static 'accounts/img/TASS_logo.webp' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
+        <div>
+          <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:#fff;">San Vicente Institute</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:.5px;margin-top:1px;">TUGUEGARAO ARCHDIOCESAN SCHOOL SYSTEM</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;">
+        <i class="fa-solid fa-location-dot"></i> #204 Bonifacio St., Centro Southwest, Solana, Cagayan, Philippines
+      </div>
+      <button onclick="closeAboutModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div style="background:linear-gradient(90deg,#e8f0fc,#f4f7fc);border-bottom:1px solid #dde5f0;padding:14px 36px;display:flex;align-items:center;gap:10px;">
+      <i class="fa-solid fa-quote-left" style="color:#1e5faf;font-size:16px;"></i>
+      <span style="font-family:'Fraunces',serif;font-size:15px;font-style:italic;color:#0a2463;font-weight:600;">Enter with Gladness”¦ Learn and Share God's Goodness</span>
+    </div>
+    <div style="padding:32px 36px;display:flex;flex-direction:column;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-eye" style="color:#1e5faf;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Vision</div>
+        </div>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">SVI envisions itself as a beacon of Christian formation, aiming for the <strong style="color:#0a2463;">total formation of individuals</strong> who are ready to lead and serve the community in the light of Christ.</p>
+      </div>
+      <div style="border-top:1px solid #eef2f8;"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullseye" style="color:#16a34a;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Mission</div>
+        </div>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">To <strong style="color:#0a2463;">educate with purpose, serve with humility, and love with sincerity.</strong></p>
+      </div>
+      <div style="border-top:1px solid #eef2f8;"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-brain" style="color:#7c3aed;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Philosophy</div>
+        </div>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">The school is committed to molding students through <strong style="color:#0a2463;">religious teachings and respect for human dignity</strong>, guided by the motto: <em>"Enter with Gladness”¦ Learn and Share God's Goodness."</em></p>
+      </div>
+      <div style="border-top:1px solid #eef2f8;"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:#fff7ed;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-heart" style="color:#ea580c;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Core Values</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-left:46px;">
+          <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
+            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-cross" style="color:#1e5faf;margin-right:6px;font-size:11px;"></i>Maka-Diyos</div>
+            <div style="font-size:11.5px;color:#4a637f;">God-fearing</div>
+          </div>
+          <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
+            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-hands-holding-heart" style="color:#16a34a;margin-right:6px;font-size:11px;"></i>Maka-Tao</div>
+            <div style="font-size:11.5px;color:#4a637f;">Humane</div>
+          </div>
+          <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
+            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-flag" style="color:#ea580c;margin-right:6px;font-size:11px;"></i>Maka-Bayan</div>
+            <div style="font-size:11.5px;color:#4a637f;">Patriotic</div>
+          </div>
+          <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
+            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-leaf" style="color:#16a34a;margin-right:6px;font-size:11px;"></i>Maka-Kalikasan</div>
+            <div style="font-size:11.5px;color:#4a637f;">Environmental Stewardship</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:16px 36px 24px;border-top:1px solid #eef2f8;display:flex;justify-content:flex-end;">
+      <button onclick="closeAboutModal()" style="background:#0a2463;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT SUPPORT MODAL -->
+<div id="contactModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(10,36,99,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeContactModal()">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(10,36,99,0.3);animation:slideUp .3s ease;">
+    <div style="background:linear-gradient(135deg,#0a2463,#1e5faf);padding:24px 28px;border-radius:20px 20px 0 0;color:#fff;position:relative;overflow:hidden;">
+      <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.07);top:-60px;right:-60px;"></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;">
+          <i class="fa-solid fa-headset" style="font-size:18px;color:#fff;"></i>
+        </div>
+        <div>
+          <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;">Contact Support</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">San Vicente Institute Â· TASS LMS</div>
+        </div>
+      </div>
+      <button onclick="closeContactModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div style="padding:28px 32px;display:flex;flex-direction:column;gap:20px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-circle-info" style="color:#d97706;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Contact Information</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-left:46px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:#4a637f;line-height:1.6;">
+            <i class="fa-solid fa-location-dot" style="color:#1e5faf;margin-top:2px;width:16px;"></i>
+            <span>#204 Bonifacio Street, Centro Southwest, Solana, Cagayan, Philippines</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
+            <i class="fa-solid fa-graduation-cap" style="color:#1e5faf;width:16px;"></i>
+            <span>Kindergarten through Senior High School</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
+            <i class="fa-solid fa-church" style="color:#1e5faf;width:16px;"></i>
+            <span>Tuguegarao Archdiocesan School System (TASS)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
+            <i class="fa-solid fa-phone" style="color:#1e5faf;width:16px;"></i>
+            <span>+63 78 224 8366</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:16px 32px 24px;border-top:1px solid #eef2f8;display:flex;justify-content:flex-end;">
+      <button onclick="closeContactModal()" style="background:#0a2463;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // PAGE SWITCHING
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ROLE SELECTION
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // (role selection is handled server-side after login)
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // EYE TOGGLE
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function toggleEye(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    btn.querySelector('i').className = isPass ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // HELPERS
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function val(id) { return (document.getElementById(id) || {}).value?.trim() || ''; }
+  function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // FIELD VALIDATION ”” validate on blur, clear on first input keystroke
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function setFieldError(id, msg) {
+    const inp = document.getElementById(id);
+    const errEl = document.getElementById(id + '-err');
+    const siErr = document.getElementById(id + '-si-err');
+    const siOk  = document.getElementById(id + '-si-ok');
+
+    inp.classList.add('error');
+    inp.classList.remove('success');
+
+    if (errEl) {
+      const span = errEl.querySelector('span') || errEl;
+      if (msg && errEl.querySelector('span')) errEl.querySelector('span').textContent = msg;
+      errEl.classList.add('show');
+    }
+    if (siErr) siErr.classList.add('show');
+    if (siOk)  siOk.classList.remove('show');
+  }
+
+  function setFieldSuccess(id) {
+    const inp = document.getElementById(id);
+    const errEl = document.getElementById(id + '-err');
+    const siErr = document.getElementById(id + '-si-err');
+    const siOk  = document.getElementById(id + '-si-ok');
+
+    inp.classList.remove('error');
+    inp.classList.add('success');
+
+    if (errEl) errEl.classList.remove('show');
+    if (siErr) siErr.classList.remove('show');
+    if (siOk)  siOk.classList.add('show');
+  }
+
+  function clearFieldErr(id) {
+    const inp = document.getElementById(id);
+    if (!inp) return;
+    const errEl = document.getElementById(id + '-err');
+    const siErr = document.getElementById(id + '-si-err');
+    const siOk  = document.getElementById(id + '-si-ok');
+
+    inp.classList.remove('error', 'success');
+    if (errEl) errEl.classList.remove('show');
+    if (siErr) siErr.classList.remove('show');
+    if (siOk)  siOk.classList.remove('show');
+  }
+
+  function validateEmailField(id) {
+    const v = val(id);
+    if (!v) { setFieldError(id, 'Email address is required.'); return false; }
+    if (!isEmail(v)) { setFieldError(id, 'Please enter a valid email address.'); return false; }
+    setFieldSuccess(id);
+    return true;
+  }
+
+  function validatePassField(id) {
+    const v = val(id);
+    if (!v) { setFieldError(id, 'Password is required.'); return false; }
+    setFieldSuccess(id);
+    return true;
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // TOAST NOTIFICATIONS
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function showToast(areaId, type, title, msg, autoDismiss) {
+    const area = document.getElementById(areaId);
+    if (!area) return;
+
+    const icons = {
+      error: 'fa-circle-xmark',
+      success: 'fa-circle-check',
+      warning: 'fa-triangle-exclamation'
+    };
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.id = toastId;
+    toast.innerHTML = `
+      <i class="toast-icon fa-solid ${icons[type] || 'fa-circle-info'}"></i>
+      <div class="toast-body">
+        <div class="toast-title">${title}</div>
+        ${msg ? `<div style="font-size:12px;opacity:.85;margin-top:2px;">${msg}</div>` : ''}
+      </div>
+      <button class="toast-close" onclick="dismissToast('${toastId}')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+    area.innerHTML = '';
+    area.appendChild(toast);
+
+    if (autoDismiss) {
+      setTimeout(() => dismissToast(toastId), autoDismiss);
+    }
+  }
+
+  function dismissToast(id) {
+    const t = document.getElementById(id);
+    if (!t) return;
+    t.classList.add('out');
+    setTimeout(() => t.remove(), 250);
+  }
+
+  function clearToasts(areaId) {
+    const area = document.getElementById(areaId);
+    if (area) area.innerHTML = '';
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // SHAKE ANIMATION
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function shake(el) {
+    el.classList.remove('shake');
+    void el.offsetWidth; // reflow
+    el.classList.add('shake');
+    el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // BUTTON STATES
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function setBtnLoading(btnId, iconId, textId, loadingText) {
+    const btn = document.getElementById(btnId);
+    const icon = document.getElementById(iconId);
+    const text = document.getElementById(textId);
+    btn.classList.add('loading');
+    if (icon) icon.className = 'spinner';
+    if (text) text.textContent = loadingText || 'Loading”¦';
+  }
+
+  function setBtnSuccess(btnId, iconId, textId, successText) {
+    const btn = document.getElementById(btnId);
+    const icon = document.getElementById(iconId);
+    const text = document.getElementById(textId);
+    btn.classList.remove('loading');
+    btn.classList.add('btn-success-state');
+    if (icon) icon.className = 'fa-solid fa-circle-check';
+    if (text) text.textContent = successText || 'Success!';
+  }
+
+  function setBtnError(btnId, iconId, textId, errorText) {
+    const btn = document.getElementById(btnId);
+    const icon = document.getElementById(iconId);
+    const text = document.getElementById(textId);
+    btn.classList.remove('loading');
+    btn.classList.add('btn-error-state');
+    if (icon) icon.className = 'fa-solid fa-circle-exclamation';
+    if (text) text.textContent = errorText || 'Failed';
+    setTimeout(() => resetBtn(btnId, iconId, textId), 2000);
+  }
+
+  function resetBtn(btnId, iconId, textId, defaultIcon, defaultText) {
+    const btn = document.getElementById(btnId);
+    const icon = document.getElementById(iconId);
+    const text = document.getElementById(textId);
+    btn.classList.remove('loading', 'btn-success-state', 'btn-error-state');
+    if (icon && defaultIcon) icon.className = defaultIcon;
+    if (text && defaultText) text.textContent = defaultText;
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // LOGIN
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function doLogin() {
+    clearToasts('login-toast-area');
+    const emailOk = validateEmailField('login-email');
+    const passOk  = validatePassField('login-pass');
+
+    if (!emailOk || !passOk) {
+      shake(document.querySelector('#page-login .auth-container') || document.getElementById('page-login'));
+      showToast('login-toast-area', 'error', 'Missing information', 'Please fill in all required fields.');
+      return;
+    }
+
+    setBtnLoading('login-btn', 'login-btn-icon', 'login-btn-text', 'Signing in”¦');
+
+    const email = val('login-email');
+    const password = val('login-pass');
+
+    fetch("{% url 'accounts:login' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify({ email, password }),
+    })
+      .then(res => res.json().then(data => ({ status: res.status, data })))
+      .then(({ status, data }) => {
+        if (status === 200 && data.ok) {
+          setBtnSuccess('login-btn', 'login-btn-icon', 'login-btn-text', 'Signed in!');
+          showToast('login-toast-area', 'success', 'Welcome back!', 'Redirecting you to your dashboard”¦', 4000);
+          const notice = document.getElementById('redirect-notice');
+          if (notice) {
+            notice.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Redirecting to your dashboard”¦';
+            notice.style.display = 'block';
+          }
+          window.location.href = data.redirect_url;
+          return;
+        }
+
+        // Locked account -> data.reason === "locked"
+        if (data.reason === "locked") {
+          setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Account Locked');
+          showToast('login-toast-area', 'warning', 'Account temporarily locked', data.message, 0);
+        } else if (data.reason === "pending_verification" || data.reason === "pending_password_setup") {
+          setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Account Not Ready');
+          showToast('login-toast-area', 'warning', 'Account setup incomplete', data.message, 0);
+        } else if (data.reason === "archived") {
+          setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Account Archived');
+          showToast('login-toast-area', 'error', 'Account archived', data.message, 0);
+        } else {
+          setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Sign In Failed');
+          shake(document.getElementById('page-login'));
+          showToast('login-toast-area', 'error', 'Incorrect credentials', data.message || 'The email or password you entered is wrong.', 0);
+        }
+
+        setTimeout(() => {
+          resetBtn('login-btn', 'login-btn-icon', 'login-btn-text', 'fa-solid fa-right-to-bracket', 'Sign In');
+        }, 2100);
+      })
+      .catch(() => {
+        setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Sign In Failed');
+        showToast('login-toast-area', 'error', 'Connection error', 'Could not reach the server. Please try again.', 0);
+        setTimeout(() => {
+          resetBtn('login-btn', 'login-btn-icon', 'login-btn-text', 'fa-solid fa-right-to-bracket', 'Sign In');
+        }, 2100);
+      });
+  }
+
+  function getCookie(name) {
+    const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return match ? match.pop() : '';
+  }
+
+
+
+  // (signup validation removed – registration is handled by admin/registrars)
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // FORGOT PASSWORD
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function doForgot() {
+    clearToasts('forgot-toast-area');
+    const emailOk = validateEmailField('forgot-email');
+    if (!emailOk) {
+      showToast('forgot-toast-area', 'error', 'Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+
+    setBtnLoading('forgot-btn', 'forgot-btn-icon', 'forgot-btn-text', 'Sending…');
+
+    fetch("{% url 'accounts:forgot_password' %}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ email: val('forgot-email') }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.ok) {
+          document.getElementById('forgot-form').style.display = 'none';
+          document.getElementById('forgot-back-row').style.display = 'none';
+          document.getElementById('forgot-sent-email').textContent = val('forgot-email');
+          document.getElementById('forgot-success').style.display = 'block';
+        } else {
+          showToast('forgot-toast-area', 'error', 'Request failed', data.message || 'Please try again.');
+          resetBtn('forgot-btn', 'forgot-btn-icon', 'forgot-btn-text', 'fa-solid fa-paper-plane', 'Send Reset Link');
+        }
+      })
+      .catch(function () {
+        showToast('forgot-toast-area', 'error', 'Connection error', 'Could not reach the server. Please try again.');
+        resetBtn('forgot-btn', 'forgot-btn-icon', 'forgot-btn-text', 'fa-solid fa-paper-plane', 'Send Reset Link');
+      });
+  }
+
+  function resetForgotForm() {
+    document.getElementById('forgot-form').style.display = 'block';
+    document.getElementById('forgot-back-row').style.display = 'block';
+    document.getElementById('forgot-success').style.display = 'none';
+    resetBtn('forgot-btn', 'forgot-btn-icon', 'forgot-btn-text', 'fa-solid fa-paper-plane', 'Send Reset Link');
+    clearFieldErr('forgot-email');
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // MODALS
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function openAboutModal() {
+    document.getElementById('aboutModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeAboutModal() {
+    document.getElementById('aboutModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+  function openContactModal() {
+    document.getElementById('contactModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeContactModal() {
+    document.getElementById('contactModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+</script>
+</body>
+</html>

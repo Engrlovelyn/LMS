@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Promote Students{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Promote Students</h1>
+    <p class="page-sub">Move enrolled students from one section to another.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'academic:enrollment_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Enrollments
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-right-left"></i> Promotion Details</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if promote_form.non_field_errors %}
+      <div class="messages">
+        {% for error in promote_form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% for field in promote_form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+        <div class="help-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'academic:enrollment_list' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-right-left"></i> Promote Students
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<h2 class="page-title" style="font-size:16px; margin-bottom:10px;">Active Sections</h2>
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Section</th>
+          <th>Grade Level</th>
+          <th>Academic Year</th>
+          <th>Enrolled Students</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sections %}
+        <tr>
+          <td>{{ s.name }}</td>
+          <td>Grade {{ s.grade_level }}</td>
+          <td>{{ s.academic_year.label }}</td>
+          <td>{{ s.student_enrollments.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Update Attendance - {{ session.session_date|date:"M d, Y" }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Update Attendance</h1>
+    <p class="page-sub">
+      {{ session.virtual_classroom.subject.name }} &middot; {{ session.virtual_classroom.section }} &middot;
+      {{ session.session_date|date:"M d, Y" }}
+    </p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'attendance:session_detail' session.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Session
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-pen"></i> Student Records</div>
+  </div>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Student</th>
+          <th>Status</th>
+          <th>Remarks</th>
+          <th>Saved? </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.student.lrn }}</td>
+          <td>{{ row.student.last_name }}, {{ row.student.first_name }}</td>
+          <td>
+            <form method="post" action="{% url 'attendance:record_status_update' session.pk %}" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="student_id" value="{{ row.student.pk }}">
+              {{ row.status_form.status }}
+          </td>
+          <td>
+              {{ row.status_form.remarks }}
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+              </button>
+            </form>
+          </td>
+          <td>
+            {% if row.record %}
+            <span class="pill active">Recorded</span>
+            {% else %}
+            <span class="pill archived">No Record</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-users"></i>
+      <p>No enrolled students found for this class.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

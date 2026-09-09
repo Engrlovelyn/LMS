@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Analytics &amp; Reports{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Analytics &amp; Reports</h1>
+    <p class="page-sub">Choose an analytics view to continue.</p>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+  {% if perms.analytics.view_school_wide_analytics or user.is_superuser %}
+  <a class="stat-card" href="{% url 'analytics:school_analytics' %}">
+    <div class="val" style="color:var(--blue);"><i class="fa-solid fa-chart-pie"></i></div>
+    <div class="lbl">School-Wide Analytics</div>
+  </a>
+  {% endif %}
+  {% if perms.analytics.view_class_level_analytics or user.is_superuser %}
+  <a class="stat-card" href="{% url 'analytics:attendance_trends' %}">
+    <div class="val" style="color:var(--success);"><i class="fa-solid fa-chart-line"></i></div>
+    <div class="lbl">Attendance Trends</div>
+  </a>
+  {% endif %}
+  {% if perms.analytics.generate_submission_assessment_reports or user.is_superuser %}
+  <a class="stat-card" href="{% url 'analytics:submission_reports' %}">
+    <div class="val" style="color:var(--warning);"><i class="fa-solid fa-file-lines"></i></div>
+    <div class="lbl">Submission Reports</div>
+  </a>
+  {% endif %}
+  {% if perms.analytics.manage_sf_report_templates or perms.analytics.generate_sf_reports or user.is_superuser %}
+  <a class="stat-card" href="{% url 'analytics:sf_report_home' %}">
+    <div class="val" style="color:var(--info);"><i class="fa-solid fa-file-export"></i></div>
+    <div class="lbl">School Form Reports</div>
+  </a>
+  {% endif %}
+  {% if perms.analytics.monitor_student_activity_logs or user.is_superuser %}
+  <a class="stat-card" href="{% url 'analytics:activity_logs' %}">
+    <div class="val" style="color:var(--danger);"><i class="fa-solid fa-clock-rotate-left"></i></div>
+    <div class="lbl">Activity Logs</div>
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

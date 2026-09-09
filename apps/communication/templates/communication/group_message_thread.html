@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ classroom.subject.name }} - Messages{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ classroom.subject.name }} - {{ classroom.section.name }}</h1>
+    <p class="page-sub">Group conversation for this class.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'communication:messages' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Messages
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-comments"></i> {{ classroom.subject.name }} - {{ classroom.section.name }}</div>
+  </div>
+  <div class="card-body">
+    <div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;margin-bottom:18px;">
+      {% for m in messages %}
+      <div style="display:flex;justify-content:{% if m.sender_id == user.id %}flex-end{% else %}flex-start{% endif %};">
+        <div style="max-width:65%;padding:9px 14px;border-radius:14px;{% if m.sender_id == user.id %}background:#4F46E5;color:#fff;border-bottom-right-radius:2px;{% else %}background:#f1f5f9;border-bottom-left-radius:2px;{% endif %}">
+          {% if m.sender_id != user.id %}<div style="font-size:11px;font-weight:700;margin-bottom:3px;">{{ m.sender.email }}</div>{% endif %}
+          <div>{{ m.content|linebreaksbr }}</div>
+          {% if m.attachment %}<div style="margin-top:6px;"><a href="{{ m.attachment.url }}" style="color:inherit;text-decoration:underline;">Attachment</a></div>{% endif %}
+          <div style="font-size:10px;opacity:.75;margin-top:5px;text-align:right;">{{ m.sent_at|date:"M d, H:i" }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="empty-state">
+        <i class="fa-solid fa-comments"></i>
+        <p>No messages in this conversation yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% for error in form.content.errors %}
+      <div class="help-text">{{ error }}</div>
+      {% endfor %}
+      <div class="form-group">
+        <label class="form-label" for="{{ form.content.id_for_label }}">Message</label>
+        {{ form.content }}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-paper-plane"></i> Send
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

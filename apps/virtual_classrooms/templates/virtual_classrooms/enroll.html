@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Enroll Students{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Enroll Students</h1>
+    <p class="page-sub">{{ classroom.subject.name }} &middot; {{ classroom.section }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' classroom.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Classroom
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-plus"></i> Select Students</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.students.errors %}
+      <div class="messages">
+        {% for error in form.students.errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="form-group">
+        <label class="form-label">Students</label>
+        {% if form.students.field.queryset %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>LRN</th>
+                <th>Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pk, choice in form.students.field.choices %}
+              <tr>
+                <td>
+                  <input type="checkbox" name="students" value="{{ pk }}" id="id_students_{{ forloop.counter0 }}">
+                </td>
+                <td></td>
+                <td>{{ choice }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="help-text">No students available to enroll.</div>
+        {% endif %}
+        {% if form.students.help_text %}
+        <div class="help-text">{{ form.students.help_text }}</div>
+        {% endif %}
+      </div>
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' classroom.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-user-plus"></i> Enroll Selected Students
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

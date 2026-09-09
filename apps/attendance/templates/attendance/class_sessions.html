@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Attendance Sessions - {{ classroom.subject.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ classroom.subject.name }}</h1>
+    <p class="page-sub">
+      {{ classroom.section }} &middot; {{ classroom.academic_year.label }} &middot;
+      {{ classroom.grading_period|default:"—" }}
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if perms.attendance.record_class_attendance %}
+    <a class="btn btn-primary" href="{% url 'attendance:record_attendance' classroom.pk %}">
+      <i class="fa-solid fa-plus"></i> Record Attendance
+    </a>
+    {% endif %}
+    <a class="btn btn-outline" href="{% url 'attendance:attendance_index' %}">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Sessions</div>
+  </div>
+  {% if session_rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Present</th>
+          <th>Late</th>
+          <th>Excused</th>
+          <th>Unexcused</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in session_rows %}
+        <tr>
+          <td>{{ row.session.session_date|date:"M d, Y" }}</td>
+          <td><span class="pill active">{{ row.stats.present_on_time }}</span></td>
+          <td><span class="pill late">{{ row.stats.present_late }}</span></td>
+          <td><span class="pill pending">{{ row.stats.absent_excused }}</span></td>
+          <td><span class="pill absent">{{ row.stats.absent_unexcused }}</span></td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'attendance:session_detail' row.session.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              {% if perms.attendance.record_class_attendance %}
+              <a class="btn btn-outline btn-sm" href="{% url 'attendance:record_attendance' classroom.pk %}?date={{ row.session.session_date|date:'Y-m-d' }}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-clipboard-user"></i>
+      <p>No attendance sessions have been recorded for this class.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

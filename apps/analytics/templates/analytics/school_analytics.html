@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}School-Wide Analytics{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">School-Wide Analytics</h1>
+    <p class="page-sub">Aggregate performance and attendance statistics across the selected academic year.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Academic Year</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="form-row" style="grid-template-columns:repeat(2,1fr);">
+      <div class="form-group">
+        <label class="form-label" for="id_year">Academic Year</label>
+        <select name="year" id="id_year" class="form-control">
+          <option value="">All Years</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Apply</button>
+          {% if selected_year %}
+          <a class="btn btn-outline" href="{% url 'analytics:school_analytics' %}">Clear</a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_students }}</div>
+    <div class="lbl">Total Students</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_sections }}</div>
+    <div class="lbl">Total Sections</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_submissions }}</div>
+    <div class="lbl">Submissions</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{% if attendance_rate %}{{ attendance_rate }}%{% else %}—{% endif %}</div>
+    <div class="lbl">Average Attendance</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Attendance Breakdown</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Present</th>
+          <th>Late</th>
+          <th>Excused Absent</th>
+          <th>Unexcused Absent</th>
+          <th>Total Records</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if attendance_stats.total %}
+        <tr>
+          <td><span class="pill active">{{ attendance_stats.present }}</span></td>
+          <td><span class="pill late">{{ attendance_stats.late }}</span></td>
+          <td><span class="pill pending">{{ attendance_stats.excused }}</span></td>
+          <td><span class="pill absent">{{ attendance_stats.unexcused }}</span></td>
+          <td>{{ attendance_stats.total }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-clipboard-user"></i><p>No attendance records found.</p></div></td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+  <div class="stat-card">
+    <div class="val">{% if avg_score %}{{ avg_score }}{% else %}—{% endif %}</div>
+    <div class="lbl">Average Assessment Score</div>
+  </div>
+</div>
+{% endblock %}

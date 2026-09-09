@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-sub">{{ vc.subject.name }} &middot; {{ vc.section.name }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'teaching:class_materials' vc.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Materials
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list"></i> Topic Details</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+          <div class="help-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for error in field.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'teaching:class_materials' vc.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-save"></i> Save Topic
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Submit Assessment{% endblock %}
+{% block extra_head %}
+<style>
+  .form-group ul { list-style:none; padding:0; margin:6px 0 0; }
+  .form-group ul li { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .form-group ul li label { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1.5px solid var(--card-border); border-radius:9px; cursor:pointer; transition:all .2s; width:100%; font-size:13px; }
+  .form-group ul li label:hover { border-color:var(--blue); background:var(--accent); }
+  .form-group ul li { list-style:none; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Submit: {{ assessment.title }}</h1>
+    <p class="page-sub">{{ assessment.subject.name }} &middot; Deadline {{ assessment.submission_deadline|date:"M d, Y H:i" }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back
+  </a>
+</div>
+
+{% if assessment.instructions %}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-circle-info"></i> Instructions</div>
+  </div>
+  <div class="card-body">{{ assessment.instructions|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+{% if assignments.count > 1 %}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> Classroom</div>
+  </div>
+  <div class="card-body">
+    <p class="help-text">Submitting for: <strong>{{ assignment.virtual_classroom }}</strong></p>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="messages">
+    {% for error in form.non_field_errors %}
+    <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for part, field in part_fields %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-question"></i>
+        Part {{ part.order }} &middot; {{ part.get_question_type_display }}
+      </div>
+      <span class="pill {% if part.is_objective %}active{% else %}pending{% endif %}">
+        {{ part.points }} pts
+      </span>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        {% if part.is_objective %}
+        <label class="form-label">{{ part.question_text }}</label>
+        {{ field }}
+        {% else %}
+        <label class="form-label" for="{{ field.id_for_label }}">{{ part.question_text }}</label>
+        <textarea class="form-control" name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="4">{{ field.value|default:"" }}</textarea>
+        {% endif %}
+        {% if field.help_text %}
+        <div class="help-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="form-actions" style="justify-content:flex-start;">
+    <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">Cancel</a>
+    <button type="submit" class="btn btn-primary">
+      <i class="fa-solid fa-paper-plane"></i> Submit Assessment
+    </button>
+  </div>
+</form>
+{% endblock %}

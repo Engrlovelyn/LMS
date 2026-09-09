@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Validate Section-Subject Coverage{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Validate Section-Subject Coverage</h1>
+    <p class="page-sub">Check that every subject for a section's grade level has a class assignment.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'academic:section_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Sections
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-magnifying-glass-chart"></i> Select Section</div>
+  </div>
+  <div class="card-body">
+    <form method="get" action="{% url 'academic:validate_coverage' %}" class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="section">Section</label>
+        <select name="section" id="section" class="form-control">
+          <option value="">Select a section...</option>
+          {% for s in sections %}
+          <option value="{{ s.pk }}" {% if section.pk == s.pk %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions" style="align-self:flex-end;">
+        <button type="submit" class="btn btn-primary btn-sm">Validate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if section %}
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_subjects }}</div>
+    <div class="lbl">Subjects for Grade {{ section.grade_level }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ missing_count }}</div>
+    <div class="lbl">Missing Assignments</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">
+      {% if complete %}
+      <span class="pill active">Complete</span>
+      {% else %}
+      <span class="pill archived">Incomplete</span>
+      {% endif %}
+    </div>
+    <div class="lbl">Coverage Status</div>
+  </div>
+</div>
+
+{% if coverage %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list-check"></i> Subject Coverage for {{ section }}</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Type</th>
+          <th>Grading Period</th>
+          <th>Class Assignment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in coverage %}
+        <tr>
+          <td>{{ item.subject.name }}</td>
+          <td>{{ item.subject.get_subject_type_display }}</td>
+          <td>{{ item.subject.grading_period|default:"—" }}</td>
+          <td>
+            {% if item.has_assignment %}
+            <span class="pill active">Assigned</span>
+            {% else %}
+            <span class="pill archived">Missing</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-book-open"></i>
+      <p>No active subjects defined for Grade {{ section.grade_level }} in {{ section.academic_year.label }}.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

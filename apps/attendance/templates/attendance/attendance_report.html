@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Attendance Report{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attendance Report</h1>
+    <p class="page-sub">Per-student attendance summary by academic year, section, or class.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Report Filters</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="form-row" style="grid-template-columns:repeat(3,1fr);">
+      <div class="form-group">
+        <label class="form-label" for="id_year">Academic Year</label>
+        <select name="academic_year" id="id_year" class="form-control">
+          <option value="">All Years</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if y.pk in selected_years %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="id_section">Section</label>
+        <select name="section" id="id_section" class="form-control">
+          <option value="">All Sections</option>
+          {% for sec in sections %}
+          <option value="{{ sec.pk }}" {% if sec.pk in selected_sections %}selected{% endif %}>{{ sec }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="id_vc">Virtual Classroom</label>
+        <select name="vc" id="id_vc" class="form-control">
+          <option value="">All Classes</option>
+          {% for vc in vcs %}
+          <option value="{{ vc.pk }}" {% if vc.pk|stringformat:'s' == request.GET.vc %}selected{% endif %}>
+            {{ vc.subject.name }} - {{ vc.section }} ({{ vc.academic_year.label }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1;">
+        <div class="form-actions" style="justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-magnifying-glass"></i> Generate Report
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if report_rows %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chart-simple"></i> Student Summary</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Student</th>
+          <th>Present</th>
+          <th>Late</th>
+          <th>Excused</th>
+          <th>Unexcused</th>
+          <th>Total</th>
+          <th>% Present</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in report_rows %}
+        <tr>
+          <td>{{ r.student.lrn }}</td>
+          <td>{{ r.student.last_name }}, {{ r.student.first_name }}</td>
+          <td><span class="pill active">{{ r.present }}</span></td>
+          <td><span class="pill late">{{ r.late }}</span></td>
+          <td><span class="pill pending">{{ r.excused }}</span></td>
+          <td><span class="pill absent">{{ r.unexcused }}</span></td>
+          <td>{{ r.total }}</td>
+          <td>
+            {% if r.total %}
+            <span class="pill active">{{ r.pct }}%</span>
+            {% else %}<span class="pill archived">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chart-simple"></i>
+      <p>Select filters above to generate the attendance report.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Add Student{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Add Student</h1>
+    <p class="page-sub">{{ classroom.subject.name }} &middot; {{ classroom.section }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' classroom.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Classroom
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-plus"></i> Add a Single Student</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="form-group">
+        <label class="form-label" for="{{ form.student.id_for_label }}">Student</label>
+        {{ form.student }}
+        {% for error in form.student.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' classroom.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-user-plus"></i> Add Student
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

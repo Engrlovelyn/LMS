@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Assessments{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Assessments</h1>
+    <p class="page-sub">Manage and view assessments.</p>
+  </div>
+  {% if perms.assessments.create_assessment_custom %}
+  <a class="btn btn-primary" href="{% url 'assessments:assessment_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Assessment
+  </a>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-body">
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+      <div class="form-group" style="margin-bottom:0; flex:1; min-width:180px;">
+        <label class="form-label">Search</label>
+        <input type="text" name="q" class="form-control" placeholder="Search title or subject..." value="{{ q }}">
+      </div>
+      <div class="form-group" style="margin-bottom:0; min-width:140px;">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-control">
+          <option value="">All</option>
+          <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
+          <option value="archived" {% if status_filter == "archived" %}selected{% endif %}>Archived</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0; min-width:180px;">
+        <label class="form-label">Subject</label>
+        <select name="subject" class="form-control">
+          <option value="">All</option>
+          {% for s in subjects %}
+          <option value="{{ s.pk }}" {% if subject_filter == s.pk|stringformat:"d" %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-filter"></i> Filter</button>
+    </form>
+  </div>
+</div>
+
+{% if assessments %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-check"></i> Assessments</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Subject</th>
+          <th>Type</th>
+          <th>Deadline</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assessments %}
+        <tr>
+          <td><strong>{{ a.title }}</strong></td>
+          <td>{{ a.subject.name }}</td>
+          <td>{{ a.get_assessment_type_display }}</td>
+          <td>{{ a.submission_deadline|date:"M d, Y H:i" }}</td>
+          <td><span class="pill {{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_detail' a.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              {% if perms.assessments.update_assessment_custom %}
+              <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_update' a.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-clipboard-check"></i>
+      <p>No assessments found.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Attendance Trends{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attendance Trends</h1>
+    <p class="page-sub">Summary of attendance statuses over the selected academic year.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-filter"></i> Academic Year</div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="form-row" style="grid-template-columns:repeat(2,1fr);">
+      <div class="form-group">
+        <label class="form-label" for="id_year">Academic Year</label>
+        <select name="year" id="id_year" class="form-control">
+          <option value="">All Years</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Apply</button>
+          {% if selected_year %}
+          <a class="btn btn-outline" href="{% url 'analytics:attendance_trends' %}">Clear</a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ stats.present }}</div>
+    <div class="lbl">Present On Time</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ stats.late }}</div>
+    <div class="lbl">Present Late</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ stats.excused }}</div>
+    <div class="lbl">Absent - Excused</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ stats.unexcused }}</div>
+    <div class="lbl">Absent - Unexcused</div>
+  </div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+  <div class="stat-card">
+    <div class="val">{{ stats.total }}</div>
+    <div class="lbl">Total Records</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{% if attendance_rate %}{{ attendance_rate }}%{% else %}—{% endif %}</div>
+    <div class="lbl">Attendance Rate</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chart-column"></i> Attendance Distribution</div>
+  </div>
+  <div class="card-body">
+    <canvas id="attendanceChart" height="100"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+(function () {
+  var ctx = document.getElementById("attendanceChart");
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Present On Time", "Present Late", "Absent Excused", "Absent Unexcused"],
+      datasets: [{
+        label: "Attendance Records",
+        data: [{{ stats.present }}, {{ stats.late }}, {{ stats.excused }}, {{ stats.unexcused }}],
+        backgroundColor: ["#dcfce7", "#fef3c7", "#dbeafe", "#fee2e2"],
+        borderColor: ["#16a34a", "#d97706", "#1e40af", "#dc2626"],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+})();
+</script>
+{% endblock %}

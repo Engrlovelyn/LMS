@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Subjects{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Subjects</h1>
+    <p class="page-sub">Manage academic subjects.</p>
+  </div>
+  {% if perms.academic_structure.add_subject_custom %}
+  <a class="btn btn-primary" href="{% url 'academic:subject_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Subject
+  </a>
+  {% endif %}
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_subjects }}</div>
+    <div class="lbl">Active Subjects</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ archived_subjects }}</div>
+    <div class="lbl">Archived Subjects</div>
+  </div>
+</div>
+
+{% if subjects %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-book-open"></i> Subjects</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Grade Level</th>
+          <th>Type</th>
+          <th>Grading Period</th>
+          <th>Academic Year</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in subjects %}
+        <tr>
+          <td>{{ sub.name }}</td>
+          <td>Grade {{ sub.grade_level }}</td>
+          <td>{{ sub.get_subject_type_display }}</td>
+          <td>{{ sub.grading_period|default:"—" }}</td>
+          <td>{{ sub.academic_year.label }}</td>
+          <td>
+            <span class="pill {{ sub.status|lower }}">
+              {% if sub.status == "ACTIVE" %}Active{% else %}Archived{% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              {% if perms.academic_structure.update_subject_custom %}
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:subject_update' sub.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+              {% if perms.academic_structure.archive_subject_custom and sub.status == "ACTIVE" %}
+              <form method="post" action="{% url 'academic:subject_archive' sub.pk %}" onsubmit="return confirm('Archive this subject?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-box-archive"></i> Archive
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-book-open"></i>
+      <p>No subjects have been created yet.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

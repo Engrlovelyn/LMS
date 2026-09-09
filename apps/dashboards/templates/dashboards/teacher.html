@@ -1,0 +1,218 @@
+﻿{% extends "base.html" %}
+{% block title %}Teacher Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Teacher Dashboard</h1>
+    <p class="page-sub">Welcome back — manage your classes, grading, attendance, and announcements.</p>
+  </div>
+  <div class="form-actions">
+    <a class="btn btn-primary" href="{% url 'teaching:resource_add' %}">
+      <i class="fa-solid fa-folder-open"></i> Add Material
+    </a>
+    <a class="btn btn-outline" href="{% url 'communication:class_announcement_add' %}">
+      <i class="fa-solid fa-bullhorn"></i> Post Announcement
+    </a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <i class="fa-solid fa-chalkboard-user"></i>
+    <div>
+      <div class="stat-value">{{ my_class_count }}</div>
+      <div class="stat-label">My Virtual Classrooms</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <i class="fa-solid fa-clipboard-list"></i>
+    <div>
+      <div class="stat-value">{{ needs_grading_count }}</div>
+      <div class="stat-label">Needs Grading</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <i class="fa-solid fa-clipboard-user"></i>
+    <div>
+      <div class="stat-value">{{ today_sessions|length }}</div>
+      <div class="stat-label">Sessions Today</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <i class="fa-solid fa-bullhorn"></i>
+    <div>
+      <div class="stat-value">{{ recent_announcements|length }}</div>
+      <div class="stat-label">Recent Announcements</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> My Virtual Classrooms</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'teaching:resource_add' %}">
+      <i class="fa-solid fa-plus"></i> Add Material
+    </a>
+  </div>
+  {% if class_items %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Academic Year</th>
+          <th>Students</th>
+          <th>Topics</th>
+          <th>Resources</th>
+          <th>Assessments</th>
+          <th>Pending Grading</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in class_items %}
+        <tr>
+          <td>{{ item.vc.subject.name }}</td>
+          <td>{{ item.vc.section.name }}</td>
+          <td>{{ item.vc.academic_year.label }}</td>
+          <td>{{ item.students_count }}</td>
+          <td>{{ item.topics_count }}</td>
+          <td>{{ item.resources_count }}</td>
+          <td>{{ item.assessments_count }}</td>
+          <td><span class="pill">{{ item.pending_grading }}</span></td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'teaching:class_materials' item.vc.pk %}">
+                <i class="fa-solid fa-folder-open"></i> Materials
+              </a>
+              <a class="btn btn-outline btn-sm" href="{% url 'teaching:topic_list' item.vc.pk %}">
+                <i class="fa-solid fa-list"></i> Topics
+              </a>
+              <a class="btn btn-outline btn-sm" href="{% url 'attendance:class_sessions' item.vc.pk %}">
+                <i class="fa-solid fa-clipboard-user"></i> Attendance
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-chalkboard-user"></i>
+      <p>No virtual classrooms have been assigned to you yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-list"></i> Needs Grading</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'assessments:list' %}">
+      <i class="fa-solid fa-clipboard-check"></i> Open Assessments
+    </a>
+  </div>
+  {% if needs_grading %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Student</th><th>Assessment</th><th>Submitted</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for sub in needs_grading %}
+        <tr>
+          <td>{{ sub.student.last_name }}, {{ sub.student.first_name }}</td>
+          <td>{{ sub.assessment_assignment.assessment.title }}</td>
+          <td>{{ sub.submitted_at|date:"M d, Y H:i" }}</td>
+          <td>
+            <a class="btn btn-outline btn-sm" href="{% url 'assessments:grade_submission' sub.assessment_assignment.assessment.pk sub.pk %}">
+              <i class="fa-solid fa-pen-to-square"></i> Grade
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-clipboard-check"></i>
+      <p>Nothing is waiting to be graded.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-user"></i> Today's Sessions</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'attendance:attendance_report' %}">
+      <i class="fa-solid fa-chart-column"></i> View Attendance Report
+    </a>
+  </div>
+  {% if today_sessions %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Date</th><th>Subject</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for session in today_sessions %}
+        <tr>
+          <td>{{ session.session_date|date:"M d, Y" }}</td>
+          <td>{{ session.virtual_classroom.subject.name }}</td>
+          <td>
+            <a class="btn btn-outline btn-sm" href="{% url 'attendance:class_sessions' session.virtual_classroom.pk %}">
+              <i class="fa-solid fa-eye"></i> View
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-calendar-day"></i>
+      <p>No attendance sessions scheduled for today.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-bullhorn"></i> Recent Class Announcements</div>
+    <a class="btn btn-outline btn-sm" href="{% url 'communication:announcements' %}">
+      <i class="fa-solid fa-list"></i> View All
+    </a>
+  </div>
+  {% if recent_announcements %}
+  <div class="card-body">
+    {% for ann in recent_announcements %}
+    <div class="announce-item">
+      <div class="title">{{ ann.virtual_classroom.subject.name }}</div>
+      <div class="body">{{ ann.content }}</div>
+      <div class="meta">
+        <span>{{ ann.posted_at|date:"M d, Y H:i" }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-bullhorn"></i>
+      <p>No class announcements have been posted yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}{{ classroom.subject.name }} - {{ classroom.section.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ classroom.subject.name }}</h1>
+    <p class="page-sub">{{ classroom.section }} &middot; {{ classroom.academic_year.label }}</p>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-outline" href="{% url 'classrooms:classroom_list' %}">
+      <i class="fa-solid fa-arrow-left"></i> Back to List
+    </a>
+    {% if is_teacher %}
+      <a class="btn btn-primary" href="{% url 'teaching:class_materials' classroom.pk %}">
+        <i class="fa-solid fa-book-open"></i> TLA
+      </a>
+      <a class="btn btn-outline" href="{% url 'attendance:record_attendance' classroom.pk %}">
+        <i class="fa-solid fa-calendar-check"></i> Take Attendance
+      </a>
+      <a class="btn btn-outline" href="{% url 'communication:class_announcement_add' %}">
+        <i class="fa-solid fa-bullhorn"></i> Announce
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="classroom-header">
+  <h2>{{ classroom.subject.name }}</h2>
+  <p>{{ classroom.section }} &middot; {{ classroom.subject }} &middot; {{ classroom.academic_year.label }}</p>
+  <div class="classroom-meta-chips">
+    <span class="classroom-meta-chip"><i class="fa-solid fa-users"></i> {{ students_count }} Students</span>
+    <span class="classroom-meta-chip"><i class="fa-solid fa-circle" style="color:#4ade80;font-size:8px;"></i> {{ classroom.get_status_display }}</span>
+    <span class="classroom-meta-chip"><i class="fa-solid fa-user"></i> {{ classroom.teacher.get_full_name|default:classroom.teacher.email }}</span>
+  </div>
+</div>
+
+<div class="classroom-tabs">
+  <button class="tab-btn active" data-tab="students" onclick="vcTab('students',this)"><i class="fa-solid fa-users"></i> Students</button>
+  <button class="tab-btn" data-tab="tla" onclick="vcTab('tla',this)"><i class="fa-solid fa-book-open"></i> TLA</button>
+  <button class="tab-btn" data-tab="assessment" onclick="vcTab('assessment',this)"><i class="fa-solid fa-file-pen"></i> Assessment</button>
+  <button class="tab-btn" data-tab="submissions" onclick="vcTab('submissions',this)"><i class="fa-solid fa-file-export"></i> Submissions</button>
+  <button class="tab-btn" data-tab="attendance" onclick="vcTab('attendance',this)"><i class="fa-solid fa-calendar-check"></i> Attendance</button>
+  <button class="tab-btn" data-tab="announcements" onclick="vcTab('announcements',this)"><i class="fa-solid fa-bullhorn"></i> Announcements</button>
+  <button class="tab-btn" data-tab="messages" onclick="vcTab('messages',this)"><i class="fa-solid fa-comments"></i> Messages</button>
+  <button class="tab-btn" data-tab="performance" onclick="vcTab('performance',this)"><i class="fa-solid fa-chart-line"></i> Performance</button>
+</div>
+
+<!-- STUDENTS TAB -->
+<div class="tab-pane active" id="tab-students">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-users" style="color:var(--blue)"></i> Student Roster</div>
+      {% if perms.virtual_classrooms.enroll_students_to_vc %}
+        <a class="btn btn-primary btn-sm" href="{% url 'classrooms:classroom_enroll' classroom.pk %}"><i class="fa-solid fa-user-plus"></i> Enroll Students</a>
+      {% elif perms.virtual_classrooms.add_student_to_class %}
+        <a class="btn btn-primary btn-sm" href="{% url 'classrooms:classroom_add_student' classroom.pk %}"><i class="fa-solid fa-user-plus"></i> Add Student</a>
+      {% endif %}
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>LRN</th><th>Name</th><th>Status</th>{% if perms.virtual_classrooms.archive_student_from_class %}<th>Actions</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for e in enrollments %}
+          <tr>
+            <td>{{ e.student.lrn }}</td>
+            <td>{{ e.student.last_name }}, {{ e.student.first_name }} {{ e.student.middle_initial }}</td>
+            <td><span class="pill active">Active</span></td>
+            {% if perms.virtual_classrooms.archive_student_from_class %}
+            <td>
+              <form method="post" action="{% url 'classrooms:classroom_remove_student' classroom.pk e.pk %}" onsubmit="return confirm('Remove this student from the classroom?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-user-minus"></i> Remove</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="{% if perms.virtual_classrooms.archive_student_from_class %}4{% else %}3{% endif %}">
+            <div class="empty-state"><i class="fa-solid fa-users"></i><p>No students enrolled yet.</p></div>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if perms.virtual_classrooms.archive_virtual_classroom and classroom.status == "active" %}
+  <div class="card" style="margin-top:18px;">
+    <div class="card-header"><div class="card-title"><i class="fa-solid fa-box-archive"></i> Danger Zone</div></div>
+    <div class="card-body">
+      <form method="post" action="{% url 'classrooms:classroom_archive' classroom.pk %}" onsubmit="return confirm('Archive this classroom?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-box-archive"></i> Archive Classroom</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- TLA TAB -->
+<div class="tab-pane" id="tab-tla">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-book-open" style="color:var(--blue)"></i> Teaching &amp; Learning Activities</div>
+      {% if is_teacher %}
+      <div class="row-actions">
+        <a class="btn btn-primary btn-sm" href="{% url 'teaching:topic_add' classroom.pk %}"><i class="fa-solid fa-folder-plus"></i> Add Topic</a>
+        <a class="btn btn-outline btn-sm" href="{% url 'teaching:resource_attach' classroom.pk %}"><i class="fa-solid fa-file-arrow-up"></i> Link Resource</a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% for tr in topic_rows %}
+      <div class="topic-accordion-item">
+        <div class="topic-accordion-header" onclick="this.nextElementSibling.classList.toggle('open');">
+          <i class="fa-solid fa-folder" style="color:var(--blue);"></i>
+          <div class="topic-accordion-title">{{ tr.topic.name }}</div>
+          <div style="font-size:11px;color:var(--text-muted);">{% if tr.topic.is_supplementary %}(Supplementary){% endif %}</div>
+          <i class="fa-solid fa-chevron-down" style="color:var(--text-muted);font-size:11px;"></i>
+        </div>
+        <div class="topic-accordion-body">
+          {% if tr.placements %}
+          <div class="material-list">
+            {% for p in tr.placements %}
+            <div class="material-item">
+              <div class="material-icon {{ p.resource.resource_type }}">
+                <i class="fa-solid {% if p.resource.resource_type == 'pdf' %}fa-file-pdf{% elif p.resource.resource_type == 'video' %}fa-film{% elif p.resource.resource_type == 'audio' %}fa-headphones{% elif p.resource.resource_type == 'image' %}fa-image{% elif p.resource.resource_type == 'presentation' %}fa-file-powerpoint{% elif p.resource.resource_type == 'link' %}fa-link{% else %}fa-file{% endif %}"></i>
+              </div>
+              <div style="flex:1;">
+                <div class="material-name">{{ p.resource.title }}</div>
+                <div class="material-meta">{{ p.resource.get_resource_type_display }}{% if p.resource.external_link %} &middot; <a href="{{ p.resource.external_link }}" target="_blank" style="color:var(--blue);">{{ p.resource.external_link|truncatechars:40 }}</a>{% endif %}</div>
+              </div>
+              {% if p.resource.file %}<a class="btn btn-outline btn-sm" href="{{ p.resource.file.url }}" download><i class="fa-solid fa-download"></i></a>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state" style="padding:16px;"><i class="fa-solid fa-folder-open"></i><p>No materials in this topic yet.</p></div>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="empty-state"><i class="fa-solid fa-book-open"></i><p>No topics yet.</p><p style="font-size:12px;color:var(--text-muted);">Topics are pre-populated from the subject outline.</p></div>
+      {% endfor %}
+      <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">{{ materials_count }} materials across {{ topics_count }} topic(s)</p>
+    </div>
+  </div>
+</div>
+
+<!-- ASSESSMENT TAB -->
+<div class="tab-pane" id="tab-assessment">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--blue)"></i> Assessments</div>
+      {% if perms.assessments.create_assessment_custom %}
+        <a class="btn btn-primary btn-sm" href="{% url 'assessments:assessment_add' %}"><i class="fa-solid fa-plus"></i> Create Assessment</a>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        <div style="background:var(--accent);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--navy);">{{ assessments_count }}</div><div style="font-size:11px;color:var(--text-muted);">Assessments</div></div>
+        <div style="background:#dcfce7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#16a34a;">{{ open_assessments_count|default:assessments_count }}</div><div style="font-size:11px;color:#166534;">Assigned to this class</div></div>
+        <div style="background:var(--gray-100);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--gray-600);">{{ students_count }}</div><div style="font-size:11px;color:var(--text-muted);">Students</div></div>
+        <div style="background:#fef3c7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#d97706;">{{ pending_grading_count|default:"0" }}</div><div style="font-size:11px;color:#92400e;">Need grading</div></div>
+      </div>
+      {% for ar in assessment_rows %}
+      <div class="assessment-item">
+        {% if ar.assessment.assessment_type == 'term_exam' or ar.assessment.assessment_type == 'summative_test' %}
+          <span class="assess-badge exam">Exam</span>
+        {% elif ar.assessment.assessment_type == 'product_performance' %}
+          <span class="assess-badge act">Performance</span>
+        {% else %}
+          <span class="assess-badge sum">Written</span>
+        {% endif %}
+        <div style="flex:1;min-width:0;">
+          <div class="assess-title">{{ ar.assessment.title }}</div>
+          <div class="assess-meta"><i class="fa-regular fa-clock"></i> {{ ar.submitted }}/{{ ar.total }} submitted &middot; Closes {{ ar.assessment.submission_deadline|date:"M d, Y g:i A" }}</div>
+        </div>
+        <span class="assess-status {% if ar.assessment.submission_deadline < now %}closed{% else %}open{% endif %}">{% if ar.assessment.submission_deadline < now %}Closed{% else %}Open{% endif %}</span>
+        <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_detail' ar.assessment.pk %}"><i class="fa-solid fa-eye"></i> View</a>
+        {% if perms.assessments.monitor_student_submissions %}
+        <a class="btn btn-outline btn-sm" href="{% url 'assessments:submissions_monitor' ar.assessment.pk %}"><i class="fa-solid fa-chart-bar"></i> Submissions</a>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="empty-state"><i class="fa-solid fa-file-pen"></i><p>No assessments assigned to this class yet.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- SUBMISSIONS TAB -->
+<div class="tab-pane" id="tab-submissions">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-file-export" style="color:var(--blue)"></i> Submissions</div>
+    </div>
+    <div class="card-body">
+      {% if assessment_rows %}
+        {% for ar in assessment_rows %}
+        <div style="margin-bottom:18px;">
+          <div class="card-title" style="font-size:13px;"><i class="fa-solid fa-file-export" style="color:var(--blue)"></i> {{ ar.assessment.title }}
+            <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">&nbsp;{{ ar.submitted }}/{{ ar.total }} submitted</span></div>
+          {% if ar.submissions %}
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Student</th><th>Submitted</th><th>Lateness</th><th>Grade</th>{% if perms.assessments.monitor_student_submissions %}<th>Review</th>{% endif %}</tr></thead>
+              <tbody>
+                {% for s in ar.submissions %}
+                <tr>
+                  <td>{{ s.student.last_name }}, {{ s.student.first_name }}</td>
+                  <td>{{ s.submitted_at|date:"M d, Y g:i A" }}</td>
+                  <td>{% if s.is_late %}<span style="color:var(--warning);font-weight:600;">Late</span>{% else %}<span style="color:var(--success);font-weight:600;">On time</span>{% endif %}</td>
+                  <td>{% if s.total_score is not None %}{{ s.total_score }}{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}</td>
+                  {% if perms.assessments.monitor_student_submissions %}
+                  <td><a class="btn btn-outline btn-sm" href="{% url 'assessments:submissions_monitor' ar.assessment.pk %}"><i class="fa-solid fa-eye"></i> Review</a></td>
+                  {% endif %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-file-export"></i><p>No submissions yet.</p></div></td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="material-list">
+            <div class="material-item"><i class="fa-solid fa-inbox" style="color:var(--text-muted);"></i><div class="material-meta">No submissions yet for this assessment.</div></div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state"><i class="fa-solid fa-file-export"></i><p>No assessments assigned, so there are no submissions to show.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE TAB -->
+<div class="tab-pane" id="tab-attendance">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-calendar-check" style="color:var(--blue)"></i> Attendance Records</div>
+      {% if perms.attendance.record_class_attendance %}
+        <a class="btn btn-primary btn-sm" href="{% url 'attendance:record_attendance' classroom.pk %}"><i class="fa-solid fa-plus"></i> Take Attendance</a>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% if session_rows %}
+        {% for sr in session_rows %}
+        <div class="session-row">
+          <div><strong>{{ sr.session.session_date|date:"D, M d Y" }}</strong></div>
+          <div style="display:flex;gap:12px;align-items:center;">
+            <span><span class="att-pill present">{{ sr.stats.present }}</span> Present</span>
+            <span><span class="att-pill late">{{ sr.stats.late }}</span> Late</span>
+            <span><span class="att-pill excused">{{ sr.stats.excused }}</span> Excused</span>
+            <span><span class="att-pill absent">{{ sr.stats.absent }}</span> Absent</span>
+            <a class="btn btn-outline btn-sm" href="{% url 'attendance:session_detail' sr.session.pk %}"><i class="fa-solid fa-eye"></i> View</a>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state"><i class="fa-solid fa-calendar-check"></i><p>No attendance sessions recorded yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ANNOUNCEMENTS TAB -->
+<div class="tab-pane" id="tab-announcements">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-bullhorn" style="color:var(--blue)"></i> Announcements</div>
+      {% if perms.communication.post_class_announcement %}
+        <a class="btn btn-primary btn-sm" href="{% url 'communication:class_announcement_add' %}"><i class="fa-solid fa-plus"></i> Post</a>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% for a in announcements %}
+      <div class="announce-item" style="border-left-color:var(--blue);">
+        <div class="body">{{ a.content }}</div>
+        <div class="meta"><span><i class="fa-regular fa-calendar"></i> Posted {{ a.posted_at|date:"M d, Y g:i A" }} by {{ a.posted_by.get_full_name|default:a.posted_by.email }}</span></div>
+      </div>
+      {% empty %}
+      <div class="empty-state"><i class="fa-solid fa-bullhorn"></i><p>No announcements yet.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- MESSAGES TAB -->
+<div class="tab-pane" id="tab-messages">
+  <div class="card">
+    <div class="card-header"><div class="card-title"><i class="fa-solid fa-comments" style="color:var(--blue)"></i> Class Messages</div>
+      {% if perms.communication.send_group_messaging %}<a class="btn btn-outline btn-sm" href="{% url 'communication:group_message_thread' classroom.pk %}"><i class="fa-solid fa-comments"></i> Open Thread</a>{% endif %}
+    </div>
+    <div class="card-body">
+      {% if group_messages %}
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {% for m in group_messages %}
+        <div class="msg {% if m.sender_id == request.user.id %}sent{% else %}received{% endif %}">
+          <div class="msg-bubble">{{ m.content }}</div>
+          <div class="msg-time">{{ m.sender.get_full_name|default:m.sender.email }} &middot; {{ m.sent_at|date:"M d g:i A" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fa-solid fa-comments"></i><p>No class messages yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- PERFORMANCE TAB -->
+<div class="tab-pane" id="tab-performance">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--blue)"></i> Student Performance</div>
+    </div>
+    <div class="card-body">
+      {% if student_rows %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Student</th><th>Assessments</th><th>Average Score</th><th>Attendance Rate</th></tr></thead>
+          <tbody>
+            {% for sr in student_rows %}
+            <tr>
+              <td>{{ sr.student.last_name }}, {{ sr.student.first_name }}</td>
+              <td>{{ sr.assessments }}</td>
+              <td>
+                <div class="perf-row" style="border:none;padding:2px 0;">
+                  <div class="perf-bar-wrap"><div class="perf-bar" style="width:{% widthratio sr.avg_pct 100 100 %}%;{% if sr.avg_pct < 50 %}background:var(--danger){% elif sr.avg_pct < 75 %}background:var(--warning){% endif %}"></div></div>
+                  <div class="perf-score">{% if sr.avg_pct %}{{ sr.avg_pct }}%{% else %}—{% endif %}</div>
+                </div>
+              </td>
+              <td>
+                <div class="perf-row" style="border:none;padding:2px 0;">
+                  <div class="perf-bar-wrap"><div class="perf-bar" style="width:{% widthratio sr.att_pct 100 100 %}%;"></div></div>
+                  <div class="perf-score">{% if sr.att_pct %}{{ sr.att_pct }}%{% else %}—{% endif %}</div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-chart-line"></i><p>No students found.</p></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fa-solid fa-chart-line"></i><p>No students enrolled yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function vcTab(name, btn){
+  document.querySelectorAll('#tab-'+name + ', .tab-pane').forEach(function(){});
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  var pane = document.getElementById('tab-'+name);
+  if(pane) pane.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+</script>
+{% endblock %}

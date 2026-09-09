@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Role Access Review - {{ review.academic_year }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Role Access Review - {{ review.academic_year }}</h1>
+    <p class="page-sub">Review details and completion state.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'governance:review_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to List
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-scale-balanced"></i> Review Summary</div>
+    {% if is_completed %}
+    <span class="pill active">Completed</span>
+    {% else %}
+    <span class="pill pending">Pending</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <div class="form-row">
+      <div class="form-group">
+        <span class="form-label">Academic Year</span>
+        <div>{{ review.academic_year }}</div>
+      </div>
+      <div class="form-group">
+        <span class="form-label">Conducted By</span>
+        <div>{{ review.conducted_by }}</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Completed At</span>
+      <div>
+        {% if review.completed_at %}
+        {{ review.completed_at|date:"M d, Y H:i" }}
+        {% else %}
+        Not yet completed
+        {% endif %}
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Notes</span>
+      <div>
+        {% if review.notes %}
+        {{ review.notes|linebreaks }}
+        {% else %}
+        No notes provided.
+        {% endif %}
+      </div>
+    </div>
+    {% if not is_completed %}
+    <div class="form-actions">
+      <form method="post" action="{% url 'governance:review_complete' review.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">
+          <i class="fa-solid fa-check"></i> Mark as Complete
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

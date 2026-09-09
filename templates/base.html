@@ -1,0 +1,122 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}TASS LMS{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+  <div class="brand-block">
+    <img src="{% static 'accounts/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI">
+    <img src="{% static 'accounts/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS">
+    <div class="brand-text">San Vicente Institute<span>TASS LMS</span></div>
+  </div>
+  <div class="header-main">
+    <div class="header-user">
+      <i class="fa-solid fa-user-check"></i>
+      <div>{{ user.email }}
+        <div class="role">{{ user_role|default:"" }}</div>
+      </div>
+    </div>
+    <a class="logout-link" href="{% url 'accounts:logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Main</div>
+      <a class="nav-item" href="{% url view_dashboard_url %}">
+        <i class="fa-solid fa-house"></i><span>Dashboard</span>
+      </a>
+    </div>
+
+    {% if perms.academic_structure.manage_academic_structure_template or perms.academic_structure.add_academic_year_custom or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Academic</div>
+      <a class="nav-item" href="{% url 'academic:years' %}"><i class="fa-solid fa-calendar-week"></i><span>Academic Years</span></a>
+      <a class="nav-item" href="{% url 'academic:sections' %}"><i class="fa-solid fa-users-between-lines"></i><span>Sections</span></a>
+      <a class="nav-item" href="{% url 'academic:subjects' %}"><i class="fa-solid fa-book-open"></i><span>Subjects</span></a>
+      <a class="nav-item" href="{% url 'academic:enrollments' %}"><i class="fa-solid fa-user-graduate"></i><span>Enrollments</span></a>
+    </div>
+    {% endif %}
+
+    {% if perms.virtual_classrooms.view_virtual_classroom or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Classes</div>
+      <a class="nav-item" href="{% url 'classrooms:classroom_list' %}"><i class="fa-solid fa-chalkboard-user"></i><span>Virtual Classrooms</span></a>
+      {% if perms.virtual_classrooms.enroll_students_to_vc or user.is_superuser %}
+      <a class="nav-item" href="{% url 'enrollment:dashboard' %}"><i class="fa-solid fa-user-graduate"></i><span>Class Enrollment</span></a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if perms.assessments.view_assessment_custom or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Learning</div>
+      <a class="nav-item" href="{% url 'assessments:list' %}"><i class="fa-solid fa-clipboard-check"></i><span>Assessments</span></a>
+      {% if perms.teaching_learning.access_subject_level_repository or user.is_superuser %}
+      <a class="nav-item" href="{% url 'teaching:repository_list' %}"><i class="fa-solid fa-folder-open"></i><span>Materials Repository</span></a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if perms.attendance.view_attendance_records or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Records</div>
+      <a class="nav-item" href="{% url 'attendance:attendance_index' %}"><i class="fa-solid fa-clipboard-user"></i><span>Attendance</span></a>
+    </div>
+    {% endif %}
+
+    {% if perms.communication.view_announcements_custom or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Communication</div>
+      <a class="nav-item" href="{% url 'communication:announcements' %}"><i class="fa-solid fa-bullhorn"></i><span>Announcements</span></a>
+      {% if perms.communication.send_private_message or perms.communication.send_group_messaging or user.is_superuser %}
+      <a class="nav-item" href="{% url 'communication:messages' %}"><i class="fa-solid fa-comments"></i><span>Messages</span></a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if perms.analytics.view_school_wide_analytics or perms.analytics.view_class_level_analytics or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Analytics</div>
+      <a class="nav-item" href="{% url 'analytics:analytics_index' %}"><i class="fa-solid fa-chart-column"></i><span>Analytics &amp; Reports</span></a>
+    </div>
+    {% endif %}
+
+    {% if perms.governance.conduct_annual_role_access_review or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Governance</div>
+      <a class="nav-item" href="{% url 'governance:reviews' %}"><i class="fa-solid fa-scale-balanced"></i><span>Role Access Reviews</span></a>
+    </div>
+    {% endif %}
+
+    {% if perms.system_settings.configure_system_settings or user.is_superuser %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">System</div>
+      <a class="nav-item" href="{% url 'settings:index' %}"><i class="fa-solid fa-gear"></i><span>System Settings</span></a>
+      <a class="nav-item" href="{% url 'settings:backups' %}"><i class="fa-solid fa-database"></i><span>Backups</span></a>
+    </div>
+    {% endif %}
+  </aside>
+
+  <main class="main">
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="message {{ message.tags }}"><i class="fa-solid fa-circle-info"></i>{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

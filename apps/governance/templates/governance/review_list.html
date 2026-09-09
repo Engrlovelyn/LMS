@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Role Access Reviews{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Role Access Reviews</h1>
+    <p class="page-sub">Review role and access assignments per academic year.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'governance:review_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Review
+  </a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_reviews }}</div>
+    <div class="lbl">Total Reviews</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ completed_this_year }}</div>
+    <div class="lbl">Completed This Year</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-scale-balanced"></i> Reviews</div>
+    <form method="get" class="form-row" style="grid-template-columns:auto;">
+      <select name="year" class="form-control" style="width:220px;" onchange="this.form.submit()">
+        <option value="">All Years</option>
+        {% for ay in academic_years %}
+        <option value="{{ ay.pk }}" {% if filtered_year and filtered_year.pk == ay.pk %}selected{% endif %}>
+          {{ ay.label }}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Academic Year</th>
+          <th>Conducted By</th>
+          <th>Completed At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for review in reviews %}
+        <tr>
+          <td>{{ review.academic_year }}</td>
+          <td>{{ review.conducted_by }}</td>
+          <td>{{ review.completed_at|date:"M d, Y H:i" }}</td>
+          <td>
+            {% if review.completed_at %}
+            <span class="pill active">Completed</span>
+            {% else %}
+            <span class="pill pending">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'governance:review_detail' review.pk %}">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+              {% if not review.completed_at %}
+              <form method="post" action="{% url 'governance:review_complete' review.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="fa-solid fa-check"></i> Complete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="fa-solid fa-scale-balanced"></i>
+              <p>No role access reviews found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

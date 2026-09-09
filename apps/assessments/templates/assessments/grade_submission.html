@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Grade Submission{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Grade: {{ assessment.title }}</h1>
+    <p class="page-sub">
+      {{ submission.student.last_name }}, {{ submission.student.first_name }} ({{ submission.student.lrn }})
+      &middot; {{ submission.assessment_assignment.virtual_classroom }}
+    </p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'assessments:submissions_monitor' assessment.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-file-lines"></i> Responses</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Question</th>
+          <th>Answer</th>
+          <th>Type</th>
+          <th>Max Score</th>
+          <th>Result</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for resp in responses %}
+        <tr>
+          <td>{{ resp.part.order }}</td>
+          <td>{{ resp.part.question_text }}</td>
+          <td>{{ resp.response_text|default:"—" }}</td>
+          <td>{{ resp.part.get_question_type_display }}</td>
+          <td>{{ resp.part.points }}</td>
+          <td>
+            {% if resp.part.is_objective %}
+              {% if resp.is_correct %}
+              <span class="pill active">Correct</span>
+              {% else %}
+              <span class="pill locked">Incorrect</span>
+              {% endif %}
+            {% else %}
+            <span class="pill pending">Subjective</span>
+            {% endif %}
+          </td>
+          <td>{{ resp.score|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-pen-to-square"></i> Manual Grading</div>
+  </div>
+  <div class="card-body">
+    {% if not subjective_responses %}
+    <div class="empty-state">
+      <i class="fa-solid fa-circle-check"></i>
+      <p>No subjective parts to grade. Objective responses were auto-scored.</p>
+    </div>
+    {% endif %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% for resp, field in score_fields %}
+      <div class="card" style="border:1px dashed var(--card-border); margin-bottom:14px;">
+        <div class="card-body">
+          <div class="form-group" style="margin-bottom:6px;">
+            <div class="form-label">{{ resp.part.question_text }}</div>
+            <div>{{ resp.response_text|default:"No answer provided" }}</div>
+          </div>
+          <div class="form-group" style="margin-bottom:6px;">
+            <label class="form-label" for="{{ field.id_for_label }}">Score (max {{ resp.part.points }})</label>
+            {{ field }}
+            {% for error in field.errors %}
+            <div class="help-text">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.teacher_remarks.id_for_label }}">Overall Remarks</label>
+        {{ form.teacher_remarks }}
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'assessments:submissions_monitor' assessment.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i> Save Grade
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

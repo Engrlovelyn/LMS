@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Announcements{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Announcements</h1>
+    <p class="page-sub">School-wide and class announcements.</p>
+  </div>
+  <div class="row-actions">
+    {% if can_post_school %}
+    <a class="btn btn-primary" href="{% url 'communication:school_announcement_add' %}">
+      <i class="fa-solid fa-plus"></i> School Announcement
+    </a>
+    {% endif %}
+    {% if can_post_class %}
+    <a class="btn btn-primary" href="{% url 'communication:class_announcement_add' %}">
+      <i class="fa-solid fa-plus"></i> Class Announcement
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row-actions" style="margin-bottom:18px;">
+  <a class="btn btn-sm {% if active_type %}btn-outline{% else %}btn-primary{% endif %}" href="{% url 'communication:announcements' %}">All</a>
+  <a class="btn btn-sm {% if active_type == 'school' %}btn-primary{% else %}btn-outline{% endif %}" href="{% url 'communication:announcements' %}?type=school">School</a>
+  <a class="btn btn-sm {% if active_type == 'class' %}btn-primary{% else %}btn-outline{% endif %}" href="{% url 'communication:announcements' %}?type=class">Class</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-school"></i> School Announcements</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Posted By</th>
+          <th>Posted At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in school_announcements %}
+        <tr>
+          <td>{{ a.title }}</td>
+          <td>{{ a.posted_by.email }}</td>
+          <td>{{ a.posted_at|date:"M d, Y H:i" }}</td>
+          <td><span class="pill {{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>
+            <div class="row-actions">
+              {% if can_update_school %}
+              <a class="btn btn-outline btn-sm" href="{% url 'communication:school_announcement_update' a.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+              {% if can_archive_school and a.status == "active" %}
+              <form method="post" action="{% url 'communication:school_announcement_archive' a.pk %}" onsubmit="return confirm('Archive this announcement?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-box-archive"></i> Archive
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="fa-solid fa-school"></i>
+              <p>No school announcements.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard-user"></i> Class Announcements</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Content</th>
+          <th>Posted By</th>
+          <th>Posted At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in class_announcements %}
+        <tr>
+          <td>{{ a.virtual_classroom.subject.name }} - {{ a.virtual_classroom.section.name }}</td>
+          <td>{{ a.content|truncatechars:80 }}</td>
+          <td>{{ a.posted_by.email }}</td>
+          <td>{{ a.posted_at|date:"M d, Y H:i" }}</td>
+          <td><span class="pill {{ a.status }}">{{ a.get_status_display }}</span></td>
+          <td>
+            <div class="row-actions">
+              {% if can_update_class %}
+              <a class="btn btn-outline btn-sm" href="{% url 'communication:class_announcement_update' a.pk %}">
+                <i class="fa-solid fa-pen"></i> Edit
+              </a>
+              {% endif %}
+              {% if can_archive_class and a.status == "active" %}
+              <form method="post" action="{% url 'communication:class_announcement_archive' a.pk %}" onsubmit="return confirm('Archive this announcement?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-box-archive"></i> Archive
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="fa-solid fa-chalkboard-user"></i>
+              <p>No class announcements for your classes.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
