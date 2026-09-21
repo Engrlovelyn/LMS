@@ -245,6 +245,190 @@ def teacher_context(user):
         .order_by("-posted_at")[:5]
     )
 
+    # ── Real-data payload for the new front-end dashboard ─────────────────
+    def _iso(v):
+        return v.isoformat() if v else None
+
+    def _dt(v):
+        return timezone.localtime(v).strftime("%Y-%m-%d %H:%M") if v else None
+
+    teacher_display = user.get_full_name() or user.email
+
+    palette = ["#1e5faf", "#16a34a", "#e11d48", "#7c3aed", "#d97706", "#0891b2", "#4f46e5"]
+    classes_json = []
+    for idx, item in enumerate(class_items):
+        vc = item["vc"]
+        subj = vc.subject
+        sect = vc.section
+        grade = getattr(subj, "grade_level", None)
+        grade_label = ("Grade " + str(grade)) if grade else (subj.name or "Class")
+        classes_json.append(
+            {
+                "id": vc.id,
+                "title": (grade_label + " – " + subj.name) if grade else subj.name,
+                "section": sect.name if sect else "",
+                "teacher": teacher_display,
+                "students": item["students_count"],
+                "grade": grade_label,
+                "subject": subj.name,
+                "year": getattr(vc.academic_year, "label", None) or "",
+                "status": "Active",
+                "color": vc.theme_color or palette[idx % len(palette)],
+            }
+        )
+
+    assignments = AssessmentAssignment.objects.filter(
+        virtual_classroom__in=my_classes, assessment__status=STATUS_ACTIVE
+    ).select_related(
+        "assessment",
+        "assessment__subject",
+        "virtual_classroom",
+        "virtual_classroom__section",
+        "virtual_classroom__subject",
+    ).order_by("-assigned_at")[:40]
+
+    assessments_json = []
+    for aa in assignments:
+        a = aa.assessment
+        lifecycle = (
+            "completed"
+            if a.lifecycle_stage == Assessment.STAGE_COMPLETED
+            else ("grading" if a.lifecycle_stage == Assessment.STAGE_GRADING else None)
+        )
+        vc = aa.virtual_classroom
+        assessments_json.append(
+            {
+                "id": a.id,
+                "title": a.title,
+                "type": a.get_assessment_method_display() or a.assessment_method,
+                "openDate": _dt(a.available_at),
+                "deadline": _dt(a.submission_deadline),
+                "archived": a.status == STATUS_ARCHIVED,
+                "subject": (a.subject.name if a.subject else (vc.subject.name if vc.subject else "")),
+                "cls": vc.section.name if vc.section else "",
+                "lifecycle": lifecycle,
+                "hasManual": False,
+            }
+        )
+
+    announcements_json = [
+        {
+            "id": ca.id,
+            "title": (ca.content[:90] if ca.content else "Class announcement"),
+            "body": ca.content or "",
+            "createdAt": _iso(ca.posted_at),
+        }
+        for ca in class_announcements
+    ]
+
+    notifications_json = []
+    ng_count = needs_grading.count()
+    if ng_count:
+        latest = needs_grading.first()
+        notifications_json.append(
+            {
+                "id": "ng-" + str(ng_count),
+                "type": "manual_grade",
+                "msg": "{} submission(s) awaiting your grading".format(ng_count),
+                "createdAt": _iso(latest.submitted_at if latest else timezone.now()),
+                "unread": True,
+            }
+        )
+    now_dt = timezone.now()
+    for aa in assignments:
+        dl = aa.assessment.submission_deadline
+        if dl and 0 <= (dl - now_dt).total_seconds() <= 3 * 86400:
+            notifications_json.append(
+                {
+                    "id": "dl-" + str(aa.id),
+                    "type": "deadline_nearing",
+                    "msg": '"{}" closes on {}'.format(
+                        aa.assessment.title,
+                        timezone.localtime(dl).strftime("%b %d, %I:%M %p"),
+                    ),
+                    "createdAt": _iso(dl),
+                    "unread": True,
+                }
+            )
+    notifications_json = notifications_json[:8]
+
+    recent_subs = Submission.objects.filter(
+        assessment_assignment__virtual_classroom__in=my_classes
+    ).select_related(
+        "student",
+        "student__user",
+        "assessment_assignment__assessment",
+        "assessment_assignment__virtual_classroom",
+        "assessment_assignment__virtual_classroom__section",
+        "assessment_assignment__virtual_classroom__subject",
+    ).order_by("-submitted_at")[:24]
+
+    activity_json = []
+    for sub in recent_subs:
+        prof = sub.student
+        sname = " ".join(filter(None, [prof.first_name, prof.last_name])) or (
+            prof.user.get_full_name() if prof.user else prof.lrn or "Student"
+        )
+        vc = sub.assessment_assignment.virtual_classroom
+        cls_label = vc.section.name if vc.section else (vc.subject.name if vc.subject else "Class")
+        activity_json.append(
+            {
+                "icon": "fa-file-arrow-up",
+                "bg": "#dbeafe",
+                "color": "#2563eb",
+                "text": '{} submitted "{}" ({} · {})'.format(
+                    sname,
+                    sub.assessment_assignment.assessment.title,
+                    vc.subject.name if vc.subject else "",
+                    cls_label,
+                ),
+                "time": _iso(sub.submitted_at),
+            }
+        )
+    for ca in class_announcements:
+        activity_json.append(
+            {
+                "icon": "fa-bullhorn",
+                "bg": "#dcfce7",
+                "color": "#16a34a",
+                "text": "Posted announcement in {}".format(
+                    ca.virtual_classroom.subject.name if ca.virtual_classroom.subject else "your class"
+                ),
+                "time": _iso(ca.posted_at),
+            }
+        )
+    activity_json.sort(key=lambda x: x["time"] or "", reverse=True)
+    activity_json = activity_json[:16]
+
+    ts_total = today_sessions.count()
+    ts_present = AttendanceRecord.objects.filter(
+        session__virtual_classroom__in=my_classes,
+        session__session_date=today,
+        status__in=PRESENT_STATUSES,
+    ).count()
+    attendance_rate = round(ts_present * 100 / ts_total) if ts_total else None
+
+    open_assessments = sum(
+        1
+        for aa in assignments
+        if aa.assessment.lifecycle_stage != Assessment.STAGE_COMPLETED
+        and (aa.assessment.submission_deadline is None or aa.assessment.submission_deadline > now_dt)
+    )
+
+    dashboard_json = {
+        "classes": classes_json,
+        "stats": {
+            "classes": len(class_items),
+            "students": sum(i["students_count"] for i in class_items),
+            "openAssessments": open_assessments,
+            "attendance": attendance_rate,
+        },
+        "assessments": assessments_json,
+        "notifications": notifications_json,
+        "announcements": announcements_json,
+        "activity": activity_json,
+    }
+
     return {
         "class_items": class_items,
         "my_class_count": len(class_items),
@@ -252,8 +436,9 @@ def teacher_context(user):
         "open_assessments": sum(i["assessments_count"] for i in class_items),
         "today_sessions": today_sessions,
         "needs_grading": needs_grading,
-        "needs_grading_count": needs_grading.count(),
+        "needs_grading_count": ng_count,
         "recent_announcements": class_announcements,
+        "dashboard_json": dashboard_json,
     }
 
 

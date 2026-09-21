@@ -1853,8 +1853,8 @@ function downloadExcelTemplate(){
   const h=['LRN','Last Name','First Name','Grade Level','Section','Subject Applied']; 
   const d=['136100100021','Santos','Maria','Grade 7','Section A','Science']; 
   let html='<table><tr>'+h.map(c=>'<th>'+c+'</th>').join('')+'</tr><tr>'+d.map(c=>'<td>'+c+'</td>').join('')+'</tr></table>'; 
-  const xls='\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'+html+'<form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
-</body></html>'; 
+  const xls='\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'+html+'<form id="logoutForm" method="post" action="{% url "accounts:logout" %}" style="display:none;">{% csrf_token %}</form>' +
+'</body></html>'; 
   const a=document.createElement('a'); 
   a.href=URL.createObjectURL(new Blob([xls],{type:'application/vnd.ms-excel'})); 
   a.download='Subject_Applied_Import_Template.xls';document.body.appendChild(a);a.click();a.remove(); 

@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -631,6 +631,9 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 </style>
 </head>
 <body>
+
+{{ dashboard_json|json_script:"teacher-backend-data" }}
+<script>window.__TASS_REAL__ = true;</script>
 
 <!-- HEADER -->
 <header>
@@ -2720,6 +2723,7 @@ function seedTeacherSampleData(){
     card.onclick=()=>openClassroom(c.title,c.section,c.color);
     return card;
   };
+  window.buildClassCard = buildClassCard;
   const classes=[
     {title:'Grade 7 – Science',section:'Section A',teacher:'Ms. Lovelyn C. Malanot',color:'#1e5faf',students:35,grade:'Grade 7',subject:'Science',year:'2025-2026',status:'Active'},
     {title:'Grade 9 – Science',section:'Section C',teacher:'Ms. Lovelyn C. Malanot',color:'#16a34a',students:32,grade:'Grade 9',subject:'Science',year:'2025-2026',status:'Active'},
@@ -3247,7 +3251,7 @@ function showMessageAttachment(input){
   window.teacherFRState=state;
 
   // Seed sample assessments for the demo (first run only).
-  if(!state.assessments.length){
+  if(!window.__TASS_REAL__ && !state.assessments.length){
     const dayOffset=(n,h)=>{const d=new Date();d.setDate(d.getDate()+n);d.setHours(h||8,0,0,0);return String(d.toISOString().slice(0,16));};
     state.assessments.push(
       {title:'Q1 Quiz: Cell Structure & Function',type:'Quiz',openDate:dayOffset(-30,8),deadline:dayOffset(-23,23),instructions:'Answer all multiple-choice items. No retakes.',parts:[{id:'p1',label:'Part I · Multiple Choice',mode:'objective',qtype:'mc'}],questions:[{partId:'p1',type:'mc',mode:'objective',text:'Which organelle is known as the powerhouse of the cell?',points:20,options:['Nucleus','Ribosome','Mitochondria','Golgi Body'],correct:2},{partId:'p1',type:'mc',mode:'objective',text:'Which of the following is the basic unit of life?',points:10,options:['Tissue','Cell','Organ','Organ System'],correct:1}],hasManual:false,lifecycle:'completed',avg:88,passRate:92,high:100,low:60,createdAt:new Date().toISOString(),notifications:[]},
@@ -3259,7 +3263,7 @@ function showMessageAttachment(input){
     );
     persist();
   }
-  if(!state.notifications.length){
+  if(!window.__TASS_REAL__ && !state.notifications.length){
     state.notifications.push(
       {id:'welcome_1',type:'assessment_completed',title:'Welcome',msg:'Welcome back, Ms. Malanot! You have 3 assessments open or nearing their deadline.',createdAt:new Date(Date.now()-3600000*5).toISOString(),unread:true},
       {id:'welcome_2',type:'deadline_nearing',title:'Deadline nearing',msg:'"Seatwork: Cell Organelle Identification" closes soon. Unsubmitted students will be auto-reminded.',createdAt:new Date(Date.now()-3600000*2).toISOString(),unread:true}
@@ -3535,8 +3539,8 @@ function showMessageAttachment(input){
 
   // Export helpers for reports and submissions.
   function downloadCSV(filename,rows){const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);}
-  function printModal(id){const el=document.getElementById(id);if(!el)return;const box=el.querySelector('.modal-box')||el;try{const w=window.open('','_blank');if(!w)throw 0;w.document.write('<html><head><title>TASS LMS Report</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #999;padding:4px;font-size:11px;}</style></head><body>'+box.innerHTML+'<form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
-</body></html>');w.document.close();w.focus();setTimeout(()=>{try{w.print()}catch(e){}},300);showToast('Preparing print view...','success');}catch(err){window.print();}}
+  function printModal(id){const el=document.getElementById(id);if(!el)return;const box=el.querySelector('.modal-box')||el;try{const w=window.open('','_blank');if(!w)throw 0;w.document.write('<html><head><title>TASS LMS Report</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #999;padding:4px;font-size:11px;}</style></head><body>'+box.innerHTML+'<form id="logoutForm" method="post" action="{% url "accounts:logout" %}" style="display:none;">{% csrf_token %}</form>' +
+'</body></html>');w.document.close();w.focus();setTimeout(()=>{try{w.print()}catch(e){}},300);showToast('Preparing print view...','success');}catch(err){window.print();}}
   function attendanceStats(r){const att=makeAttendance(r.absent||[],r.late||[],r.excuses||{});const p=att.filter(a=>a[2]==='Present').length,ab=att.filter(a=>a[2]==='Absent').length,l=att.filter(a=>a[2]==='Late').length;return{p:p,a:ab,l:l,total:att.length,pct:att.length?Math.round(p/att.length*100):0};}
   function lrnOf(r){return (String(r.sub||'').match(/LRN\s+([\d-]+)/i)||[])[1]||'';}
   function assessPct(a){if(!a)return null;const m=String(a[1]).match(/([\d.]+)\s*\/\s*([\d.]+)/);if(!m)return null;const v=parseFloat(m[1]),t=parseFloat(m[2]);return t?Math.round(v/t*100):null;}
@@ -3760,9 +3764,7 @@ function showMessageAttachment(input){
   // Restrict analytics to assigned classes, not school-wide.
   const af=document.getElementById('analyticsClassFilter'); if(af){af.querySelector('option[value="all"]')?.remove(); if(af.options.length)af.selectedIndex=0;}
 
-  // Activity Log is an administrative monitoring function in the requirements matrix; hide the teacher-facing navigation/view.
-  document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim().includes('Activity Log'))n.remove();});
-  const al=document.getElementById('view-activitylog');if(al)al.remove();
+  // Activity Log teacher view is kept visible in the teacher dashboard.
 
   // Wire report buttons / score modal after DOM is ready.
   patchClassCards(); assessmentManageButtons(); addManualGradeButton(); restoreTopics(); renderTeacherAssessments(); updateAssessmentStats();
@@ -4448,6 +4450,82 @@ window.tassValidate=tassValidate;
 window.tassDecimal=tassDecimal;
 window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(el.value,10)||0);if(max!=null)v=Math.min(v,max);if(min!=null)v=Math.max(v,min);el.value=v;return v;};
 })();
+</script>
+<script>
+// Backend bridge: replace demo/mock data in the new teacher dashboard with real data.
+function teacherBackendBridge() {
+  var el = document.getElementById('teacher-backend-data');
+  if (!el) return;
+  var D;
+  try { D = JSON.parse(el.textContent); } catch (e) { return; }
+  if (!D || !D.classes || !D.classes.length) return;
+
+  ['classGrid', 'classGridDash'].forEach(function (id) {
+    var grid = document.getElementById(id);
+    if (!grid || typeof window.buildClassCard !== 'function') return;
+    grid.innerHTML = '';
+    (D.classes || []).forEach(function (c) { grid.appendChild(window.buildClassCard(c)); });
+  });
+
+  var st = window.teacherFRState;
+  if (st) {
+    if (D.assessments && D.assessments.length) st.assessments = D.assessments;
+    if (D.notifications) st.notifications = D.notifications;
+    if (D.announcements) st.announcements = D.announcements;
+  }
+
+  var setStat = function (idx, v) { var eEl = document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child(' + idx + ') .stat-val'); if (eEl) eEl.textContent = v; };
+  if (D.stats) {
+    setStat(1, D.stats.classes);
+    setStat(2, D.stats.students);
+    if (D.stats.openAssessments != null) setStat(3, D.stats.openAssessments);
+    if (D.stats.attendance != null) setStat(4, D.stats.attendance + '%');
+  }
+
+  var feedOK = false;
+  if (typeof activityFeed !== 'undefined' && Array.isArray(activityFeed)) {
+    feedOK = true;
+    var real = (D.activity || []).map(function (a) {
+      if (/^\d{4}-\d{2}/.test(a.time || '') && typeof timeAgoText === 'function') a.time = timeAgoText(a.time);
+      return a;
+    });
+    if (real.length) {
+      activityFeed.length = 0;
+      real.slice(0, 16).forEach(function (a) { activityFeed.push(a); });
+      if (typeof renderRecentActivity === 'function') { try { renderRecentActivity(); } catch (e) {} }
+    }
+  }
+
+  window.renderActivityLog = function () {
+    var view = document.getElementById('view-activitylog');
+    if (!view) return;
+    var box = view.querySelector('.log-list');
+    if (!box) return;
+    var list = (typeof activityFeed !== 'undefined' && Array.isArray(activityFeed)) ? activityFeed : [];
+    var items = list.slice(0, 16);
+    if (!items.length) {
+      if (box.dataset.real === '1') return;
+      box.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';
+      return;
+    }
+    box.dataset.real = '1';
+    box.innerHTML = items.map(function (a) {
+      return '<div class="log-item"><div class="notif-dot-icon" style="background:' + (a.bg || '#dbeafe') + ';color:' + (a.color || '#2563eb') + ';"><i class="fa-solid ' + (a.icon || 'fa-flag') + '"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">' + (a.text || '') + '</div><div class="notif-time">' + (a.time || '') + '</div></div></div>';
+    }).join('');
+  };
+
+  if (typeof renderActivityLog === 'function') { try { renderActivityLog(); } catch (e) {} }
+
+  ['renderDashboardUpcoming', 'renderNotifs', 'renderAnnouncements', 'renderTeacherAssessments', 'updateAssessmentStats'].forEach(function (fn) {
+    try { if (typeof window[fn] === 'function') window[fn](); } catch (e) {}
+  });
+  void feedOK;
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', teacherBackendBridge);
+} else {
+  teacherBackendBridge();
+}
 </script>
 </body>
 </html> 
