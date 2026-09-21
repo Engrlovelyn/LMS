@@ -2914,7 +2914,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 
 
 /* BUTTONS */
-.btn { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; }
+.btn { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; text-decoration:none; color:var(--navy); }
 
 .btn-primary { background:var(--navy); color:#fff; }
 
@@ -6005,3 +6005,44 @@ input:checked + .toggle-slider::before{ transform:translateX(18px); }
    RESPONSIVE ENHANCEMENTS — mobile-friendly dashboards
    ════════════════════════════════════════════════════════ */
 .sidebar-overlay{position:fixed;inset:0;background:rgba(10,36,99,0.45);backdrop-filter:blur(2px);z-index:149;display:none}
+
+/* ════════════════════════════════════════════════════════
+   PART 3 - GLOBAL NEW-DESIGN DEFAULTS (buttons / links / forms)
+   Loaded last so every control inherits the canonical dashboard look —
+   no more browser-default ("old") styling on anchors, buttons or inputs.
+   ════════════════════════════════════════════════════════ */
+
+/* Anchors: kill the default underline+blue so every link/button uses the
+   new navy design language (class rules still win via specificity). */
+a { color: var(--navy); text-decoration: none; }
+a[href]:hover { color: var(--blue); }
+
+/* Form controls inherit the dashboard typeface & palette by default */
+button, input, select, textarea {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-primary);
+}
+
+/* Remove old browser chrome on any bare button (default gray/raised look) */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+button:focus, button:focus-visible { outline: none; }
+
+/* Checkboxes/radios match the brand accent instead of the old blue */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--blue); }
+
+/* Consistent focus ring (matches dashboard focus-visible rule) */
+a:focus-visible, .btn:focus-visible, button:focus-visible,
+.form-control:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Keep variant tints that predate the .btn base color (cascade safety) */
+.btn-danger-outline { color: var(--danger); border: 1.5px solid var(--card-border); }
+.btn-danger-outline:hover { border-color: var(--danger); color: var(--danger); }
+.btn-logout-panel { color: var(--gray-600); }
