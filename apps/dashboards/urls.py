@@ -3,11 +3,23 @@ from . import views
 
 app_name = "dashboards"
 
-urlpatterns = [
-    path("ict/", views.system_admin, name="ict"),
-    path("registrar/", views.registrar, name="registrar"),
-    path("teacher/", views.teacher, name="teacher"),
-    path("principal/", views.principal, name="principal"),
-    path("academic-coordinator/", views.academic_coordinator, name="academic_coordinator"),
-    path("student/", views.student, name="student"),
+# Each dashboard also accepts a trailing route (e.g. /teacher/classroom/assessment/)
+# so deep links and refreshes re-load the same SPA; the client router restores the
+# exact view/tab from the pathname.
+_DASHBOARDS = [
+    ("ict/", views.system_admin, "ict"),
+    ("registrar/", views.registrar, "registrar"),
+    ("teacher/", views.teacher, "teacher"),
+    ("principal/", views.principal, "principal"),
+    ("academic-coordinator/", views.academic_coordinator, "academic_coordinator"),
+    ("student/", views.student, "student"),
+    ("tass-administrator/", views.tass_administrator, "tass_administrator"),
+    ("quality-audit/", views.quality_audit, "quality_audit"),
 ]
+
+urlpatterns = [
+    path("", views.hub, name="hub"),
+]
+for prefix, view, name in _DASHBOARDS:
+    urlpatterns.append(path(prefix, view, name=name))
+    urlpatterns.append(path(prefix + "<path:route>/", view, name=name + "_route"))

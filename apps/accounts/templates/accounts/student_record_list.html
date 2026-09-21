@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Student Records{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Student Records</h1>
+    <p class="page-sub">Manage student profiles, accounts and enrollments.</p>
+  </div>
+  <div class="page-actions">
+    {% if perms.accounts.bulk_import_student_records %}
+    <a class="btn btn-outline" href="{% url 'accounts:student_records_import' %}">
+      <i class="fa-solid fa-file-csv"></i> Bulk Import
+    </a>
+    {% endif %}
+    {% if perms.accounts.generate_student_account %}
+    <a class="btn btn-outline" href="{% url 'accounts:student_record_generate' %}">
+      <i class="fa-solid fa-user-plus"></i> Generate
+    </a>
+    {% endif %}
+    {% if perms.accounts.create_student_profile_account %}
+    <a class="btn btn-primary" href="{% url 'accounts:student_record_add' %}">
+      <i class="fa-solid fa-plus"></i> Add Student
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_students }}</div>
+    <div class="lbl">Total Students</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_enrolled }}</div>
+    <div class="lbl">Currently Enrolled</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-graduate"></i> Student Records</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>LRN</th>
+          <th>Sex</th>
+          <th>Section</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr>
+          <td>{{ student.user.get_full_name|default:student }}</td>
+          <td>{{ student.lrn }}</td>
+          <td>{{ student.get_sex_display|default:"—" }}</td>
+          <td>{{ student.section_display|default:"—" }}</td>
+          <td>{{ student.user.email }}</td>
+          <td><span class="pill {{ student.user.status|lower }}">
+            {{ student.user.get_status_display }}
+          </span></td>
+          <td class="actions">
+            {% if perms.accounts.update_student_record %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:student_record_update' student.pk %}">
+              <i class="fa-solid fa-pen"></i> Update
+            </a>
+            {% endif %}
+            {% if perms.accounts.archive_student_record and student.user.status != 'archived' %}
+            <form method="post" action="{% url 'accounts:student_record_archive' student.pk %}" class="inline-form"
+              onsubmit="return confirm('Archive this student record? The user will lose access.')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger-outline btn-sm">
+                <i class="fa-solid fa-archive"></i> Archive
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-cell">No student records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

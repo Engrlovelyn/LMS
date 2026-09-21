@@ -25,12 +25,12 @@
   </div>
 </div>
 
-<div class="classroom-header">
+<div class="classroom-header" style="background:linear-gradient(135deg,{{ classroom.theme_color }},{{ classroom.theme_color }}cc){% if classroom.background_image %},url('{{ classroom.background_image.url }}'){% endif %};background-size:cover;background-position:center;">
   <h2>{{ classroom.subject.name }}</h2>
   <p>{{ classroom.section }} &middot; {{ classroom.subject }} &middot; {{ classroom.academic_year.label }}</p>
   <div class="classroom-meta-chips">
     <span class="classroom-meta-chip"><i class="fa-solid fa-users"></i> {{ students_count }} Students</span>
-    <span class="classroom-meta-chip"><i class="fa-solid fa-circle" style="color:#4ade80;font-size:8px;"></i> {{ classroom.get_status_display }}</span>
+    <span class="classroom-meta-chip"><i class="fa-solid fa-circle" style="color:var(--success);font-size:8px;"></i> {{ classroom.get_status_display }}</span>
     <span class="classroom-meta-chip"><i class="fa-solid fa-user"></i> {{ classroom.teacher.get_full_name|default:classroom.teacher.email }}</span>
   </div>
 </div>
@@ -51,11 +51,16 @@
   <div class="card">
     <div class="card-header">
       <div class="card-title"><i class="fa-solid fa-users" style="color:var(--blue)"></i> Student Roster</div>
+      <div class="page-actions">
+      {% if perms.accounts.bulk_import_students_to_vc %}
+        <a class="btn btn-outline btn-sm" href="{% url 'accounts:vc_students_import' classroom.pk %}"><i class="fa-solid fa-file-csv"></i> Import CSV</a>
+      {% endif %}
       {% if perms.virtual_classrooms.enroll_students_to_vc %}
         <a class="btn btn-primary btn-sm" href="{% url 'classrooms:classroom_enroll' classroom.pk %}"><i class="fa-solid fa-user-plus"></i> Enroll Students</a>
       {% elif perms.virtual_classrooms.add_student_to_class %}
         <a class="btn btn-primary btn-sm" href="{% url 'classrooms:classroom_add_student' classroom.pk %}"><i class="fa-solid fa-user-plus"></i> Add Student</a>
       {% endif %}
+      </div>
     </div>
     <div class="table-wrap">
       <table class="data-table">
@@ -157,11 +162,11 @@
       {% endif %}
     </div>
     <div class="card-body">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-        <div style="background:var(--accent);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--navy);">{{ assessments_count }}</div><div style="font-size:11px;color:var(--text-muted);">Assessments</div></div>
-        <div style="background:#dcfce7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#16a34a;">{{ open_assessments_count|default:assessments_count }}</div><div style="font-size:11px;color:#166534;">Assigned to this class</div></div>
-        <div style="background:var(--gray-100);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--gray-600);">{{ students_count }}</div><div style="font-size:11px;color:var(--text-muted);">Students</div></div>
-        <div style="background:#fef3c7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#d97706;">{{ pending_grading_count|default:"0" }}</div><div style="font-size:11px;color:#92400e;">Need grading</div></div>
+      <div class="stats-grid" style="margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-clipboard-list"></i></div><div class="stat-val">{{ assessments_count }}</div><div class="stat-label">Assessments</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="fa-solid fa-check-double"></i></div><div class="stat-val" style="color:#16a34a;">{{ open_assessments_count|default:assessments_count }}</div><div class="stat-label">Assigned to this class</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-val">{{ students_count }}</div><div class="stat-label">Students</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#fef3c7;color:#d97706;"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-val" style="color:#d97706;">{{ pending_grading_count|default:"0" }}</div><div class="stat-label">Need grading</div></div>
       </div>
       {% for ar in assessment_rows %}
       <div class="assessment-item">
@@ -316,6 +321,18 @@
   <div class="card">
     <div class="card-header">
       <div class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--blue)"></i> Student Performance</div>
+      <div style="display:flex; gap:8px;">
+        {% if perms.assessments.view_grade_book %}
+        <a class="btn btn-outline btn-sm" href="{% url 'assessments:grade_book' classroom.pk %}">
+          <i class="fa-solid fa-book"></i> Grade Book
+        </a>
+        {% endif %}
+        {% if perms.assessments.view_student_performance_tracking %}
+        <a class="btn btn-outline btn-sm" href="{% url 'assessments:performance_tracking' %}">
+          <i class="fa-solid fa-chart-line"></i> Overall Tracking
+        </a>
+        {% endif %}
+      </div>
     </div>
     <div class="card-body">
       {% if student_rows %}
@@ -358,7 +375,6 @@
 {% block extra_js %}
 <script>
 function vcTab(name, btn){
-  document.querySelectorAll('#tab-'+name + ', .tab-pane').forEach(function(){});
   document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
   var pane = document.getElementById('tab-'+name);

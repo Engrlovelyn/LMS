@@ -25,6 +25,7 @@ class AcademicYear(models.Model):
             )
         ]
         permissions = [
+            ("view_academic_year", "View/Retrieve Academic Year"),
             ("add_academic_year_custom", "Add Academic Year"),
             ("update_academic_year", "Update Academic Year"),
             ("archive_academic_year", "Archive Academic Year"),
@@ -102,6 +103,7 @@ class Section(models.Model):
             )
         ]
         permissions = [
+            ("view_section_custom", "View/Retrieve Section"),
             ("add_section_custom", "Add Section"),
             ("update_section_custom", "Update Section"),
             ("archive_section_custom", "Archive Section"),
@@ -109,6 +111,50 @@ class Section(models.Model):
 
     def __str__(self):
         return f"Grade {self.grade_level} - {self.name} ({self.academic_year.label})"
+
+
+class StudentEnrollment(models.Model):
+    STATUS_ENROLLED, STATUS_ARCHIVED = "ENROLLED", "ARCHIVED"
+    STATUS_CHOICES = [
+        (STATUS_ENROLLED, "Enrolled"),
+        (STATUS_ARCHIVED, "Archived"),
+    ]
+
+    student = models.ForeignKey(
+        "accounts.StudentProfile",
+        on_delete=models.PROTECT,
+        related_name="enrollments"
+    )
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.PROTECT,
+        related_name="student_enrollments"
+    )
+    section = models.ForeignKey(
+        Section,
+        on_delete=models.PROTECT,
+        related_name="student_enrollments"
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ENROLLED)
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "academic_year"],
+                condition=models.Q(status="ENROLLED"),
+                name="one_active_enrollment_per_student_year",
+            )
+        ]
+        permissions = [
+            ("create_student_enrollment_inline", "Create Student Enrollment"),
+            ("update_student_enrollment_inline", "Update Student Enrollment"),
+            ("archive_student_enrollment_inline", "Archive Student Enrollment"),
+        ]
+
+    def __str__(self):
+        return f"{self.student} - {self.section} ({self.academic_year.label})"
 
 
 class Subject(models.Model):
@@ -141,6 +187,7 @@ class Subject(models.Model):
             )
         ]
         permissions = [
+            ("view_subject_custom", "View/Retrieve Subject"),
             ("add_subject_custom", "Add Subject"),
             ("update_subject_custom", "Update Subject"),
             ("archive_subject_custom", "Archive Subject"),

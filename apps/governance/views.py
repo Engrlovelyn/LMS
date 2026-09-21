@@ -3,13 +3,15 @@ from django.utils import timezone
 from apps.academic_structure.models import AcademicYear
 from apps.accounts.decorators import perm_required
 from django.contrib import messages
+from django.contrib.auth.models import Group
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import RoleAccessReview
 from .forms import RoleAccessReviewForm
 
 
-@perm_required("governance.conduct_annual_role_access_review")
+@perm_required("governance.retrieve_role_access_review_records")
 def review_list(request):
     reviews = RoleAccessReview.objects.select_related("academic_year", "conducted_by").all()
 
@@ -23,7 +25,8 @@ def review_list(request):
     total_reviews = RoleAccessReview.objects.count()
     now = timezone.now()
     completed_this_year = RoleAccessReview.objects.filter(
-        completed_at__year=now.year
+        completed_at__year=now.year,
+        completed_at__isnull=False,
     ).count()
 
     context = {
@@ -61,12 +64,53 @@ def review_add(request):
 
 
 @perm_required("governance.conduct_annual_role_access_review")
+def review_update(request, pk):
+    review = get_object_or_404(
+        RoleAccessReview.objects.select_related("academic_year"),
+        pk=pk,
+    )
+    if request.method == "POST":
+        form = RoleAccessReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            new_year = form.cleaned_data["academic_year"]
+            if (
+                new_year != review.academic_year
+                and RoleAccessReview.objects.filter(academic_year=new_year)
+                .exclude(pk=review.pk)
+                .exists()
+            ):
+                messages.error(
+                    request,
+                    f"A review already exists for {new_year}. "
+                    "Only one review is allowed per academic year.",
+                )
+                return redirect("governance:review_detail", pk=review.pk)
+            form.save()
+            messages.success(request, "Review updated successfully.")
+            return redirect("governance:review_detail", pk=review.pk)
+    else:
+        form = RoleAccessReviewForm(instance=review)
+
+    return render(
+        request,
+        "governance/review_form.html",
+        {"form": form, "title": "Update Role Access Review", "review": review},
+    )
+
+
+@perm_required("governance.conduct_annual_role_access_review")
 def review_complete(request, pk):
     if request.method != "POST":
         return redirect("governance:review_detail", pk=pk)
 
     review = get_object_or_404(RoleAccessReview, pk=pk)
-    duplicate = RoleAccessReview.objects.filter(academic_year=review.academic_year).exclude(pk=review.pk).exists()
+    if review.is_completed:
+        messages.info(request, "This review is already completed.")
+        return redirect("governance:review_detail", pk=review.pk)
+
+    duplicate = RoleAccessReview.objects.filter(
+        academic_year=review.academic_year
+    ).exclude(pk=review.pk).exists()
     if duplicate:
         messages.error(
             request,
@@ -75,11 +119,28 @@ def review_complete(request, pk):
         )
         return redirect("governance:review_list")
 
+    review.completed_at = timezone.now()
+    # Capture the current role group snapshot as of completion.
+    review.role_snapshot = {
+        group.name: group.user_set.filter(is_active=True).count()
+        for group in Group.objects.all()
+    }
+    review.save(update_fields=["completed_at", "role_snapshot"])
     messages.success(request, "Review marked as completed.")
     return redirect("governance:review_detail", pk=review.pk)
 
 
 @perm_required("governance.conduct_annual_role_access_review")
+def review_delete(request, pk):
+    if request.method != "POST":
+        return redirect("governance:review_detail", pk=pk)
+    review = get_object_or_404(RoleAccessReview, pk=pk)
+    review.delete()
+    messages.success(request, "Review deleted.")
+    return redirect("governance:review_list")
+
+
+@perm_required("governance.retrieve_role_access_review_records")
 def review_detail(request, pk):
     review = get_object_or_404(
         RoleAccessReview.objects.select_related("academic_year", "conducted_by"),
@@ -87,6 +148,7 @@ def review_detail(request, pk):
     )
     context = {
         "review": review,
-        "is_completed": review.completed_at is not None,
+        "is_completed": review.is_completed,
+        "role_snapshot": review.role_snapshot or {},
     }
     return render(request, "governance/review_detail.html", context)

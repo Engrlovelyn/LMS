@@ -57,6 +57,35 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    def get_full_name(self):
+        for rel in ("employee_profile", "student_profile"):
+            try:
+                prof = getattr(self, rel)
+            except (EmployeeProfile.DoesNotExist, StudentProfile.DoesNotExist):
+                continue
+            if prof is not None and getattr(prof, "first_name", ""):
+                parts = [prof.first_name]
+                if getattr(prof, "middle_initial", ""):
+                    parts.append(prof.middle_initial.rstrip(".") + ".")
+                parts.append(prof.last_name or "")
+                name = " ".join(part for part in parts if part).strip()
+                if getattr(prof, "suffix", ""):
+                    name = f"{name} {prof.suffix}"
+                if name:
+                    return name
+        return self.email or ""
+
+    def get_initials(self):
+        name = self.get_full_name()
+        if not name:
+            return "U"
+        parts = [p.rstrip(".") for p in name.replace("@", " ").split() if p.rstrip(".")]
+        if not parts:
+            return "U"
+        if len(parts) == 1:
+            return parts[0][0].upper()
+        return (parts[0][0] + parts[-1][0]).upper()
+
     class Meta:
         permissions = [
             ("create_employee_account", "Create Employee Account"),
@@ -77,6 +106,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             ("log_in_user", "Log In User"),
             ("manage_active_sessions", "Manage Active Sessions"),
             ("view_role_based_dashboard", "View Role-Based Dashboard"),
+            ("role_based_access_control", "Role-Based Access Control"),
         ]
 
 
@@ -107,6 +137,8 @@ class Role(models.Model):
         PRINCIPAL = "principal", "Principal"
         ASSISTANT_PRINCIPAL = "assistant_principal", "Assistant Principal"
         STUDENT = "student", "Student"
+        TASS_ADMINISTRATOR = "tass_administrator", "TASS Administrator"
+        QUALITY_AUDIT = "quality_audit", "Quality Assurance"
 
     code = models.CharField(max_length=20, choices=Code.choices, unique=True)
 
@@ -153,6 +185,11 @@ class SuffixChoices(models.TextChoices):
     III = "III", "III"
     IV = "IV", "IV"
     V = "V", "V"
+
+
+class SexChoices(models.TextChoices):
+    MALE = "M", "Male"
+    FEMALE = "F", "Female"
 
 
 middle_initial_validator = RegexValidator(
@@ -218,11 +255,29 @@ class StudentProfile(models.Model):
     )
     suffix = models.CharField(max_length=5, choices=SuffixChoices.choices, blank=True)
     birthdate = models.DateField()
+    sex = models.CharField(max_length=1, choices=SexChoices.choices, blank=True)
+    contact_number = models.CharField(max_length=20, blank=True)
+    address = models.CharField(max_length=255, blank=True)
     guardian_name = models.CharField(max_length=100, blank=True)
     guardian_email = models.EmailField(blank=True)
+    guardian_contact_number = models.CharField(max_length=20, blank=True)
 
     def __str__(self):
         return f"{self.last_name}, {self.first_name} ({self.lrn})"
+
+    @property
+    def section_display(self):
+        """Return current enrolled section label (with grade level), or None."""
+        enrollment = (
+            self.enrollments.filter(status="ENROLLED")
+            .select_related("section__academic_year")
+            .order_by("-academic_year__start_date")
+            .first()
+        )
+        if enrollment and enrollment.section:
+            section = enrollment.section
+            return f"Grade {section.grade_level} - {section.name}"
+        return None
 
 
 # ----------------------------------------
@@ -232,6 +287,7 @@ class LoginSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sessions")
     device_info = models.CharField(max_length=255, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
+    session_key = models.CharField(max_length=40, blank=True, null=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_active_at = models.DateTimeField(auto_now=True)
     is_current = models.BooleanField(default=True)

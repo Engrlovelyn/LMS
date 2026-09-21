@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Grading Formula - {{ vc.subject.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Grading Formula</h1>
+    <p class="page-sub">
+      {{ vc.subject.name }} &middot; {{ vc.section.name }} &middot; {{ vc.academic_year.label }}
+      {% if vc.grading_period %}&middot; {{ vc.grading_period|default:"" }}{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' vc.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Classroom
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-scale-balanced"></i> Component Weights</div>
+    <span class="pill {% if formula %}active{% else %}pending{% endif %}">
+      {% if formula %}Configured{% else %}Not configured{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+    <p class="help-text">
+      Assign a weight (in %) to each assessment type taught in this classroom.
+      The weights of the included components must total exactly 100%.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% for field in form.visible_fields %}
+      <div class="form-group" style="max-width:420px;">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          {{ field }}
+          <span class="help-text" style="margin:0;">%</span>
+        </div>
+        {% for error in field.errors %}
+        <div class="help-text">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' vc.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-save"></i> Save Formula
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if formula and formula.components.exists %}
+<div class="card" style="margin-top:0;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list-check"></i> Current Components</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Component</th><th>Weight</th></tr>
+      </thead>
+      <tbody>
+        {% for c in formula.components.all %}
+        <tr>
+          <td>{{ c.get_component_type_display }}</td>
+          <td>{{ c.weight_percentage }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -6,6 +6,11 @@
     <h1 class="page-title">Attendance</h1>
     <p class="page-sub">Attendance sessions recorded across your classes.</p>
   </div>
+  {% if perms.attendance.generate_attendance_report %}
+  <a class="btn btn-outline" href="{% url 'attendance:attendance_report' %}">
+    <i class="fa-solid fa-file-lines"></i> Attendance Report
+  </a>
+  {% endif %}
 </div>
 
 <div class="card">

@@ -94,6 +94,9 @@ def classroom_add(request):
                 "virtual_classrooms/classroom_form.html",
                 {"form": form, "title": "Add Virtual Classroom"},
             )
+        from .services import populate_classroom_defaults
+
+        populate_classroom_defaults(classroom)
         messages.success(request, "Virtual classroom created successfully.")
         return redirect(reverse("classrooms:classroom_detail", args=[classroom.pk]))
     return render(

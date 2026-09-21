@@ -1,9 +1,12 @@
 from io import StringIO
+import os
 
+from django.conf import settings
 from django.contrib import messages
 from django.core import management
-from django.http import HttpResponseBadRequest
+from django.http import FileResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from apps.accounts.decorators import perm_required
 
@@ -23,6 +26,21 @@ from .models import (
 def _get_solo(manager):
     instance, _ = manager.get_or_create(pk=1)
     return instance
+
+
+def _backup_dir():
+    return os.path.abspath(os.path.join(settings.MEDIA_ROOT, "backups"))
+
+
+def _backup_abs_path(file_reference):
+    """Resolve a stored backup reference to an absolute path safely."""
+    backup_dir = _backup_dir()
+    path = os.path.abspath(os.path.join(settings.MEDIA_ROOT, file_reference))
+    if not (path == backup_dir or path.startswith(backup_dir + os.sep)):
+        raise ValueError("Backup reference points outside the backups directory.")
+    if not os.path.isfile(path):
+        return None
+    return path
 
 
 @perm_required("system_settings.configure_system_settings")
@@ -117,10 +135,20 @@ def backup_create(request):
     try:
         output = StringIO()
         management.call_command("dumpdata", stdout=output)
-        record.file_reference = f"backup_{record.created_at:%Y%m%d_%H%M%S}.json"
+        payload = output.getvalue()
+        if not payload.strip():
+            raise ValueError("dumpdata produced no output.")
+        backup_dir = _backup_dir()
+        os.makedirs(backup_dir, exist_ok=True)
+        stamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        fname = f"backup_{stamp}.json"
+        full_path = os.path.join(backup_dir, fname)
+        with open(full_path, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+        record.file_reference = os.path.join("backups", fname)
         record.status = BackupRecord.STATUS_COMPLETED
         record.save()
-        messages.success(request, "Database backup created successfully.")
+        messages.success(request, f"Database backup created ({fname}).")
     except Exception as exc:
         record.save()
         messages.error(request, f"Backup failed: {exc}")
@@ -134,13 +162,21 @@ def backup_restore(request, pk):
         return redirect("settings:backups")
 
     backup = get_object_or_404(BackupRecord, pk=pk)
+    if backup.status == BackupRecord.STATUS_RESTORED:
+        messages.error(request, "This backup has already been restored.")
+        return redirect("settings:backups")
     try:
-        if backup.status == BackupRecord.STATUS_RESTORED:
-            messages.error(request, "This backup has already been restored.")
-            return redirect("settings:backups")
+        path = _backup_abs_path(backup.file_reference)
+        if path is None:
+            raise ValueError("Backup file is missing from storage.")
+        output = StringIO()
+        management.call_command(
+            "loaddata", path, verbosity=0, stdout=output, stderr=output
+        )
         backup.status = BackupRecord.STATUS_RESTORED
-        backup.save()
-        messages.success(request, "Backup flagged as restored.")
+        backup.restored_at = timezone.now()
+        backup.save(update_fields=["status", "restored_at"])
+        messages.success(request, "Backup restored successfully.")
     except Exception as exc:
         messages.error(request, f"Restore failed: {exc}")
 
@@ -150,7 +186,14 @@ def backup_restore(request, pk):
 @perm_required("system_settings.backup_restore_database")
 def backup_download(request, pk):
     backup = get_object_or_404(BackupRecord, pk=pk)
-    if hasattr(backup, "file"):
-        from django.http import FileResponse
-        return FileResponse(backup.file.open("rb"), as_attachment=True, filename=backup.file.name)
-    return HttpResponseBadRequest("File storage is not available for this backup record.")
+    try:
+        path = _backup_abs_path(backup.file_reference)
+    except ValueError:
+        return HttpResponseBadRequest("Invalid backup file reference.")
+    if path is None:
+        return HttpResponseBadRequest("Backup file is missing from storage.")
+    return FileResponse(
+        open(path, "rb"),
+        as_attachment=True,
+        filename=os.path.basename(path),
+    )

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Grade Book - {{ vc.subject.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Grade Book</h1>
+    <p class="page-sub">
+      {{ vc.subject.name }} &middot; {{ vc.section.name }} &middot; {{ vc.academic_year.label }}
+      {% if vc.grading_period %}&middot; {{ vc.grading_period|default:"" }}{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' vc.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Classroom
+  </a>
+</div>
+
+{% if not formula %}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-body">
+    <p class="help-text" style="margin:0;">
+      No grading formula is configured for this classroom yet.
+      <a href="{% url 'assessments:grading_formula' vc.pk %}">Configure the formula</a> before computing grades.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% if formula %}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-calculator"></i> Compute Grades</div>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <p class="help-text">
+        Weighted average across all graded assessments in this classroom, using the
+        configured formula
+        {% for c in formula.components.all %}
+          ({{ c.get_component_type_display }} {{ c.weight_percentage }}%){% if not forloop.last %}, {% endif %}
+        {% endfor %}.
+      </p>
+      <div class="form-actions" style="justify-content:flex-start;">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-rotate"></i> Compute Grades
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-users"></i> Student Grades</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Student</th>
+          <th>Sex</th>
+          <th>Grade</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for enrollment, grade in rows %}
+        <tr>
+          <td>{{ enrollment.student.lrn }}</td>
+          <td>{{ enrollment.student.last_name }}, {{ enrollment.student.first_name }}</td>
+          <td>{{ enrollment.student.get_sex_display|default:"—" }}</td>
+          <td>
+            {% if grade %}
+              <strong>{{ grade.grade_value }}</strong>
+            {% else %}
+              <span class="pill pending">Not computed</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if grade %}
+              <span class="pill active">Computed</span>
+            {% else %}
+              <span class="pill pending">Awaiting</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-cell">No active students in this classroom.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

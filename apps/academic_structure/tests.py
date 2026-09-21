@@ -4,12 +4,14 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
 
-from .models import AcademicYear, Section, StudentEnrollment
+from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
+
+from .models import AcademicYear, Section, Subject
 
 User = get_user_model()
 
 
-class StudentEnrollmentTestCase(TestCase):
+class VirtualClassroomEnrollmentTestCase(TestCase):
     def setUp(self):
         self.year = AcademicYear.objects.create(
             label="2026-2027",
@@ -20,6 +22,19 @@ class StudentEnrollmentTestCase(TestCase):
             academic_year=self.year,
             name="Newton",
             grade_level=8,
+        )
+        self.subject = Subject.objects.create(
+            academic_year=self.year,
+            name="Science",
+            grade_level=8,
+        )
+        self.teacher = User.objects.create_user(email="teacher@test.ph", password="pass")
+        self.classroom = VirtualClassroom.objects.create(
+            academic_year=self.year,
+            section=self.section,
+            subject=self.subject,
+            teacher=self.teacher,
+            status=VirtualClassroom.STATUS_ACTIVE,
         )
         self.user = User.objects.create_user(email="student@test.ph", password="pass")
         from apps.accounts.models import StudentProfile
@@ -33,44 +48,39 @@ class StudentEnrollmentTestCase(TestCase):
         )
 
     def test_active_enrollment_created(self):
-        enrollment = StudentEnrollment.objects.create(
+        enrollment = VirtualClassroomEnrollment.objects.create(
+            virtual_classroom=self.classroom,
             student=self.student,
-            academic_year=self.year,
-            section=self.section,
         )
-        self.assertEqual(enrollment.status, StudentEnrollment.STATUS_ENROLLED)
+        self.assertEqual(enrollment.status, VirtualClassroomEnrollment.STATUS_ACTIVE)
 
     def test_duplicate_active_enrollment_rejected(self):
-        StudentEnrollment.objects.create(
+        VirtualClassroomEnrollment.objects.create(
+            virtual_classroom=self.classroom,
             student=self.student,
-            academic_year=self.year,
-            section=self.section,
         )
         with self.assertRaises(IntegrityError):
-            StudentEnrollment.objects.create(
+            VirtualClassroomEnrollment.objects.create(
+                virtual_classroom=self.classroom,
                 student=self.student,
-                academic_year=self.year,
-                section=self.section,
             )
 
-    def test_reenroll_after_archive_allowed(self):
-        first = StudentEnrollment.objects.create(
+    def test_reenroll_after_removal_allowed(self):
+        first = VirtualClassroomEnrollment.objects.create(
+            virtual_classroom=self.classroom,
             student=self.student,
-            academic_year=self.year,
-            section=self.section,
         )
-        first.status = StudentEnrollment.STATUS_ARCHIVED
+        first.status = VirtualClassroomEnrollment.STATUS_REMOVED
         first.save()
-        StudentEnrollment.objects.create(
+        VirtualClassroomEnrollment.objects.create(
+            virtual_classroom=self.classroom,
             student=self.student,
-            academic_year=self.year,
-            section=self.section,
         )
         self.assertEqual(
-            StudentEnrollment.objects.filter(
+            VirtualClassroomEnrollment.objects.filter(
+                virtual_classroom=self.classroom,
                 student=self.student,
-                academic_year=self.year,
-                status=StudentEnrollment.STATUS_ENROLLED,
+                status=VirtualClassroomEnrollment.STATUS_ACTIVE,
             ).count(),
             1,
         )

@@ -6,11 +6,18 @@
     <h1 class="page-title">Sections</h1>
     <p class="page-sub">Manage academic sections.</p>
   </div>
-  {% if perms.academic_structure.add_section_custom %}
-  <a class="btn btn-primary" href="{% url 'academic:section_add' %}">
-    <i class="fa-solid fa-plus"></i> Add Section
-  </a>
-  {% endif %}
+  <div style="display:flex; gap:8px;">
+    {% if perms.academic_structure.promote_student %}
+    <a class="btn btn-outline" href="{% url 'academic:promote_students' %}">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i> Promote Students
+    </a>
+    {% endif %}
+    {% if perms.academic_structure.add_section_custom %}
+    <a class="btn btn-primary" href="{% url 'academic:section_add' %}">
+      <i class="fa-solid fa-plus"></i> Add Section
+    </a>
+    {% endif %}
+  </div>
 </div>
 
 <div class="stats-grid">

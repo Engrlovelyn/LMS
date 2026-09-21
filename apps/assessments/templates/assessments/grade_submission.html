@@ -22,26 +22,26 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th>Part</th>
           <th>Question</th>
-          <th>Answer</th>
+          <th>Student Answer</th>
           <th>Type</th>
-          <th>Max Score</th>
+          <th>Max</th>
           <th>Result</th>
           <th>Score</th>
         </tr>
       </thead>
       <tbody>
-        {% for resp in responses %}
+        {% for row in response_rows %}
         <tr>
-          <td>{{ resp.part.order }}</td>
-          <td>{{ resp.part.question_text }}</td>
-          <td>{{ resp.response_text|default:"—" }}</td>
-          <td>{{ resp.part.get_question_type_display }}</td>
-          <td>{{ resp.part.points }}</td>
+          <td>{{ row.part_order }}</td>
+          <td>{{ row.question|truncatewords:12 }}</td>
+          <td>{{ row.answer }}</td>
+          <td>{{ row.type }}</td>
+          <td>{{ row.max }}</td>
           <td>
-            {% if resp.part.is_objective %}
-              {% if resp.is_correct %}
+            {% if row.is_objective %}
+              {% if row.is_correct %}
               <span class="pill active">Correct</span>
               {% else %}
               <span class="pill locked">Incorrect</span>
@@ -50,8 +50,16 @@
             <span class="pill pending">Subjective</span>
             {% endif %}
           </td>
-          <td>{{ resp.score|default:"—" }}</td>
+          <td>
+            {% if row.score is not None %}
+              {{ row.score }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
         </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-cell">No responses recorded.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -63,12 +71,12 @@
     <div class="card-title"><i class="fa-solid fa-pen-to-square"></i> Manual Grading</div>
   </div>
   <div class="card-body">
-    {% if not subjective_responses %}
+    {% if not subjective_grouped %}
     <div class="empty-state">
       <i class="fa-solid fa-circle-check"></i>
       <p>No subjective parts to grade. Objective responses were auto-scored.</p>
     </div>
-    {% endif %}
+    {% else %}
     <form method="post" novalidate>
       {% csrf_token %}
       {% if form.non_field_errors %}
@@ -79,20 +87,21 @@
       </div>
       {% endif %}
 
-      {% for resp, field in score_fields %}
+      {% for resp, fields in subjective_grouped %}
       <div class="card" style="border:1px dashed var(--card-border); margin-bottom:14px;">
+        <div class="card-header">
+          <div class="card-title">Part {{ resp.part.order }} &middot; {{ resp.part.get_question_type_display }}</div>
+        </div>
         <div class="card-body">
-          <div class="form-group" style="margin-bottom:6px;">
-            <div class="form-label">{{ resp.part.question_text }}</div>
-            <div>{{ resp.response_text|default:"No answer provided" }}</div>
-          </div>
-          <div class="form-group" style="margin-bottom:6px;">
-            <label class="form-label" for="{{ field.id_for_label }}">Score (max {{ resp.part.points }})</label>
+          {% for item_key, field, point_max in fields %}
+          <div class="form-group" style="margin-bottom:10px;">
+            <div class="form-label">{{ field.label }} (max {{ point_max }})</div>
             {{ field }}
             {% for error in field.errors %}
             <div class="help-text">{{ error }}</div>
             {% endfor %}
           </div>
+          {% endfor %}
         </div>
       </div>
       {% endfor %}
@@ -109,6 +118,7 @@
         </button>
       </div>
     </form>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

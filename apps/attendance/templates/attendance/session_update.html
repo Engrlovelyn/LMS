@@ -27,7 +27,9 @@
           <th>Student</th>
           <th>Status</th>
           <th>Remarks</th>
-          <th>Saved? </th>
+          <th>Attachment</th>
+          <th class="text-right">Action</th>
+          <th>Saved?</th>
         </tr>
       </thead>
       <tbody>
@@ -36,13 +38,18 @@
           <td>{{ row.student.lrn }}</td>
           <td>{{ row.student.last_name }}, {{ row.student.first_name }}</td>
           <td>
-            <form method="post" action="{% url 'attendance:record_status_update' session.pk %}" novalidate>
+            <form method="post" action="{% url 'attendance:record_status_update' session.pk %}" enctype="multipart/form-data" novalidate>
               {% csrf_token %}
               <input type="hidden" name="student_id" value="{{ row.student.pk }}">
               {{ row.status_form.status }}
           </td>
           <td>
               {{ row.status_form.remarks }}
+          </td>
+          <td>
+              {{ row.status_form.attachment }}
+          </td>
+          <td>
               <button type="submit" class="btn btn-primary btn-sm">
                 <i class="fa-solid fa-floppy-disk"></i> Save
               </button>

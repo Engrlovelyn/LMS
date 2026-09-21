@@ -38,16 +38,18 @@ class ClassAnnouncementForm(forms.ModelForm):
 class GroupMessageForm(forms.ModelForm):
     class Meta:
         model = GroupMessage
-        fields = ["content"]
+        fields = ["content", "attachment"]
         widgets = {"content": forms.Textarea(attrs={"rows": 3, "placeholder": "Type a message..."})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["content"].widget.attrs["class"] = "form-control"
+        self.fields["attachment"].widget.attrs["class"] = "form-control"
 
 
 class PrivateMessageForm(forms.Form):
     content = forms.CharField(widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Type a message..."}))
+    attachment = forms.FileField(required=False, widget=forms.ClearableFileInput(attrs={"class": "form-control"}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

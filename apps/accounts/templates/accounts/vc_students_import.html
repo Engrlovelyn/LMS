@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Bulk Enroll Students in {{ vc }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Bulk Enroll Students</h1>
+    <p class="page-sub">Import students into <strong>{{ vc }}</strong> from a CSV file.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' vc.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to {{ vc }}
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-file-csv"></i> CSV Import</div>
+  </div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+          <div class="help-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for error in field.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'classrooms:classroom_detail' vc.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-file-import"></i> Enroll Students
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if report %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-list"></i> Import Results</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <tbody>
+        <tr><th>Enrolled</th><td>{{ report.enrolled }}</td></tr>
+        <tr><th>Skipped (already enrolled / not found)</th><td>{{ report.skipped }}</td></tr>
+        <tr><th>Errors</th><td>{{ report.errors|length }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% if report.errors %}
+  <div class="card-body">
+    <ul>
+      {% for error in report.errors %}
+      <li class="help-text">{{ error }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

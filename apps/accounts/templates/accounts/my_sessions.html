@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Active Sessions{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Active Sessions</h1>
+    <p class="page-sub">Devices and browsers currently signed in to your account.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'accounts:change_password' %}">
+    <i class="fa-solid fa-key"></i> Change Password
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-desktop"></i> Recent Sessions</div>
+  </div>
+  <div class="card-body">
+    {% if sessions %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Device</th>
+            <th>IP Address</th>
+            <th>Signed In</th>
+            <th>Last Active</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for session in sessions %}
+          <tr>
+            <td>{{ session.device_info|truncatechars:60 }}</td>
+            <td>{{ session.ip_address|default:"—" }}</td>
+            <td>{{ session.created_at|date:"M d, Y H:i" }}</td>
+            <td>{{ session.last_active_at|date:"M d, Y H:i" }}</td>
+            <td class="text-right">
+              {% if session.is_current %}
+              <span class="pill pill-green">Current</span>
+              {% else %}
+              <form method="post" action="{% url 'accounts:revoke_session' session.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline"><i class="fa-solid fa-sign-out-alt"></i> Revoke</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fa-solid fa-desktop"></i><p>No sessions recorded yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

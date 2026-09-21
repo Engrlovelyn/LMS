@@ -1,8 +1,8 @@
 from django import forms
 
-from apps.accounts.models import StudentProfile, User
+from apps.accounts.models import User
 
-from .models import AcademicStructureVersion, AcademicYear, Section, StudentEnrollment, Subject
+from .models import AcademicStructureVersion, AcademicYear, Section, Subject
 
 WIDGET_TYPES = (
     forms.TextInput,
@@ -59,28 +59,6 @@ class SubjectForm(forms.ModelForm):
         self.fields["academic_year"].queryset = AcademicYear.objects.filter(
             status=AcademicYear.STATUS_ACTIVE
         )
-
-
-class StudentEnrollmentForm(forms.ModelForm):
-    class Meta:
-        model = StudentEnrollment
-        fields = ["student", "academic_year", "section"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        apply_form_control(self.fields)
-        self.fields["academic_year"].queryset = AcademicYear.objects.filter(
-            status=AcademicYear.STATUS_ACTIVE
-        )
-        self.fields["section"].queryset = Section.objects.filter(
-            status=Section.STATUS_ACTIVE
-        )
-        enrolled_ids = StudentEnrollment.objects.filter(
-            status=StudentEnrollment.STATUS_ENROLLED
-        ).values_list("student_id", flat=True)
-        self.fields["student"].queryset = StudentProfile.objects.exclude(
-            id__in=enrolled_ids
-        ).order_by("lrn")
 
 
 class StructureFinalizeForm(forms.ModelForm):

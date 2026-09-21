@@ -34,5 +34,41 @@ class GeneratedReport(models.Model):
             ("monitor_student_activity_logs", "Monitor Student Activity Logs"),
         ]
 
-    def __str__(self):
+def __str__(self):
         return f"{self.get_report_type_display()} - {self.scope_description} ({self.generated_at:%Y-%m-%d})"
+
+
+class SFReportTemplate(models.Model):
+    FORM_SF1 = "sf1"
+    FORM_SF2 = "sf2"
+    FORM_SF4 = "sf4"
+    FORM_SF5 = "sf5"
+    FORM_SF9 = "sf9"
+    FORM_SF10 = "sf10"
+    FORM_TYPE_CHOICES = [
+        (FORM_SF1, "School Form 1 (SF1) - Learner Roster"),
+        (FORM_SF2, "School Form 2 (SF2) - Daily Attendance"),
+        (FORM_SF4, "School Form 4 (SF4) - Monthly Report"),
+        (FORM_SF5, "School Form 5 (SF5) - Report on Promotion"),
+        (FORM_SF9, "School Form 9 (SF9) - Learner Progress Report Card"),
+        (FORM_SF10, "School Form 10 (SF10) - Learner's Permanent Academic Record"),
+    ]
+
+    name = models.CharField(max_length=150)
+    form_type = models.CharField(max_length=10, choices=FORM_TYPE_CHOICES)
+    description = models.CharField(max_length=255, blank=True)
+    template_file = models.FileField(upload_to="sf_report_templates/")
+    field_mappings = models.JSONField(default=dict, blank=True,
+                                      help_text="Maps SF template fields to system data fields, e.g. {\"LRN\": \"lrn\", \"Last Name\": \"last_name\"}.")
+    is_active = models.BooleanField(default=True)
+    uploaded_by = models.ForeignKey(
+        "accounts.User", on_delete=models.PROTECT, related_name="sf_report_templates"
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["form_type", "name"]
+
+    def __str__(self):
+        return self.name

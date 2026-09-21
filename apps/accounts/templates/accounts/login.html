@@ -1,27 +1,24 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TASS LMS ”“ Login</title>
+<title>TASS LMS – Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
 <style>
   :root {
-    --navy: #0a2463;
-    --blue: #1e5faf;
-    --sky: #3a86d4;
-    --light: #d6e8f7;
-    --white: #ffffff;
-    --off: #f4f7fc;
-    --g200: #dde5f0;
-    --g400: #94a8c4;
-    --g600: #4a637f;
-    --g800: #1e2e42;
-    --success: #22a877;
-    --danger: #d94f4f;
-    --warning: #e99b2a;
+    --navy: #0a2463; --blue: #1e5faf; --sky: #3a86d4; --light-blue: #d6e8f7; --accent: #e8f0fc;
+    --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0; --gray-300:#b9c9e0; --gray-500:#6f86a8;
+    --gray-400: #94a8c4; --gray-600: #4a637f; --gray-800: #1e2e42;
+    --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #3a86d4;
+    --header-bg: #0a2463; --body-bg: #f4f7fc; --card-bg: #ffffff; --card-border: #dde5f0;
+    --text-primary: #1e2e42; --text-muted: #94a8c4; --input-bg: #ffffff; --input-border: #dde5f0;
+    --radius: 14px; --shadow: 0 4px 24px rgba(10,36,99,0.12); --shadow-sm: 0 2px 10px rgba(10,36,99,0.07);
+    --transition: 0.28s cubic-bezier(.4,0,.2,1);
+    --light: var(--light-blue); --off: var(--off-white);
+    --g200: var(--gray-200); --g400: var(--gray-400); --g600: var(--gray-600); --g800: var(--gray-800);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,17 +31,16 @@
     overflow: hidden;
   }
 
-  /* â”€â”€ LEFT PANEL â”€â”€ */
+  /* ── LEFT PANEL ── */
   .left-panel {
     width: 52%;
     background:
-      linear-gradient(160deg, rgba(10,36,99,0.52) 0%, rgba(30,95,175,0.52) 55%, rgba(14,58,128,0.58) 90%),
-      url('{% static "accounts/img/sanvicente.jpg" %}');
+      url("{% static 'dashboards/img/login_bg.png' %}");
     background-size: cover;
     background-position: center;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 48px 52px;
     position: relative;
     overflow: hidden;
@@ -54,7 +50,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at center, rgba(10,36,99,0.2) 0%, rgba(10,36,99,0.55) 100%);
+    background: none;
     pointer-events: none;
   }
 
@@ -93,10 +89,12 @@
     position: relative; z-index: 1;
   }
   .logo-box {
-    width: 60px; height: 60px;
+    width: 70px; height: 70px;
     border-radius: 50%;
     object-fit: cover;
     display: block;
+    border: 2px solid rgba(255,255,255,0.28);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   }
   .left-title { font-family: 'Fraunces', serif; color: #fff; line-height: 1.2; }
   .left-title .big { font-size: 40px; font-weight: 600; }
@@ -104,7 +102,6 @@
 
   .left-hero {
     position: relative; z-index: 1;
-    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -153,7 +150,7 @@
 
   .left-footer { position: relative; z-index: 1; font-size: 12px; color: rgba(255,255,255,0.35); }
 
-  /* â”€â”€ RIGHT PANEL â”€â”€ */
+  /* ── RIGHT PANEL ── */
   .right-panel {
     flex: 1;
     background: var(--white);
@@ -163,14 +160,22 @@
     overflow-y: auto;
   }
 
-  .auth-container { width: 100%; max-width: 400px; }
+  .auth-container { width: 100%; max-width: 100x; }
+
+  /* Mobile-only brand row (left panel is hidden below 900px) */
+  .mobile-brand { display: none; align-items: center; gap: 10px; justify-content: center; margin: -4px 0 28px; }
+  .mobile-brand img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(10,36,99,0.12); background: #fff; }
+  .mobile-brand img + img { margin-left: -10px; }
+  .mobile-brand .mb-big { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; color: var(--navy); line-height: 1.2; }
+  .mobile-brand .mb-small { font-size: 9.5px; letter-spacing: .6px; color: var(--g400); font-weight: 700; margin-top: 2px; }
+  .desktop-info { display: none; }
 
   /* PAGE SWITCHER */
   .page { display: none; }
   .page.active { display: block; animation: fadeIn .3s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* â”€â”€ FORM STYLES â”€â”€ */
+  /* ── FORM STYLES ── */
   .auth-header { margin-bottom: 32px; }
   .auth-header h2 {
     font-family: 'Fraunces', serif;
@@ -253,14 +258,11 @@
   .field-msg.hint { color: var(--g400); display: flex; }
   @keyframes msgIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 
-  /* Forgot / remember row */
+  /* Forgot row */
   .forgot-row {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: flex-end;
     margin-bottom: 22px;
   }
-  .checkbox-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-  .checkbox-wrap input[type="checkbox"] { accent-color: var(--navy); width: 15px; height: 15px; }
-  .checkbox-wrap span { font-size: 13px; color: var(--g600); }
   .link-btn {
     font-size: 13px; color: var(--blue); font-weight: 600;
     background: none; border: none; cursor: pointer;
@@ -268,7 +270,7 @@
   }
   .link-btn:hover { color: var(--navy); }
 
-  /* â”€â”€ SUBMIT BUTTON â”€â”€ */
+  /* ── SUBMIT BUTTON ── */
   .btn-submit {
     width: 100%; padding: 14px;
     background: var(--navy); color: #fff;
@@ -315,7 +317,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* â”€â”€ TOAST NOTIFICATION â”€â”€ */
+  /* ── TOAST NOTIFICATION ── */
   .toast-wrap {
     position: relative;
     margin-bottom: 16px;
@@ -348,7 +350,7 @@
   }
   .toast-close:hover { opacity: 1; }
 
-  /* â”€â”€ SHAKE ANIMATION â”€â”€ */
+  /* ── SHAKE ANIMATION ── */
   .shake { animation: shake .4s cubic-bezier(.36,.07,.19,.97); }
   @keyframes shake {
     0%,100% { transform: translateX(0); }
@@ -358,23 +360,7 @@
     80% { transform: translateX(4px); }
   }
 
-  /* â”€â”€ DIVIDER â”€â”€ */
-  .divider {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 20px;
-  }
-  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--g200); }
-  .divider span { font-size: 12px; color: var(--g400); white-space: nowrap; }
-
-  /* Switch page */
-  .switch-page { text-align: center; font-size: 13.5px; color: var(--g600); }
-
-  /* â”€â”€ PASSWORD STRENGTH â”€â”€ */
-  .strength-bar { display: flex; gap: 4px; margin-top: 8px; }
-  .strength-seg { height: 4px; flex: 1; border-radius: 99px; background: var(--g200); transition: background .3s; }
-  .strength-label { font-size: 11px; color: var(--g400); margin-top: 4px; transition: color .3s; }
-
-  /* â”€â”€ SUCCESS SCREEN â”€â”€ */
+  /* ── SUCCESS SCREEN ── */
   .success-screen { text-align: center; padding: 20px 0; }
   .success-icon {
     width: 72px; height: 72px; border-radius: 50%;
@@ -385,17 +371,6 @@
     animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
   }
   @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-  /* Form row */
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-  /* Steps indicator */
-  .steps { display: flex; gap: 8px; margin-bottom: 28px; }
-  .step { height: 4px; flex: 1; border-radius: 99px; background: var(--g200); transition: background .3s; }
-  .step.active { background: var(--navy); }
-  .step.done { background: var(--success); }
-
-  select.form-control { appearance: none; padding-left: 42px; }
 
   /* Progress bar inside loading button */
   .btn-progress {
@@ -510,25 +485,75 @@
       max-width: 440px;
       margin: 0 auto;
     }
+
+    .mobile-brand {
+      display: flex;
+    }
+
+    .desktop-info {
+      display: none;
+    }
   }
 
   /* Phones */
   @media (max-width: 600px) {
     body {
-      background: var(--white);
+      background:
+        linear-gradient(160deg, rgba(10,36,99,0.62) 0%, rgba(30,95,175,0.62) 55%, rgba(14,58,128,0.68) 90%),
+        url("{% static 'dashboards/img/sanvicente.jpg' %}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
     }
 
     .right-panel {
-      padding: 28px 18px;
-      align-items: flex-start;
+      padding: 26px 16px;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
     }
 
     .auth-container {
-      max-width: 100%;
+      max-width: 410px;
+      background: #ffffff;
+      border: 2px solid #ffffff;
+      border-radius: 22px;
+      padding: 18px 20px 20px;
+      box-shadow: 0 12px 36px rgba(4,14,40,0.45);
+    }
+
+    .mobile-brand {
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+      margin: 0 0 14px;
+    }
+
+    .mobile-brand img {
+      width: 90px;
+      height: 90px;
+    }
+
+    .mobile-brand > div {
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .mobile-brand .mb-big {
+      font-size: 19px;
+      margin-top: 2px;
+    }
+
+    .mobile-brand .mb-small {
+      font-size: 10px;
+      letter-spacing: 1.2px;
+      margin-top: 5px;
     }
 
     .auth-header {
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
 
     .auth-header h2 {
@@ -540,34 +565,25 @@
     }
 
     .form-group {
-      margin-bottom: 15px;
+      margin-bottom: 12px;
     }
 
     .form-control {
       font-size: 13.5px;
-      padding-top: 12px;
-      padding-bottom: 12px;
+      padding-top: 10px;
+      padding-bottom: 10px;
     }
 
     .forgot-row {
       flex-direction: column;
       align-items: flex-start;
       gap: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .btn-submit {
-      padding: 13px;
+      padding: 11px;
       font-size: 14px;
-    }
-
-    .role-selector,
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-
-    .divider {
-      margin-bottom: 18px;
     }
 
     .success-screen {
@@ -644,75 +660,1032 @@
     }
   }
 
+  /* Slight rightward nudge for the sign-in form (tablets/laptops/desktops) */
+  @media (min-width: 601px) {
+    .auth-container { transform: translateX(18px); }
+  }
+
+  /* Laptops / desktops: photo panel on the left, all login content on the white right panel */
+  @media (min-width: 901px) {
+    body {
+      flex-direction: row;
+      overflow-y: auto;
+      background: var(--white);
+    }
+
+    /* LEFT: photo panel with tagline + description */
+    .left-panel {
+      display: flex;
+      flex: 0 0 60%;
+      width: 60%;
+      max-width: 60%;
+      min-height: 100vh;
+      max-height: none;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 32px;
+      text-align: center;
+      background: url("{% static 'dashboards/img/login_bg.png' %}") center / cover no-repeat;
+    }
+
+    .left-panel::before {
+      display: none;
+    }
+
+    .left-panel .left-title,
+    .left-panel .left-footer,
+    .left-panel .left-logo-row,
+    .left-panel .dot-grid {
+      display: none;
+    }
+
+    .left-panel .left-hero {
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(6px);
+      border-radius: 20px;
+      padding: 36px 40px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 16px 40px rgba(10,36,99,0.25);
+      text-align: center;
+    }
+
+    .left-panel .left-hero h1 {
+      font-size: 38px;
+      color: var(--navy);
+      text-shadow: none;
+      margin-bottom: 14px;
+    }
+
+    .left-panel .left-hero em {
+      color: var(--blue);
+    }
+
+    .left-panel .left-hero p {
+      color: var(--g600);
+      text-shadow: none;
+      max-width: 400px;
+      margin: 0 auto;
+      font-size: 14px;
+    }
+
+    .left-panel::after {
+      display: none;
+    }
+
+    /* RIGHT: fully white panel holding all content */
+    .right-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 56px 32px;
+      background: #eef4fc;
+    }
+
+    .auth-container {
+      transform: none;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      background: none;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+
+    .mobile-brand {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 18px;
+      margin-bottom: 28px;
+      order: 0;
+    }
+
+    .desktop-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 30px;
+      order: 1;
+    }
+
+    .desktop-info .mb-big {
+      font-family: 'Fraunces', serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+
+    .desktop-info .mb-small {
+      font-size: 11px;
+      letter-spacing: 1.4px;
+      margin-top: 6px;
+      font-weight: 700;
+      color: var(--g400);
+    }
+
+    .desktop-info .mb-tagline {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-top: 18px;
+      line-height: 1.3;
+    }
+
+    .desktop-info .mb-desc {
+      font-size: 13.5px;
+      color: var(--g600);
+      line-height: 1.7;
+      max-width: 380px;
+      margin-top: 8px;
+    }
+
+    .mobile-brand .brand-text {
+      display: none;
+    }
+
+    .mobile-brand img {
+      width: 100px;
+      height: 100px;
+    }
+
+    .desktop-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 30px;
+      order: 1;
+    }
+
+    .desktop-info .mb-big {
+      font-size: 26px;
+    }
+
+    .desktop-info .mb-small {
+      font-size: 11px;
+      letter-spacing: 1.4px;
+      margin-top: 6px;
+      color: var(--g400);
+    }
+
+    .desktop-info .mb-tagline,
+    .desktop-info .mb-desc {
+      display: none;
+    }
+
+    .desktop-info .mb-tagline {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-top: 16px;
+      line-height: 1.3;
+    }
+
+    .desktop-info .mb-desc {
+      font-size: 13px;
+      color: var(--g600);
+      line-height: 1.7;
+      max-width: 360px;
+      margin-top: 6px;
+    }
+
+    .page {
+      order: 2;
+      margin-bottom: 26px;
+    }
+
+    .page-footer {
+      order: 3;
+      margin-top: 0;
+      padding-top: 22px;
+    }
+
+    .footer-links {
+      flex-wrap: nowrap;
+    }
+  }
+
+  /* ── PAGE FOOTER ── */
+  .page-footer {
+    order: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 22px 0 0;
+    margin-top: 28px;
+    color: var(--g600);
+    border-top: 1px solid var(--g200);
+    background: transparent;
+  }
+
+  .footer-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    list-style: none;
+    margin: 0 0 14px;
+  }
+
+  .footer-pair {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-basis: 100%;
+    white-space: nowrap;
+  }
+
+  .footer-links a {
+    display: inline;
+    white-space: nowrap;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 0;
+    color: var(--blue);
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color .2s;
+  }
+
+  .footer-links a:hover {
+    color: var(--navy);
+    background: none;
+    text-decoration: underline;
+  }
+
+  .footer-links a + a::before {
+    content: "\00b7";
+    margin-right: 14px;
+    color: var(--g400);
+  }
+
+  .footer-pair a + a::before {
+    content: "\00b7";
+    margin: 0 14px;
+    color: var(--g400);
+    transform: translateY(-1px);
+  }
+
+  .page-footer p {
+    font-size: 12px;
+    color: var(--g400);
+    white-space: nowrap;
+    margin: 0;
+  }
+
+
+
+
+/* =========================================================
+   PROFESSIONAL DESKTOP REDESIGN
+   - Keeps the original split-screen concept
+   - Keeps the left panel
+   - Does not alter the phone breakpoint (<= 600px)
+   ========================================================= */
+@media (min-width: 901px) {
+  body {
+    background: #eef4fb;
+    color: var(--g800);
+  }
+
+  /* LEFT: strong visual identity, not just a background image */
+  .left-panel {
+    flex: 0 0 58%;
+    width: 58%;
+    max-width: 58%;
+    padding: 42px clamp(38px, 4.2vw, 68px);
+    justify-content: space-between;
+    background:
+      url("{% static 'dashboards/img/login_bg.png' %}") center / cover no-repeat;
+    isolation: isolate;
+  }
+
+  .left-panel::before {
+    z-index: -1;
+    background: none;
+  }
+
+  .left-panel::after {
+    width: 520px;
+    height: 520px;
+    top: -220px;
+    right: -210px;
+    border-color: rgba(255,255,255,.12);
+  }
+
+  .left-logo-row {
+    gap: 13px;
+    align-items: center;
+  }
+
+  .left-panel .logo-box {
+    width: 60px;
+    height: 60px;
+    border: 2px solid rgba(255,255,255,.42);
+    box-shadow: 0 10px 30px rgba(0,0,0,.28);
+  }
+
+  .left-title .big {
+    font-size: clamp(28px, 2.5vw, 38px);
+    letter-spacing: -.7px;
+  }
+
+  .left-title .small {
+    margin-top: 4px;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+  }
+
+  .left-hero {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 590px);
+    margin: 0;
+    padding: 34px 38px 32px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 26px;
+    background: linear-gradient(135deg, rgba(4,22,64,.55), rgba(12,66,140,.26));
+    box-shadow: 0 28px 70px rgba(1,13,38,.34);
+    backdrop-filter: blur(14px);
+  }
+
+  .left-hero::before {
+    content: 'TASS DIGITAL LEARNING';
+    display: inline-flex;
+    align-items: center;
+    height: 27px;
+    padding: 0 11px;
+    margin-bottom: 17px;
+    border: 1px solid rgba(169,212,255,.25);
+    border-radius: 999px;
+    background: rgba(169,212,255,.08);
+    color: #b9dcff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+  }
+
+  .left-hero h1 {
+    max-width: 540px;
+    margin-bottom: 16px;
+    font-size: clamp(39px, 4vw, 58px);
+    line-height: 1.04;
+    letter-spacing: -1.8px;
+  }
+
+  .left-hero h1 em {
+    color: #a9d7ff;
+  }
+
+  .left-hero p {
+    max-width: 500px;
+    margin-bottom: 24px;
+    color: rgba(255,255,255,.78);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .feature-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    max-width: 520px;
+  }
+
+  .feature-pill {
+    min-height: 48px;
+    padding: 9px 11px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.07);
+    border-color: rgba(255,255,255,.11);
+    font-size: 11.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+  }
+
+  .feature-pill:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .pill-icon {
+    width: 29px;
+    height: 29px;
+    border-radius: 8px;
+    background: rgba(126,184,247,.12);
+    color: #9fd0ff;
+  }
+
+  .left-footer {
+    font-size: 10.5px;
+    color: rgba(255,255,255,.42);
+    letter-spacing: .15px;
+  }
+
+  /* RIGHT: calm, premium authentication surface */
+  .right-panel {
+    min-width: 0;
+    padding: 42px clamp(38px, 5vw, 78px);
+    background:
+      radial-gradient(circle at 90% 7%, rgba(58,134,212,.10), transparent 24%),
+      linear-gradient(180deg, #fbfdff 0%, #f5f9fe 100%);
+  }
+
+  .auth-container {
+    width: 100%;
+    max-width: 450px;
+    transform: none !important;
+  }
+
+  .mobile-brand {
+    display: flex;
+    justify-content: flex-start;
+    margin: 0 0 24px;
+  }
+
+  .mobile-brand img {
+    width: 54px;
+    height: 54px;
+    border: 2px solid #fff;
+    box-shadow: 0 8px 22px rgba(10,36,99,.14);
+  }
+
+  .mobile-brand img + img {
+    margin-left: -17px;
+  }
+
+  .desktop-login-header {
+    display: block;
+    margin: 0 0 25px;
+  }
+
+  .desktop-login-header .desktop-login-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+
+  .desktop-login-header h2 {
+    margin: 0 0 7px;
+    font-family: 'Fraunces', serif;
+    color: var(--navy);
+    font-size: 26px;
+    line-height: 1.08;
+    letter-spacing: -.7px;
+  }
+
+  .desktop-login-header p {
+    margin: 0;
+    color: #62748a;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .auth-header {
+    margin-bottom: 24px;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-label {
+    margin-bottom: 8px;
+    color: #405a76;
+    font-size: 10.5px;
+    letter-spacing: .8px;
+  }
+
+  .form-control {
+    min-height: 51px;
+    border: 1px solid #d5e1ee;
+    border-radius: 13px;
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 2px 7px rgba(10,36,99,.025);
+  }
+
+  .form-control:hover {
+    border-color: #b8cbe0;
+  }
+
+  .form-control:focus {
+    border-color: #3a86d4;
+    box-shadow: 0 0 0 4px rgba(58,134,212,.10), 0 8px 20px rgba(10,36,99,.06);
+  }
+
+  .forgot-row {
+    margin: -1px 0 19px;
+  }
+
+  .btn-submit {
+    min-height: 52px;
+    margin-bottom: 17px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #0a2463 0%, #174e9b 100%);
+    box-shadow: 0 10px 24px rgba(10,36,99,.20);
+  }
+
+  .btn-submit::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,.13) 50%, transparent 85%);
+    transform: translateX(-120%);
+    transition: transform .55s ease;
+  }
+
+  .btn-submit:hover:not(.loading):not(.btn-success-state)::after {
+    transform: translateX(120%);
+  }
+
+  .page-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #dce6f2;
+  }
+
+  .footer-links a {
+    font-size: 11px;
+  }
+
+  .page-footer p {
+    font-size: 10.5px;
+  }
+}
+
+/* Smaller desktop: maintain a comfortable split without crushing content. */
+@media (min-width: 901px) and (max-width: 1150px) {
+  .left-panel {
+    flex-basis: 56%;
+    width: 56%;
+    max-width: 56%;
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+  .left-hero {
+    padding: 28px 30px;
+  }
+  .left-hero h1 {
+    font-size: 40px;
+  }
+  .feature-pills {
+    grid-template-columns: 1fr;
+  }
+  .feature-pill:last-child {
+    grid-column: auto;
+  }
+  .right-panel {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+}
+
+/* The phone experience remains controlled by the original <= 600px rules. */
+@media (max-width: 600px) {
+  .desktop-login-header { display: none !important; }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .btn-submit::after { transition: none !important; }
+}
+
+
+/* =========================================================
+   FINAL DESKTOP VISUAL CLEANUP
+   - Centers the school/TASS logos in the left panel
+   - Removes the glass/card border from the left hero
+   - Keeps the right login area open and border-free
+   - Mobile card styling remains unchanged
+   ========================================================= */
+@media (min-width: 901px) {
+  .left-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 50px 40px;
+  }
+
+  /* Center the two logos side by side with the school name below as one identity block */
+  .left-logo-row {
+    width: 100%;
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    position: relative;
+    z-index: 2;
+    margin: 0 0 38px;
+  }
+
+  .left-logo-row .logo-box {
+    width: 116px;
+    height: 116px;
+    border: 3px solid rgba(255,255,255,.45);
+  }
+
+  .left-logo-row .logo-box + .logo-box {
+    margin-left: 0;
+    margin-top: 0;
+  }
+
+  .left-logo-row .left-title,
+  .left-panel .left-title {
+    flex: 0 0 100%;
+    display: block !important;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .left-title .big {
+    font-size: clamp(27px, 2.5vw, 36px);
+  }
+
+  .left-title .small {
+    margin-top: 5px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+
+  /* Clean hero: no white/glass boarder/card */
+  .left-panel .left-hero {
+    width: min(100%, 590px);
+    max-width: 590px;
+    margin: 0;
+    padding: 0 20px;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    text-align: center;
+  }
+
+  .left-panel .left-hero::before {
+    display: none;
+  }
+
+  .left-panel .left-hero h1 {
+    max-width: 590px;
+    margin: 0 auto 15px;
+    color: #fff;
+    font-size: clamp(36px, 4vw, 55px);
+    line-height: 1.06;
+    text-shadow: 0 3px 18px rgba(0,0,0,.22);
+  }
+
+  .left-panel .left-hero h1 em {
+    color: #a9d7ff;
+  }
+
+  .left-panel .left-hero p {
+    max-width: 470px;
+    margin: 0 auto;
+    color: rgba(255,255,255,.78);
+    font-size: 13.5px;
+    line-height: 1.8;
+    text-shadow: 0 2px 12px rgba(0,0,0,.18);
+  }
+
+  /* Cleaner left side: no extra feature cards */
+  .left-panel .feature-pills {
+    display: none;
+  }
+
+  .left-footer {
+    display: none;
+  }
+
+  /* Right panel: open layout, no surrounding white card/border */
+  .right-panel {
+    background:
+      radial-gradient(circle at 90% 7%, rgba(58,134,212,.08), transparent 24%),
+      linear-gradient(180deg, #fbfdff 0%, #f5f9fe 100%);
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .auth-container {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Keep only the input fields visually defined */
+  .form-control {
+    border: 1px solid #d5e1ee;
+  }
+
+  /* Keep the footer subtle rather than looking like another card */
+  .page-footer {
+    border-top: 1px solid #dce6f2;
+    background: transparent;
+  }
+}
+
+/* Keep the existing mobile login card exactly as a mobile card. */
+@media (max-width: 600px) {
+  .auth-container {
+    background: #ffffff;
+    border: 2px solid #ffffff;
+    border-radius: 22px;
+    box-shadow: 0 12px 36px rgba(4,14,40,0.45);
+  }
+}
+
+/* Brand block moved into the right panel (left panel stays empty) */
+.right-logo-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 0 0 26px;
+}
+
+.right-logo-row .logo-box {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.right-logo-row .right-logo-title {
+  flex: 0 0 100%;
+  text-align: center;
+}
+
+.right-logo-row .right-logo-title .big {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(26px, 3vw, 32px);
+  font-weight: 600;
+  color: var(--navy);
+  line-height: 1.15;
+  letter-spacing: -.4px;
+}
+
+.right-logo-row .right-logo-title .small {
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  font-weight: 700;
+  color: var(--g400);
+}
+
+@media (max-width: 600px) {
+  .right-logo-row {
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+  .right-logo-row .logo-box {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: contain;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  .right-logo-row .right-logo-title .big {
+    font-size: 24px;
+  }
+}
+
+/* ---------- TASS login page polish ---------- */
+:root{
+  --navy:#0a1f4d; --blue:#1d5bd4; --sky:#3b82f6; --light-blue:#d8e7ff; --accent:#eaf1ff;
+  --white:#ffffff; --off-white:#f5f8fd; --gray-100:#eef3fb; --gray-200:#dde6f4;
+  --gray-400:#8ea3c4; --gray-600:#4a6388; --gray-800:#15213a;
+  --success:#0da878; --warning:#ee9d1b; --danger:#e04646; --info:#2f7de1;
+  --body-bg:#f5f8fd; --card-bg:#ffffff; --card-border:#e3ebf6;
+  --text-primary:#14203a; --text-muted:#7d94b9; --input-bg:#ffffff; --input-border:#d5e0ef;
+  --radius:16px; --shadow:0 14px 36px -14px rgba(10,31,77,.24),0 4px 14px -9px rgba(10,31,77,.12);
+  --shadow-sm:0 4px 18px -12px rgba(10,31,77,.18);
+}
+body{ -webkit-font-smoothing:antialiased; letter-spacing:.1px; }
+.auth-container{ border:1px solid var(--card-border); box-shadow:var(--shadow); }
+.btn-submit,.btn-progress{ background:linear-gradient(135deg,var(--navy),var(--blue)); box-shadow:0 10px 24px -12px rgba(10,31,77,.6); border-radius:11px; min-height:44px; }
+.btn-submit:hover{ transform:translateY(-1px); box-shadow:0 14px 30px -12px rgba(10,31,77,.65); }
+.btn-submit:focus-visible,.btn-progress:focus-visible,.eye-toggle:focus-visible,.link-btn:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+.form-control{ border-radius:10px; min-height:44px; }
+.form-control:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.input-wrap .input-icon i{ line-height:1; }
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--gray-200); border-radius:8px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--gray-400); }
+@media (max-width:600px){
+  .btn-submit,.btn-progress{ width:100%; justify-content:center; }
+}
+/* =========================================================================
+   TASS DESIGN POLISH v3 — interaction states, consistency & responsive fine-tune
+   Additive layer: applies on top of each dashboard's own stylesheet (wins cascade).
+   ========================================================================= */
+/* ---------- My Profile modal ---------- */
+.modal-box.profile-box{ width:min(94vw,480px); }
+.profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#3a86d4,#22a877); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+.profile-photo-btn{ display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border:1.5px solid var(--input-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; transition:border-color .18s,color .18s,background .18s; }
+.profile-photo-btn:hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
+.profile-fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.profile-fields .span2{ grid-column:span 2; }
+.profile-fields label{ display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:5px; }
+.profile-fields .form-group{ margin-bottom:0; }
+.profile-status{ margin-top:12px; }
+@media (max-width:600px){
+  .profile-fields{ grid-template-columns:1fr; }
+  .profile-fields .span2{ grid-column:span 1; }
+  .modal-box.profile-box{ width:min(94vw,440px); max-width:94vw; max-height:92vh; border-radius:18px; }
+  .profile-avatar-lg{ width:84px; height:84px; font-size:28px; }
+  .profile-hero{ margin-bottom:14px; }
+}
+
+
+/* ---------- Global focus visibility (keyboard users) ---------- */
+:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; border-radius:6px; }
+input:focus-visible,select:focus-visible,textarea:focus-visible{ outline-offset:2px; }
+.btn:focus-visible,.tab-btn:focus-visible,.upload-type-btn:focus-visible,.icon-btn:focus-visible{ outline-offset:2px; }
+.sidebar .nav-link:focus-visible,.side-link:focus-visible,.sidebar a:focus-visible,.nav-item:focus-visible{ outline:2px solid rgba(255,255,255,.55); outline-offset:-2px; }
+
+/* ---------- Unified form controls (selects match inputs everywhere) ---------- */
+.form-select{
+  width:100%; height:44px; border:1.5px solid var(--input-border); border-radius:var(--radius-sm,10px);
+  padding:0 12px; font-size:14px; font-family:inherit; color:var(--text-primary); background:var(--input-bg);
+  outline:none; transition:border-color .18s,box-shadow .18s,background .18s; cursor:pointer;
+}
+.form-select:hover{ border-color:var(--gray-400); }
+.form-select:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-control[disabled],.form-select[disabled],select[disabled],input[disabled],textarea[disabled]{
+  opacity:.6; cursor:not-allowed; background:var(--gray-100);
+}
+input::placeholder,textarea::placeholder{ color:var(--gray-400); }
+.form-control:focus,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+
+/* ---------- Search & filter bars: consistent sizing + focus ---------- */
+.search-input,.filter-bar .form-control,.filter-bar .form-select{
+  height:40px; border-radius:10px; font-size:13.5px;
+}
+.search-input{ min-height:40px; padding:0 38px 0 34px; }
+.search-bar{ position:relative; }
+.search-bar .fa-magnifying-glass,.search-bar>i:first-child{
+  position:absolute; left:11px; top:50%; transform:translateY(-50%);
+  color:var(--gray-400); font-size:13px; pointer-events:none; z-index:1;
+}
+.filter-bar>*{ flex:0 1 auto; min-width:120px; }
+.filter-bar{ align-items:center; }
+
+/* ---------- Buttons: icon/text alignment, sizes, states ---------- */
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.btn i,.btn .fa-solid,.btn .fa-regular,.btn .fa-brands{ font-size:13px; vertical-align:-1px; }
+.btn-sm{ padding:6px 13px; font-size:12px; border-radius:9px; height:32px; flex:0 0 auto; white-space:nowrap; }
+.btn-sm i{ font-size:11.5px; }
+.btn[disabled],.btn:disabled,.btn.disabled{ pointer-events:none; opacity:.55; box-shadow:none; cursor:not-allowed; filter:saturate(.6); }
+.btn:not(:disabled):active{ transform:translateY(1px); }
+.btn-outline:not(:disabled):hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
+.btn-primary:not(:disabled):active,.btn-danger:not(:disabled):active,.btn-success:not(:disabled):active{ box-shadow:none; filter:brightness(.96); }
+
+/* ---------- Tabs: hover/active affordance ---------- */
+.tab-btn:not(.active):hover{ background:rgba(29,91,212,.08); color:var(--navy); }
+.tab-btn.active{ box-shadow:var(--shadow-sm); }
+.classroom-tabs::-webkit-scrollbar{ height:0; }
+
+/* ---------- Icon-only header buttons ---------- */
+.icon-btn{ will-change:background; }
+.icon-btn:hover{ background:rgba(255,255,255,.22); }
+.icon-btn:active{ transform:translateY(1px); }
+
+/* ---------- Unified table polish ---------- */
+.data-table th,.student-table th,.perm-table th,.repo-table th,.att-table th{
+  text-align:left; font-size:10.5px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.5px; color:var(--gray-400); background:var(--off-white);
+  padding:11px 14px; border-bottom:1px solid var(--card-border); white-space:nowrap;
+}
+.data-table td,.student-table td,.perm-table td,.repo-table td,.att-table td{
+  padding:11px 14px; font-size:13px; vertical-align:middle; border-bottom:1px solid var(--gray-100);
+}
+.data-table tbody tr:hover,.student-table tbody tr:hover,.perm-table tbody tr:hover,
+.repo-table tbody tr:hover,.att-table tbody tr:hover{ background:var(--accent); }
+.data-table tbody tr:last-child td,.student-table tbody tr:last-child td,
+.perm-table tbody tr:last-child td{ border-bottom:none; }
+
+/* ---------- Pills (unified badge base, colors stay inline) ---------- */
+.pill{ display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px;
+  font-size:11px; font-weight:700; line-height:1.4; white-space:nowrap; }
+
+/* ---------- Typography hierarchy ---------- */
+.page-title{ font-size:clamp(19px,2.6vw,24px); font-weight:800; letter-spacing:-.3px; line-height:1.25; }
+.card-title{ font-size:14px; font-weight:800; letter-spacing:-.15px; }
+.card-title i,.card-title .fa-solid{ font-size:14px; vertical-align:-1px; }
+.section-title{ font-weight:800; letter-spacing:-.15px; }
+
+/* ---------- Welcome banner unification ---------- */
+.welcome-banner{
+  padding:24px 28px; border-radius:var(--radius); color:#fff;
+  box-shadow:var(--shadow); position:relative; overflow:hidden;
+}
+
+/* ---------- Stat cards: consistent icon chip + press feedback ---------- */
+.stat-icon{ font-size:18px; }
+.stat-card:not(.no-hover):hover{ transform:translateY(-2px); }
+.stat-card:not(.no-hover):active{ transform:translateY(0); }
+
+/* ---------- Charts responsive guard ---------- */
+canvas{ max-width:100% !important; }
+
+/* ---------- Header spacing ---------- */
+.header-right{ gap:8px; }
+
+/* ---------- Respect reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+}
+
+/* ---------- Responsive: medium screens ---------- */
+@media (max-width:992px){
+  .filter-bar>*{ min-width:100px; }
+  .data-table,.student-table,.perm-table,.repo-table,.att-table{ min-width:600px; }
+  .table-wrap,.card-body{ overflow-x:auto; }
+}
+
+/* ---------- Responsive: phones ---------- */
+@media (max-width:600px){
+  .welcome-banner{ padding:18px 16px; }
+  .filter-bar>*{ flex:1 1 100%; min-width:0; }
+  .btn-sm{ padding:6px 11px; }
+}
+@media (max-width:420px){
+  .header-right{gap:4px;}
+}
 </style>
+
 </head>
 <body>
 {% csrf_token %}
 
 <!-- LEFT PANEL -->
-<div class="left-panel">
-  <div class="dot-grid"></div>
-  <div class="deco-circle-3"></div>
-
-  <div class="left-logo-row">
-    <img src="{% static 'accounts/img/SVI_logo.png' %}" class="logo-box" alt="SVI Logo">
-    <img src="{% static 'accounts/img/TASS_logo.webp' %}" class="logo-box" alt="TASS Logo">
-    <div class="left-title">
-      <div class="big">San Vicente Institute</div>
-      <div class="small">LEARNING MANAGEMENT SYSTEM</div>
-    </div>
-  </div>
-
-  <div class="left-hero">
-    <h1>Your <em>classroom,</em><br>everywhere you go.</h1>
-    <p>A centralized digital platform for TASS member schools ”” bringing together lessons, assessments, attendance, and communication in one place.</p>
-    <div class="feature-pills">
-      <div class="feature-pill" onclick="openAboutModal()">
-        <div class="pill-icon"><i class="fa-solid fa-book-open"></i></div>
-        About
-      </div>
-      <div class="feature-pill">
-        <div class="pill-icon"><i class="fa-solid fa-file-pen"></i></div>
-        Privacy Policy
-      </div>
-      <div class="feature-pill">
-        <div class="pill-icon"><i class="fa-solid fa-scroll"></i></div>
-        Terms of Use
-      </div>
-      <div class="feature-pill" onclick="openContactModal()">
-        <div class="pill-icon"><i class="fa-solid fa-comments"></i></div>
-        Contact Support
-      </div>
-      <div class="feature-pill">
-        <div class="pill-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
-        Teacher's Guide
-      </div>
-    </div>
-  </div>
-
-  <div class="left-footer">
-    Â© 2026 San Vicente Institute Â· TASS LMS Â· All rights reserved.
-  </div>
-</div>
+<div class="left-panel"></div>
 
 <!-- RIGHT PANEL -->
 <div class="right-panel">
   <div class="auth-container">
 
-    <!-- â”€â”€ LOGIN PAGE â”€â”€ -->
-    <div class="page active" id="page-login">
-      <div class="auth-header">
-        <h2>Welcome back</h2>
-        <p>Sign in to your TASS LMS account to continue.</p>
+    <!-- Brand block -->
+    <div class="right-logo-row">
+      <img src="{% static 'dashboards/img/SVI_logo_clear.png' %}" class="logo-box" alt="SVI Logo">
+      <img src="{% static 'dashboards/img/TASS_logo_clear.png' %}" class="logo-box" alt="TASS Logo">
+      <div class="right-logo-title">
+        <div class="big">San Vicente Institute</div>
+        <div class="small">LEARNING MANAGEMENT SYSTEM</div>
       </div>
+    </div>
 
+    <!-- ── LOGIN PAGE ── -->
+    <div class="page active" id="page-login">
+      <div class="desktop-login-header" aria-hidden="true">
+        <span class="desktop-login-kicker"><i class="fa-solid fa-shield-halved"></i> Secure school access</span>
+        <h2>Welcome back.</h2>
+        <p>Sign in to continue to your TASS learning dashboard.</p>
+      </div>
       <!-- Toast area -->
+      {% if session_expired %}<div class="redirect-notice" style="display:flex;justify-content:center;align-items:center;gap:8px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:16px;"><i class="fa-solid fa-circle-info"></i> Your session expired. Please sign in again.</div>{% endif %}
       <div id="login-toast-area"></div>
       <div class="form-group">
         <label class="form-label">Email Address</label>
         <div class="input-wrap">
           <i class="input-icon fa-solid fa-envelope"></i>
-          <input class="form-control" type="email" id="login-email" placeholder="you@svischool.edu.ph"
+          <input class="form-control" type="email" id="login-email" placeholder="you@svischool.edu.ph" autocomplete="email"
             oninput="clearFieldErr('login-email')"
             onblur="validateEmailField('login-email')" />
           <i class="status-icon err-icon fa-solid fa-circle-exclamation" id="login-email-si-err"></i>
@@ -728,7 +1701,7 @@
         <label class="form-label">Password</label>
         <div class="input-wrap has-eye">
           <i class="input-icon fa-solid fa-lock"></i>
-          <input class="form-control" type="password" id="login-pass" placeholder="Enter your password"
+          <input class="form-control" type="password" id="login-pass" placeholder="Enter your password" autocomplete="current-password"
             oninput="clearFieldErr('login-pass')"
             onblur="validatePassField('login-pass')"
             onkeydown="if(event.key==='Enter') doLogin()" />
@@ -745,10 +1718,6 @@
       </div>
 
       <div class="forgot-row">
-        <label class="checkbox-wrap">
-          <input type="checkbox" id="remember-me" />
-          <span>Remember me</span>
-        </label>
         <button class="link-btn" onclick="showPage('page-forgot')">Forgot password?</button>
       </div>
 
@@ -759,12 +1728,12 @@
       </button>
 
       <div class="redirect-notice" id="redirect-notice">
-        <i class="fa-solid fa-circle-notch fa-spin"></i> Redirecting to your dashboard”¦
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Redirecting to your dashboard…
       </div>
 
     </div>
 
-    <!-- â”€â”€ FORGOT PASSWORD PAGE â”€â”€ -->
+    <!-- ── FORGOT PASSWORD PAGE ── -->
     <div class="page" id="page-forgot">
       <div id="forgot-back-row" style="margin-bottom:28px;">
         <button class="link-btn" onclick="showPage('page-login')" style="display:flex;align-items:center;gap:6px;font-size:13px;">
@@ -784,7 +1753,7 @@
           <label class="form-label">Email Address</label>
           <div class="input-wrap">
             <i class="input-icon fa-solid fa-envelope"></i>
-            <input class="form-control" type="email" id="forgot-email" placeholder="you@svischool.edu.ph"
+            <input class="form-control" type="email" id="forgot-email" placeholder="you@svischool.edu.ph" autocomplete="email"
               oninput="clearFieldErr('forgot-email')"
               onblur="validateEmailField('forgot-email')"
               onkeydown="if(event.key==='Enter') doForgot()" />
@@ -792,7 +1761,7 @@
             <i class="status-icon ok-icon fa-solid fa-circle-check" id="forgot-email-si-ok"></i>
           </div>
           <div class="field-msg err" id="forgot-email-err">
-            <i class="fa-solid fa-circle-exclamation" style="font-size:11px;"></i> Please enter a valid email address.
+            <i class="fa-solid fa-circle-exclamation" style="font-size:11px;"></i><span id="forgot-email-err-text">Please enter a valid email address.</span>
           </div>
         </div>
 
@@ -822,24 +1791,22 @@
       </div>
     </div>
 
+    <!-- FOOTER -->
+    <footer class="page-footer">
+      <nav class="footer-links">
+        <a href="#" onclick="event.preventDefault();openAboutModal()">About</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Use</a>
+        <span class="footer-pair">
+          <a href="#">Teacher&rsquo;s Guide</a>
+          <a href="#" onclick="event.preventDefault();openContactModal()">Contact Support</a>
+        </span>
+      </nav>
+      <p>&copy; {% now 'Y' %} San Vicente Institute &middot; TASS LMS &middot; All rights reserved.</p>
+    </footer>
+
   </div>
 </div>
-
-<!-- â”€â”€ ROLE SELECTOR (login) styles here if needed â”€â”€ -->
-<style>
-  .role-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-  .role-card {
-    border: 1.5px solid var(--g200); border-radius: 11px;
-    padding: 14px 12px; cursor: pointer; text-align: center;
-    transition: all .2s; background: var(--off);
-  }
-  .role-card:hover { border-color: var(--sky); background: #f0f7ff; }
-  .role-card.selected { border-color: var(--navy); background: #eef4ff; }
-  .role-card i { font-size: 20px; color: var(--g400); margin-bottom: 6px; display: block; transition: color .2s; }
-  .role-card.selected i { color: var(--navy); }
-  .role-card span { font-size: 12.5px; font-weight: 600; color: var(--g600); transition: color .2s; }
-  .role-card.selected span { color: var(--navy); }
-</style>
 
 <!-- ABOUT MODAL -->
 <div id="aboutModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(10,36,99,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeAboutModal()">
@@ -847,8 +1814,8 @@
     <div style="background:linear-gradient(135deg,#0a2463 0%,#1e5faf 100%);border-radius:20px 20px 0 0;padding:32px 36px 28px;position:relative;overflow:hidden;">
       <div style="position:absolute;width:200px;height:200px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.07);top:-60px;right:-60px;"></div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-        <img src="{% static 'accounts/img/SVI_logo.png' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
-        <img src="{% static 'accounts/img/TASS_logo.webp' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
+        <img src="{% static 'dashboards/img/SVI_logo.png' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
+        <img src="{% static 'dashboards/img/TASS_logo.webp' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
         <div>
           <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:#fff;">San Vicente Institute</div>
           <div style="font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:.5px;margin-top:1px;">TUGUEGARAO ARCHDIOCESAN SCHOOL SYSTEM</div>
@@ -863,7 +1830,7 @@
     </div>
     <div style="background:linear-gradient(90deg,#e8f0fc,#f4f7fc);border-bottom:1px solid #dde5f0;padding:14px 36px;display:flex;align-items:center;gap:10px;">
       <i class="fa-solid fa-quote-left" style="color:#1e5faf;font-size:16px;"></i>
-      <span style="font-family:'Fraunces',serif;font-size:15px;font-style:italic;color:#0a2463;font-weight:600;">Enter with Gladness”¦ Learn and Share God's Goodness</span>
+      <span style="font-family:'Fraunces',serif;font-size:15px;font-style:italic;color:#0a2463;font-weight:600;">Enter with Gladness… Learn and Share God's Goodness</span>
     </div>
     <div style="padding:32px 36px;display:flex;flex-direction:column;gap:28px;">
       <div>
@@ -887,7 +1854,7 @@
           <div style="width:36px;height:36px;border-radius:9px;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-brain" style="color:#7c3aed;font-size:15px;"></i></div>
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Philosophy</div>
         </div>
-        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">The school is committed to molding students through <strong style="color:#0a2463;">religious teachings and respect for human dignity</strong>, guided by the motto: <em>"Enter with Gladness”¦ Learn and Share God's Goodness."</em></p>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">The school is committed to molding students through <strong style="color:#0a2463;">religious teachings and respect for human dignity</strong>, guided by the motto: <em>"Enter with Gladness… Learn and Share God's Goodness."</em></p>
       </div>
       <div style="border-top:1px solid #eef2f8;"></div>
       <div>
@@ -932,7 +1899,7 @@
         </div>
         <div>
           <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;">Contact Support</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">San Vicente Institute Â· TASS LMS</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">San Vicente Institute · TASS LMS</div>
         </div>
       </div>
       <button onclick="closeContactModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
@@ -972,22 +1939,25 @@
 </div>
 
 <script>
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
+  // MODALS (About / Contact Support)
+  // ─────────────────────────────────────────
+  function openAboutModal() { document.getElementById('aboutModal').classList.add('show'); document.body.classList.add('modal-open'); }
+  function closeAboutModal() { document.getElementById('aboutModal').classList.remove('show'); document.body.classList.remove('modal-open'); }
+  function openContactModal() { document.getElementById('contactModal').classList.add('show'); document.body.classList.add('modal-open'); }
+  function closeContactModal() { document.getElementById('contactModal').classList.remove('show'); document.body.classList.remove('modal-open'); }
+
+  // ─────────────────────────────────────────
   // PAGE SWITCHING
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   function showPage(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // ROLE SELECTION
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // (role selection is handled server-side after login)
-
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   // EYE TOGGLE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   function toggleEye(inputId, btn) {
     const inp = document.getElementById(inputId);
     const isPass = inp.type === 'password';
@@ -995,15 +1965,15 @@
     btn.querySelector('i').className = isPass ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   // HELPERS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   function val(id) { return (document.getElementById(id) || {}).value?.trim() || ''; }
   function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // FIELD VALIDATION ”” validate on blur, clear on first input keystroke
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
+  // FIELD VALIDATION
+  // ─────────────────────────────────────────
   function setFieldError(id, msg) {
     const inp = document.getElementById(id);
     const errEl = document.getElementById(id + '-err');
@@ -1064,18 +2034,14 @@
     return true;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   // TOAST NOTIFICATIONS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   function showToast(areaId, type, title, msg, autoDismiss) {
     const area = document.getElementById(areaId);
     if (!area) return;
 
-    const icons = {
-      error: 'fa-circle-xmark',
-      success: 'fa-circle-check',
-      warning: 'fa-triangle-exclamation'
-    };
+    const icons = { error: 'fa-circle-xmark', success: 'fa-circle-check', warning: 'fa-triangle-exclamation' };
     const toastId = 'toast-' + Date.now();
     const toast = document.createElement('div');
     toast.className = 'toast ' + type;
@@ -1086,16 +2052,12 @@
         <div class="toast-title">${title}</div>
         ${msg ? `<div style="font-size:12px;opacity:.85;margin-top:2px;">${msg}</div>` : ''}
       </div>
-      <button class="toast-close" onclick="dismissToast('${toastId}')">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+      <button class="toast-close" onclick="dismissToast('${toastId}')"><i class="fa-solid fa-xmark"></i></button>
     `;
     area.innerHTML = '';
     area.appendChild(toast);
 
-    if (autoDismiss) {
-      setTimeout(() => dismissToast(toastId), autoDismiss);
-    }
+    if (autoDismiss) setTimeout(() => dismissToast(toastId), autoDismiss);
   }
 
   function dismissToast(id) {
@@ -1110,9 +2072,9 @@
     if (area) area.innerHTML = '';
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   // SHAKE ANIMATION
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   function shake(el) {
     el.classList.remove('shake');
     void el.offsetWidth; // reflow
@@ -1120,16 +2082,16 @@
     el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   // BUTTON STATES
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
   function setBtnLoading(btnId, iconId, textId, loadingText) {
     const btn = document.getElementById(btnId);
     const icon = document.getElementById(iconId);
     const text = document.getElementById(textId);
     btn.classList.add('loading');
     if (icon) icon.className = 'spinner';
-    if (text) text.textContent = loadingText || 'Loading”¦';
+    if (text) text.textContent = loadingText || 'Loading…';
   }
 
   function setBtnSuccess(btnId, iconId, textId, successText) {
@@ -1162,21 +2124,29 @@
     if (text && defaultText) text.textContent = defaultText;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // LOGIN
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
+  // CSRF HELPER
+  // ─────────────────────────────────────────
+  function getCookie(name) {
+    const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return match ? match.pop() : '';
+  }
+
+  // ─────────────────────────────────────────
+  // LOGIN (server-side authentication)
+  // ─────────────────────────────────────────
   function doLogin() {
     clearToasts('login-toast-area');
     const emailOk = validateEmailField('login-email');
     const passOk  = validatePassField('login-pass');
 
     if (!emailOk || !passOk) {
-      shake(document.querySelector('#page-login .auth-container') || document.getElementById('page-login'));
+      shake(document.getElementById('page-login'));
       showToast('login-toast-area', 'error', 'Missing information', 'Please fill in all required fields.');
       return;
     }
 
-    setBtnLoading('login-btn', 'login-btn-icon', 'login-btn-text', 'Signing in”¦');
+    setBtnLoading('login-btn', 'login-btn-icon', 'login-btn-text', 'Signing in…');
 
     const email = val('login-email');
     const password = val('login-pass');
@@ -1193,17 +2163,16 @@
       .then(({ status, data }) => {
         if (status === 200 && data.ok) {
           setBtnSuccess('login-btn', 'login-btn-icon', 'login-btn-text', 'Signed in!');
-          showToast('login-toast-area', 'success', 'Welcome back!', 'Redirecting you to your dashboard”¦', 4000);
+          showToast('login-toast-area', 'success', 'Welcome back!', 'Redirecting you to your dashboard…', 4000);
           const notice = document.getElementById('redirect-notice');
           if (notice) {
-            notice.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Redirecting to your dashboard”¦';
+            notice.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Redirecting to your dashboard…';
             notice.style.display = 'block';
           }
           window.location.href = data.redirect_url;
           return;
         }
 
-        // Locked account -> data.reason === "locked"
         if (data.reason === "locked") {
           setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Account Locked');
           showToast('login-toast-area', 'warning', 'Account temporarily locked', data.message, 0);
@@ -1220,30 +2189,21 @@
         }
 
         setTimeout(() => {
-          resetBtn('login-btn', 'login-btn-icon', 'login-btn-text', 'fa-solid fa-right-to-bracket', 'Sign In');
+          resetBtn('login-btn', 'login-btn-icon', 'login-btn-text', 'fa-solid fa-right-to-bracket', 'Sign in');
         }, 2100);
       })
       .catch(() => {
         setBtnError('login-btn', 'login-btn-icon', 'login-btn-text', 'Sign In Failed');
         showToast('login-toast-area', 'error', 'Connection error', 'Could not reach the server. Please try again.', 0);
         setTimeout(() => {
-          resetBtn('login-btn', 'login-btn-icon', 'login-btn-text', 'fa-solid fa-right-to-bracket', 'Sign In');
+          resetBtn('login-btn', 'login-btn-icon', 'login-btn-text', 'fa-solid fa-right-to-bracket', 'Sign in');
         }, 2100);
       });
   }
 
-  function getCookie(name) {
-    const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-    return match ? match.pop() : '';
-  }
-
-
-
-  // (signup validation removed – registration is handled by admin/registrars)
-
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // FORGOT PASSWORD
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────
+  // FORGOT PASSWORD (server-side)
+  // ─────────────────────────────────────────
   function doForgot() {
     clearToasts('forgot-toast-area');
     const emailOk = validateEmailField('forgot-email');
@@ -1259,8 +2219,8 @@
       headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
       body: JSON.stringify({ email: val('forgot-email') }),
     })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
+      .then(res => res.json().then(data => ({ status: res.status, data })))
+      .then(({ status, data }) => {
         if (data.ok) {
           document.getElementById('forgot-form').style.display = 'none';
           document.getElementById('forgot-back-row').style.display = 'none';
@@ -1284,26 +2244,7 @@
     resetBtn('forgot-btn', 'forgot-btn-icon', 'forgot-btn-text', 'fa-solid fa-paper-plane', 'Send Reset Link');
     clearFieldErr('forgot-email');
   }
-
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // MODALS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  function openAboutModal() {
-    document.getElementById('aboutModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
-  function closeAboutModal() {
-    document.getElementById('aboutModal').style.display = 'none';
-    document.body.style.overflow = '';
-  }
-  function openContactModal() {
-    document.getElementById('contactModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
-  function closeContactModal() {
-    document.getElementById('contactModal').style.display = 'none';
-    document.body.style.overflow = '';
-  }
 </script>
+
 </body>
 </html>

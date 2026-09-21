@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +122,11 @@ class Assessment(models.Model):
             ("monitor_student_submissions", "Monitor Student Submissions"),
             ("manually_grade_subjective_assessment", "Manually Grade Subjective Assessment"),
             ("archive_assessment_custom", "Archive Assessment"),
+            ("trigger_missed_assessment_notification", "Trigger Missed Assessment Notification"),
+            ("auto_grade_objective_assessment", "Auto-Grade Objective Assessment"),
+            ("compute_student_grade", "Compute Student Grade"),
+            ("view_student_performance_tracking", "View Student Performance Tracking"),
+            ("view_grade_book", "View Grade Book"),
         ]
 
     def __str__(self):
@@ -395,7 +401,8 @@ class Submission(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk:
             deadline = self.assessment_assignment.assessment.submission_deadline
-            self.is_late = self.submitted_at is not None and self.submitted_at > deadline
+            submitted = self.submitted_at or timezone.now()
+            self.is_late = bool(deadline) and submitted > deadline
         super().save(*args, **kwargs)
 
     def recompute_total_score(self):
@@ -506,7 +513,10 @@ class SubmissionResponse(models.Model):
             }
         self.grading_status = self.AUTO_GRADED
         self._recompute_score(save=False)
-        self.save(update_fields=["item_scores", "score", "grading_status"])
+        if self.pk:
+            self.save(update_fields=["item_scores", "score", "grading_status"])
+        else:
+            self.save()
 
     @staticmethod
     def _item_is_correct(item, student_answer):
@@ -520,8 +530,8 @@ class SubmissionResponse(models.Model):
         if "correct_answer" in item:  # multiple choice, true_false, numeric
             correct = item["correct_answer"]
             if isinstance(correct, list):
-                return set(student_answer or []) == set(correct)
-            return student_answer == correct
+                return set(str(x) for x in (student_answer or [])) == set(str(x) for x in correct)
+            return str(student_answer).strip().lower() == str(correct).strip().lower()
         return False
 
     def _recompute_score(self, save=True):

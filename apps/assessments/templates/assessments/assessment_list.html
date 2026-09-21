@@ -6,11 +6,23 @@
     <h1 class="page-title">Assessments</h1>
     <p class="page-sub">Manage and view assessments.</p>
   </div>
-  {% if perms.assessments.create_assessment_custom %}
-  <a class="btn btn-primary" href="{% url 'assessments:assessment_add' %}">
-    <i class="fa-solid fa-plus"></i> Add Assessment
-  </a>
-  {% endif %}
+  <div style="display:flex; gap:8px;">
+    {% if perms.assessments.access_assessment_repository %}
+    <a class="btn btn-outline" href="{% url 'assessments:assessment_repository' %}">
+      <i class="fa-solid fa-folder-open"></i> Repository
+    </a>
+    {% endif %}
+    {% if perms.assessments.view_student_performance_tracking %}
+    <a class="btn btn-outline" href="{% url 'assessments:performance_tracking' %}">
+      <i class="fa-solid fa-chart-line"></i> Performance
+    </a>
+    {% endif %}
+    {% if perms.assessments.create_assessment_custom %}
+    <a class="btn btn-primary" href="{% url 'assessments:assessment_add' %}">
+      <i class="fa-solid fa-plus"></i> Add Assessment
+    </a>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card" style="margin-bottom:18px;">

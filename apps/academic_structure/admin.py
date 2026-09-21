@@ -3,7 +3,6 @@ from .models import (
     AcademicYear,
     AcademicStructureVersion,
     Section,
-    StudentEnrollment,
     Subject,
 )
 
@@ -32,10 +31,3 @@ class SubjectAdmin(admin.ModelAdmin):
     list_display = ("name", "grade_level", "subject_type", "grading_period", "academic_year", "status")
     list_filter = ("academic_year", "grade_level", "subject_type", "status")
     search_fields = ("name",)
-
-
-@admin.register(StudentEnrollment)
-class StudentEnrollmentAdmin(admin.ModelAdmin):
-    list_display = ("student", "section", "academic_year", "status", "enrolled_at")
-    list_filter = ("academic_year", "section", "status")
-    search_fields = ("student__last_name", "student__first_name", "student__lrn")

@@ -59,15 +59,12 @@ def resource_add(request):
             id__in=_teacher_subject_ids(request.user)
         )
     if request.method == "POST" and form.is_valid():
-        if not form.cleaned_data.get("file"):
-            form.add_error("file", "A file is required.")
-        else:
-            resource = form.save(commit=False)
-            resource.uploaded_by = request.user
-            resource.academic_year = active_year
-            resource.save()
-            messages.success(request, "Learning resource uploaded successfully.")
-            return redirect(reverse("teaching:repository_list"))
+        resource = form.save(commit=False)
+        resource.uploaded_by = request.user
+        resource.academic_year = active_year
+        resource.save()
+        messages.success(request, "Learning resource added successfully.")
+        return redirect(reverse("teaching:repository_list"))
     return render(
         request,
         "teaching_learning/resource_form.html",
@@ -203,5 +200,5 @@ def resource_attach(request, vc_pk):
     return render(
         request,
         "teaching_learning/resource_attach.html",
-        {"form": form, "vc": vc},
+        {"form": form, "vc": vc, "topics": vc.topics.all()},
     )

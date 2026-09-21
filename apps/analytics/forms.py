@@ -2,7 +2,7 @@ from django import forms
 
 from apps.academic_structure.models import AcademicYear
 
-from .models import GeneratedReport
+from .models import GeneratedReport, SFReportTemplate
 
 
 class SFReportForm(forms.Form):
@@ -22,3 +22,17 @@ class SFReportForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["academic_year"].widget.attrs.update({"class": "form-control"})
         self.fields["report_type"].widget.attrs.update({"class": "form-control"})
+
+
+class SFReportTemplateForm(forms.ModelForm):
+    class Meta:
+        model = SFReportTemplate
+        fields = ["name", "form_type", "description", "template_file", "field_mappings"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+        self.fields["field_mappings"].widget.attrs[
+            "placeholder"
+        ] = '{"LRN": "lrn", "Last Name": "last_name"}'

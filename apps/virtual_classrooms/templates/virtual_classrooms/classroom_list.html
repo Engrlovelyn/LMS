@@ -34,7 +34,7 @@
       <tbody>
         {% for c in classrooms %}
         <tr>
-          <td>{{ c.subject.name }}</td>
+          <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ c.theme_color }};margin-right:7px;vertical-align:middle;border:1px solid rgba(0,0,0,.1);"></span>{{ c.subject.name }}</td>
           <td>{{ c.section.name }}</td>
           <td>{{ c.academic_year.label }}</td>
           <td>{{ c.teacher.email|default:"Unassigned" }}</td>

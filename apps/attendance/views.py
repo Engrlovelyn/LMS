@@ -15,7 +15,7 @@ from apps.virtual_classrooms.models import (
 from .forms import AttendanceRecordForm, SessionDateForm, StatusUpdateForm
 from .models import AttendanceRecord, AttendanceSession
 
-ADMIN_ROLES = ("registrar", "assistant_principal", "system_admin", "principal")
+ADMIN_ROLES = ("registrar", "assistant_principal", "system_admin", "principal", "tass_administrator")
 
 
 def _classrooms_for_user(user):
@@ -154,13 +154,17 @@ def record_attendance(request, vc_pk):
                 if not status or status not in dict(AttendanceRecord.STATUS_CHOICES):
                     continue
                 try:
+                    defaults = {
+                        "status": status,
+                        "remark": remarks,
+                    }
+                    attachment = request.FILES.get(f"{prefix}-attachment")
+                    if attachment:
+                        defaults["attachment"] = attachment
                     AttendanceRecord.objects.update_or_create(
                         session=session,
                         student=student,
-                        defaults={
-                            "status": status,
-                            "remark": remarks,
-                        },
+                        defaults=defaults,
                     )
                     saved += 1
                 except ValidationError as exc:
@@ -316,10 +320,14 @@ def record_status_update(request, pk):
                 messages.error(request, "That student is not part of this class.")
             else:
                 try:
+                    defaults = {"status": status, "remark": remarks}
+                    attachment = request.FILES.get("attachment")
+                    if attachment:
+                        defaults["attachment"] = attachment
                     record, _ = AttendanceRecord.objects.update_or_create(
                         session=session,
                         student_id=student_id,
-                        defaults={"status": status, "remark": remarks},
+                        defaults=defaults,
                     )
                     messages.success(request, f"Attendance for {record.student} updated.")
                 except ValidationError as exc:

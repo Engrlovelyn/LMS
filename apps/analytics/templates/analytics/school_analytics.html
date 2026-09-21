@@ -93,4 +93,40 @@
     <div class="lbl">Average Assessment Score</div>
   </div>
 </div>
+
+{% if perms.analytics.view_class_level_analytics %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-chalkboard"></i> Class-Level Analytics</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Section</th>
+          <th>Subject</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in classrooms %}
+        <tr>
+          <td>{{ c }}</td>
+          <td>{{ c.section|default:"—" }}</td>
+          <td>{{ c.subject|default:"—" }}</td>
+          <td class="actions">
+            <a class="btn btn-outline btn-sm" href="{% url 'analytics:class_analytics' c.pk %}">
+              <i class="fa-solid fa-chart-pie"></i> View Analytics
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-chalkboard"></i><p>No active classes found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

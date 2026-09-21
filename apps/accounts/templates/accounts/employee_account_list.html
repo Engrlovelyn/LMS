@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Employee Accounts{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Employee Accounts</h1>
+    <p class="page-sub">Manage employee user accounts and archived records.</p>
+  </div>
+  {% if perms.accounts.create_employee_account %}
+  <a class="btn btn-primary" href="{% url 'accounts:employee_account_add' %}">
+    <i class="fa-solid fa-plus"></i> Add Employee Account
+  </a>
+  {% endif %}
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_employees }}</div>
+    <div class="lbl">Total Employees</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ active_employees }}</div>
+    <div class="lbl">Active Accounts</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ total_employees|add:"-"|add:active_employees }}</div>
+    <div class="lbl">Archived Accounts</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-users"></i> Employee Accounts</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Employee Number</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for employee in employees %}
+        <tr>
+          <td>{{ employee.user.get_full_name|default:employee }}</td>
+          <td>{{ employee.employee_number }}</td>
+          <td>{{ employee.user.email }}</td>
+          <td><span class="pill {{ employee.user.status|lower }}">
+            {{ employee.user.get_status_display }}
+          </span></td>
+          <td class="actions">
+            {% if perms.accounts.update_employee_account %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:employee_account_update' employee.pk %}">
+              <i class="fa-solid fa-pen"></i> Update
+            </a>
+            {% endif %}
+            {% if perms.accounts.reset_account_password %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:admin_reset_password' employee.pk %}">
+              <i class="fa-solid fa-key"></i> Reset Password
+            </a>
+            {% endif %}
+            {% if perms.accounts.archive_account and employee.user.status != 'archived' %}
+            <form method="post" action="{% url 'accounts:employee_account_archive' employee.pk %}" class="inline-form"
+              onsubmit="return confirm('Archive this account? The user will lose access.')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger-outline btn-sm">
+                <i class="fa-solid fa-archive"></i> Archive
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-cell">No employee accounts found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

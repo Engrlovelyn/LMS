@@ -66,8 +66,8 @@
         <tr>
           <td>{{ s.name }}</td>
           <td>Grade {{ s.grade_level }}</td>
-          <td>{{ s.academic_year.label }}</td>
-          <td>{{ s.student_enrollments.count }}</td>
+          <td>{{ s.academic_year_label }}</td>
+          <td>{{ s.enrolled }}</td>
         </tr>
         {% endfor %}
       </tbody>

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Role Assignments{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Role Assignments</h1>
+    <p class="page-sub">Assign institutional roles to users for an academic year.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'accounts:employee_account_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Accounts
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-tag"></i> Assign a Role</div>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'accounts:role_assignment_add' %}" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-plus"></i> Assign Role
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-list"></i> Current Assignments</div>
+  </div>
+  <div class="card-body">
+    {% if assignments %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Academic Year</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in assignments %}
+          <tr>
+            <td>{{ assignment.user.email }}</td>
+            <td><span class="pill pill-blue">{{ assignment.role }}</span></td>
+            <td>{{ assignment.academic_year }}</td>
+            <td class="text-right">
+              <form method="post" action="{% url 'accounts:role_assignment_remove' assignment.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline"><i class="fa-solid fa-trash"></i> Remove</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fa-solid fa-user-tag"></i><p>No role assignments yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

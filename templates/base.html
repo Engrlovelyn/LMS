@@ -1,122 +1,194 @@
 {% load static %}<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}TASS LMS{% endblock %}</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'css/app.css' %}?v={% now 'U' %}">
+<script src="{% static 'js/app.js' %}?v={% now 'U' %}"></script>
 {% block extra_head %}{% endblock %}
 </head>
 <body>
+
+<!-- HEADER -->
 <header>
   <div class="brand-block">
-    <img src="{% static 'accounts/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI">
-    <img src="{% static 'accounts/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS">
-    <div class="brand-text">San Vicente Institute<span>TASS LMS</span></div>
+    <div class="brand-logos">
+      <img src="{% static 'accounts/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
+      <img src="{% static 'accounts/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
+    </div>
+    <div class="brand-text">San Vicente Institute<span>Learning Management System</span></div>
   </div>
   <div class="header-main">
-    <div class="header-user">
-      <i class="fa-solid fa-user-check"></i>
-      <div>{{ user.email }}
-        <div class="role">{{ user_role|default:"" }}</div>
-      </div>
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+    <div class="header-right">
+      <button class="dark-toggle" onclick="toggleDarkMode()" id="darkToggleBtn" aria-label="Toggle theme"><i class="fa-solid fa-moon"></i></button>
+      <button class="icon-btn" onclick="toggleNotif()" aria-label="Notifications"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
+      <button class="profile-btn" onclick="toggleProfile()" aria-label="Profile">
+        <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg">
+        <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label|default:user_role|default:"User" }}</div></div>
+        <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i>
+      </button>
     </div>
-    <a class="logout-link" href="{% url 'accounts:logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+  </div>
+  <!-- Notification Panel -->
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">Notifications <span style="font-size:11px;color:var(--blue);cursor:pointer;" onclick="markAllRead()">Mark all read</span></div>
+    <div id="notifList">
+      <div class="notif-empty" id="notifEmpty"><i class="fa-solid fa-bell-slash"></i><span>No new notifications</span></div>
+    </div>
+  </div>
+  <!-- Profile Panel -->
+  <div class="profile-panel" id="profilePanel">
+    <div class="profile-panel-header">
+      <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials }}</text></svg>" class="profile-img-lg" alt="Profile" id="profilePanelImg">
+      <div class="profile-panel-name">{{ user_display_name }}</div>
+      <div class="profile-panel-role">{{ user_role_label|default:user_role|default:"User" }}{% if user.email %} &middot; {{ user.email }}{% endif %}</div>
+    </div>
+    <button class="profile-menu-item" onclick="showToast('Opening profile settings...','success');closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    {% if perms.system_settings.configure_system_settings or user.is_superuser %}
+    <a class="profile-menu-item" href="{% url 'settings:index' %}"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</a>
+    {% else %}
+    <button class="profile-menu-item" onclick="showToast('Settings are managed by your system administrator.','success');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
+    {% endif %}
+    <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
 </header>
 
 <div class="layout">
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Main</div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      {% block sidebar %}
+      <div class="sidebar-section-label">Main Menu</div>
       <a class="nav-item" href="{% url view_dashboard_url %}">
-        <i class="fa-solid fa-house"></i><span>Dashboard</span>
+        <div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span>
       </a>
-    </div>
 
-    {% if perms.academic_structure.manage_academic_structure_template or perms.academic_structure.add_academic_year_custom or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.academic_structure.manage_academic_structure_template or perms.academic_structure.add_academic_year_custom or perms.academic_structure.view_academic_year or user.is_superuser %}
       <div class="sidebar-section-label">Academic</div>
-      <a class="nav-item" href="{% url 'academic:years' %}"><i class="fa-solid fa-calendar-week"></i><span>Academic Years</span></a>
-      <a class="nav-item" href="{% url 'academic:sections' %}"><i class="fa-solid fa-users-between-lines"></i><span>Sections</span></a>
-      <a class="nav-item" href="{% url 'academic:subjects' %}"><i class="fa-solid fa-book-open"></i><span>Subjects</span></a>
-      <a class="nav-item" href="{% url 'academic:enrollments' %}"><i class="fa-solid fa-user-graduate"></i><span>Enrollments</span></a>
-    </div>
-    {% endif %}
+      <a class="nav-item" href="{% url 'academic:years' %}"><div class="nav-item-icon"><i class="fa-solid fa-calendar-week"></i></div><span class="nav-item-label">Academic Years</span></a>
+      <a class="nav-item" href="{% url 'academic:sections' %}"><div class="nav-item-icon"><i class="fa-solid fa-users-between-lines"></i></div><span class="nav-item-label">Sections</span></a>
+      <a class="nav-item" href="{% url 'academic:subjects' %}"><div class="nav-item-icon"><i class="fa-solid fa-book-open"></i></div><span class="nav-item-label">Subjects</span></a>
+      <a class="nav-item" href="{% url 'academic:enrollments' %}"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Enrollments</span></a>
+      {% endif %}
 
-    {% if perms.virtual_classrooms.view_virtual_classroom or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.accounts.view_employee_account or perms.accounts.view_student_record or perms.accounts.role_based_access_control or user.is_superuser %}
+      <div class="sidebar-section-label">People</div>
+      {% if perms.accounts.view_employee_account or user.is_superuser %}
+      <a class="nav-item" href="{% url 'accounts:employee_account_list' %}"><div class="nav-item-icon"><i class="fa-solid fa-id-badge"></i></div><span class="nav-item-label">Employee Accounts</span></a>
+      {% endif %}
+      {% if perms.accounts.view_student_record or user.is_superuser %}
+      <a class="nav-item" href="{% url 'accounts:student_record_list' %}"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Records</span></a>
+      {% endif %}
+      {% if perms.accounts.role_based_access_control or user.is_superuser %}
+      <a class="nav-item" href="{% url 'accounts:role_assignment_list' %}"><div class="nav-item-icon"><i class="fa-solid fa-user-shield"></i></div><span class="nav-item-label">Role Assignments</span></a>
+      {% endif %}
+      {% endif %}
+
+      {% if perms.virtual_classrooms.view_virtual_classroom or user.is_superuser %}
       <div class="sidebar-section-label">Classes</div>
-      <a class="nav-item" href="{% url 'classrooms:classroom_list' %}"><i class="fa-solid fa-chalkboard-user"></i><span>Virtual Classrooms</span></a>
+      <a class="nav-item" href="{% url 'classrooms:classroom_list' %}"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Virtual Classrooms</span></a>
       {% if perms.virtual_classrooms.enroll_students_to_vc or user.is_superuser %}
-      <a class="nav-item" href="{% url 'enrollment:dashboard' %}"><i class="fa-solid fa-user-graduate"></i><span>Class Enrollment</span></a>
+      <a class="nav-item" href="{% url 'enrollment:dashboard' %}"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Class Enrollment</span></a>
       {% endif %}
-    </div>
-    {% endif %}
+      {% endif %}
 
-    {% if perms.assessments.view_assessment_custom or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.assessments.view_assessment_custom or user.is_superuser %}
       <div class="sidebar-section-label">Learning</div>
-      <a class="nav-item" href="{% url 'assessments:list' %}"><i class="fa-solid fa-clipboard-check"></i><span>Assessments</span></a>
+      <a class="nav-item" href="{% url 'assessments:assessment_list' %}"><div class="nav-item-icon"><i class="fa-solid fa-clipboard-check"></i></div><span class="nav-item-label">Assessments</span></a>
+      {% if perms.assessments.view_student_performance_tracking or user.is_superuser %}
+      <a class="nav-item" href="{% url 'assessments:performance_tracking' %}"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Student Performance</span></a>
+      {% endif %}
       {% if perms.teaching_learning.access_subject_level_repository or user.is_superuser %}
-      <a class="nav-item" href="{% url 'teaching:repository_list' %}"><i class="fa-solid fa-folder-open"></i><span>Materials Repository</span></a>
+      <a class="nav-item" href="{% url 'teaching:repository_list' %}"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Materials Repository</span></a>
       {% endif %}
-    </div>
-    {% endif %}
+      {% endif %}
 
-    {% if perms.attendance.view_attendance_records or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.attendance.view_attendance_records or user.is_superuser %}
       <div class="sidebar-section-label">Records</div>
-      <a class="nav-item" href="{% url 'attendance:attendance_index' %}"><i class="fa-solid fa-clipboard-user"></i><span>Attendance</span></a>
-    </div>
-    {% endif %}
-
-    {% if perms.communication.view_announcements_custom or user.is_superuser %}
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">Communication</div>
-      <a class="nav-item" href="{% url 'communication:announcements' %}"><i class="fa-solid fa-bullhorn"></i><span>Announcements</span></a>
-      {% if perms.communication.send_private_message or perms.communication.send_group_messaging or user.is_superuser %}
-      <a class="nav-item" href="{% url 'communication:messages' %}"><i class="fa-solid fa-comments"></i><span>Messages</span></a>
+      <a class="nav-item" href="{% url 'attendance:attendance_index' %}"><div class="nav-item-icon"><i class="fa-solid fa-clipboard-user"></i></div><span class="nav-item-label">Attendance</span></a>
       {% endif %}
-    </div>
-    {% endif %}
 
-    {% if perms.analytics.view_school_wide_analytics or perms.analytics.view_class_level_analytics or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.communication.view_announcements_custom or user.is_superuser %}
+      <div class="sidebar-section-label">Communication</div>
+      <a class="nav-item" href="{% url 'communication:announcements' %}"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></a>
+      {% if perms.communication.send_private_message or perms.communication.send_group_messaging or user.is_superuser %}
+      <a class="nav-item" href="{% url 'communication:messages' %}"><div class="nav-item-icon"><i class="fa-solid fa-comments"></i></div><span class="nav-item-label">Messages</span></a>
+      {% endif %}
+      {% endif %}
+
+      {% if perms.analytics.view_school_wide_analytics or perms.analytics.view_class_level_analytics or user.is_superuser %}
       <div class="sidebar-section-label">Analytics</div>
-      <a class="nav-item" href="{% url 'analytics:analytics_index' %}"><i class="fa-solid fa-chart-column"></i><span>Analytics &amp; Reports</span></a>
-    </div>
-    {% endif %}
+      <a class="nav-item" href="{% url 'analytics:analytics_index' %}"><div class="nav-item-icon"><i class="fa-solid fa-chart-column"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></a>
+      {% endif %}
 
-    {% if perms.governance.conduct_annual_role_access_review or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.governance.conduct_annual_role_access_review or perms.governance.retrieve_role_access_review_records or user.is_superuser %}
       <div class="sidebar-section-label">Governance</div>
-      <a class="nav-item" href="{% url 'governance:reviews' %}"><i class="fa-solid fa-scale-balanced"></i><span>Role Access Reviews</span></a>
-    </div>
-    {% endif %}
+      <a class="nav-item" href="{% url 'governance:reviews' %}"><div class="nav-item-icon"><i class="fa-solid fa-scale-balanced"></i></div><span class="nav-item-label">Role Access Reviews</span></a>
+      {% endif %}
 
-    {% if perms.system_settings.configure_system_settings or user.is_superuser %}
-    <div class="sidebar-section">
+      {% if perms.system_settings.configure_system_settings or user.is_superuser %}
       <div class="sidebar-section-label">System</div>
-      <a class="nav-item" href="{% url 'settings:index' %}"><i class="fa-solid fa-gear"></i><span>System Settings</span></a>
-      <a class="nav-item" href="{% url 'settings:backups' %}"><i class="fa-solid fa-database"></i><span>Backups</span></a>
+      <a class="nav-item" href="{% url 'settings:index' %}"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">System Settings</span></a>
+      <a class="nav-item" href="{% url 'settings:backups' %}"><div class="nav-item-icon"><i class="fa-solid fa-database"></i></div><span class="nav-item-label">Backups</span></a>
+      {% endif %}
+      {% endblock %}
+      <div class="sidebar-spacer"></div>
     </div>
-    {% endif %}
+    <div class="sidebar-footer" style="display:none;"></div>
   </aside>
 
-  <main class="main">
+  <!-- MAIN -->
+  <main class="main" id="mainContent">
     {% if messages %}
-    <div class="messages">
-      {% for message in messages %}
-      <div class="message {{ message.tags }}"><i class="fa-solid fa-circle-info"></i>{{ message }}</div>
-      {% endfor %}
-    </div>
+    {% for message in messages %}
+    <div class="message {{ message.tags }}"><i class="fa-solid fa-circle-info"></i>{{ message }}</div>
+    {% endfor %}
     {% endif %}
     {% block content %}{% endblock %}
   </main>
 </div>
+
+<footer class="universal-footer" id="universalFooter">
+  <div class="footer-inner">
+    <div class="footer-bottom">
+      <div class="footer-bottom-left">
+        <div class="footer-brand-logo">
+          <div class="footer-brand-name">SVI LMS</div>
+        </div>
+        <div class="footer-copy">&copy; {% now 'Y' %} San Vicente Institute &middot; TASS LMS v1.0</div>
+        <div class="footer-badges">
+          <span class="footer-badge sy">TASS LMS</span>
+          <span class="footer-badge">S.Y. {{ current_academic_year_label|default:"2025–2026" }}</span>
+        </div>
+      </div>
+      <div class="footer-bottom-right">
+        <span class="footer-status-dot"></span>
+        <span class="footer-status-text">System Online</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+{% block modals %}
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box confirm-box">
+    <div class="confirm-icon" id="confirmIcon">👋</div>
+    <div class="confirm-title" id="confirmTitle">Log Out?</div>
+    <div class="confirm-msg" id="confirmMsg">Are you sure you want to log out?</div>
+    <div class="confirm-actions"><button class="btn btn-outline" onclick="closeModal('confirmModal')">Cancel</button><button class="btn btn-danger" id="confirmAction">Log Out</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"><i class="fa-solid fa-check-circle"></i><span id="toastMsg">Saved!</span></div>
+{% endblock %}
+
+<form method="post" action="{% url 'accounts:logout' %}" id="logoutForm" style="display:none;">{% csrf_token %}</form>
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

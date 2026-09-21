@@ -26,14 +26,20 @@ sys.path.append(str(BASE_DIR / "apps"))
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u!$6wl%ru=hj3fw1@r9tn^#8o$gk@c_!q-8w8-*2s@%q!c7!_z'
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    'django-insecure-u!$6wl%ru=hj3fw1@r9tn^#8o$gk@c_!q-8w8-*2s@%q!c7!_z',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
+# Comma-separated list. Set ALLOWED_HOSTS in .env to the server's LAN
+# hostname/IP (or "*") when pilot testers connect from other devices.
 ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
 ]
 
 
@@ -67,8 +73,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
+'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.accounts.middleware.NoCacheMiddleware',
+    'apps.accounts.middleware.SessionTimeoutMiddleware',
+    'apps.system_settings.middleware.MaintenanceModeMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -105,6 +114,18 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
+
+# Tests use an isolated in-memory SQLite database so they run without needing
+# PostgreSQL CREATEDB privileges on the tass_admin role. Run with plain
+# `python manage.py test` or `python manage.py test --settings=config.test_settings`.
+if "test" in sys.argv:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "test_db.sqlite3",
+        }
+    }
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 
 # Password validation
@@ -164,9 +185,15 @@ LOGIN_URL = 'accounts:login_page'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# Dev default: print emails to the console (visible when running runserver).
+# Set EMAIL_BACKEND + SMTP vars in .env to switch to a real mail server.
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@tass-lms.local")
 

@@ -10,13 +10,14 @@ ACCOUNTS = [
     ("Dina", "Respicio", "dinarespicio@gmail.com", "dina12345", "assistant_principal", "EMP-0003"),
     ("Jay Ar", "Antonio", "jayarantonio@gmail.com", "jayar12345", "registrar", "EMP-0004"),
     ("Vince", "Arnedo", "vincearnedo@gmail.com", "vince12345", "system_admin", "EMP-0005"),
+    ("TASS", "Administrator", "tass.admin@tass.edu.ph", "tassadmin12345", "tass_administrator", "EMP-0006"),
 ]
 
 STUDENT = ("Khaizer", "Reyes", "khaizerreyes@gmail.com", "khaizer12345", "000000000001")
 
 
 class Command(BaseCommand):
-    help = "Seed the 6 official demo accounts (one per role)"
+    help = "Seed the 7 official demo accounts (one per role) with known passwords"
 
     def handle(self, *args, **kwargs):
         ay = AcademicYear.objects.filter(status="ACTIVE").first()
@@ -30,12 +31,14 @@ class Command(BaseCommand):
                 email=email,
                 defaults={"status": User.Status.ACTIVE},
             )
+            user.set_password(password)
+            user.status = User.Status.ACTIVE
+            user.failed_login_attempts = 0
+            user.save()
             if created:
-                user.set_password(password)
-                user.save()
                 self.stdout.write(self.style.SUCCESS(f"Created user: {email}"))
             else:
-                self.stdout.write(f"Already exists: {email}")
+                self.stdout.write(f"Reset credentials: {email}")
 
             RoleAssignment.objects.get_or_create(user=user, role=role, academic_year=ay)
 
@@ -55,12 +58,14 @@ class Command(BaseCommand):
             email=email,
             defaults={"status": User.Status.ACTIVE},
         )
+        user.set_password(password)
+        user.status = User.Status.ACTIVE
+        user.failed_login_attempts = 0
+        user.save()
         if created:
-            user.set_password(password)
-            user.save()
             self.stdout.write(self.style.SUCCESS(f"Created user: {email}"))
         else:
-            self.stdout.write(f"Already exists: {email}")
+            self.stdout.write(f"Reset credentials: {email}")
 
         RoleAssignment.objects.get_or_create(user=user, role=role, academic_year=ay)
 
@@ -74,4 +79,4 @@ class Command(BaseCommand):
             },
         )
 
-        self.stdout.write(self.style.SUCCESS("All 6 official accounts seeded."))
+        self.stdout.write(self.style.SUCCESS("All 7 official accounts seeded."))

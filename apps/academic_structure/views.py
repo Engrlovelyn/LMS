@@ -1,5 +1,7 @@
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,7 +14,6 @@ from .forms import (
     PromoteForm,
     RolloverForm,
     SectionForm,
-    StudentEnrollmentForm,
     StructureFinalizeForm,
     SubjectForm,
 )
@@ -23,9 +24,10 @@ from .models import (
     StudentEnrollment,
     Subject,
 )
+from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
 
-@perm_required("manage_academic_structure_template")
+@perm_required("academic_structure.view_academic_year")
 def academic_year_list(request):
     years = AcademicYear.objects.all()
     active = years.filter(status=AcademicYear.STATUS_ACTIVE).first()
@@ -35,9 +37,9 @@ def academic_year_list(request):
         "total_years": years.count(),
         "total_sections": Section.objects.filter(status=Section.STATUS_ACTIVE).count(),
         "total_subjects": Subject.objects.filter(status=Subject.STATUS_ACTIVE).count(),
-        "total_enrollments": StudentEnrollment.objects.filter(
-            status=StudentEnrollment.STATUS_ENROLLED
-        ).count(),
+        "total_enrollments": VirtualClassroomEnrollment.objects.filter(
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE
+        ).values("student_id").distinct().count(),
     }
     return render(request, "academic_structure/academic_year_list.html", context)
 
@@ -58,7 +60,7 @@ def academic_year_add(request):
             )
         try:
             year = form.save()
-        except IntegrityError:
+        except (IntegrityError, ValidationError):
             messages.error(request, "There is already an active Academic Year. Archive it first before activating another.")
             return render(
                 request,
@@ -92,7 +94,7 @@ def academic_year_update(request, pk):
             )
         try:
             form.save()
-        except IntegrityError:
+        except (IntegrityError, ValidationError):
             messages.error(request, "There is already an active Academic Year. Archive it first before activating another.")
             return render(
                 request,
@@ -112,18 +114,23 @@ def academic_year_update(request, pk):
 @perm_required("archive_academic_year")
 def academic_year_archive(request, pk):
     year = get_object_or_404(AcademicYear, pk=pk)
+    now = timezone.now()
     if year.status == AcademicYear.STATUS_ACTIVE:
         Section.objects.filter(academic_year=year).update(status=Section.STATUS_ARCHIVED)
         Subject.objects.filter(academic_year=year).update(status=Subject.STATUS_ARCHIVED)
-        year.student_enrollments.filter(
-            status=StudentEnrollment.STATUS_ENROLLED
-        ).update(
-            status=StudentEnrollment.STATUS_ARCHIVED,
-            archived_at=timezone.now(),
-        )
+        VirtualClassroom.objects.filter(
+            academic_year=year, status=VirtualClassroom.STATUS_ACTIVE
+        ).update(status=VirtualClassroom.STATUS_ARCHIVED)
+        VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom__academic_year=year,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).update(status=VirtualClassroomEnrollment.STATUS_REMOVED, removed_at=now)
+        StudentEnrollment.objects.filter(
+            academic_year=year, status=StudentEnrollment.STATUS_ENROLLED
+        ).update(status=StudentEnrollment.STATUS_ARCHIVED, archived_at=now)
     year.status = AcademicYear.STATUS_ARCHIVED
     year.save()
-    messages.success(request, "Academic year archived.")
+    messages.success(request, "Academic year and its sections, subjects, and enrollments archived.")
     return redirect(reverse("academic:academic_year_list"))
 
 
@@ -136,6 +143,9 @@ def structure_finalize(request, pk):
     )
     form = StructureFinalizeForm(request.POST or None, instance=version)
     if request.method == "POST" and form.is_valid():
+        if version.is_finalized:
+            messages.warning(request, f"Structure for {year.label} is already finalized. It cannot be finalized again.")
+            return redirect(reverse("academic:academic_year_list"))
         active_sections = Section.objects.filter(
             academic_year=year,
             status=Section.STATUS_ACTIVE,
@@ -178,30 +188,41 @@ def year_rollover(request, pk):
     source_year = get_object_or_404(AcademicYear, pk=pk)
     form = RolloverForm(request.POST or None, source_year=source_year)
     if request.method == "POST" and form.is_valid():
+        if source_year.status == AcademicYear.STATUS_ARCHIVED:
+            messages.error(request, "Archived academic years cannot be rolled over.")
+            return render(
+                request,
+                "academic_structure/year_rollover.html",
+                {"form": form, "source_year": source_year},
+            )
         target_year = form.cleaned_data["target_academic_year"]
         copied_sections = 0
         copied_subjects = 0
+        copied_classes = 0
+        section_map = {}
+        subject_map = {}
         with transaction.atomic():
             for section in Section.objects.filter(
                 academic_year=source_year,
                 status=Section.STATUS_ACTIVE,
             ):
                 try:
-                    Section.objects.create(
+                    created = Section.objects.create(
                         academic_year=target_year,
                         name=section.name,
                         grade_level=section.grade_level,
                         status=Section.STATUS_ACTIVE,
                     )
+                    section_map[section.pk] = created
                     copied_sections += 1
-                except IntegrityError:
+                except (IntegrityError, ValidationError):
                     continue
             for subject in Subject.objects.filter(
                 academic_year=source_year,
                 status=Subject.STATUS_ACTIVE,
             ):
                 try:
-                    Subject.objects.create(
+                    created = Subject.objects.create(
                         academic_year=target_year,
                         name=subject.name,
                         grade_level=subject.grade_level,
@@ -209,10 +230,39 @@ def year_rollover(request, pk):
                         grading_period=subject.grading_period,
                         status=Subject.STATUS_ACTIVE,
                     )
+                    subject_map[subject.pk] = created
                     copied_subjects += 1
-                except IntegrityError:
+                except (IntegrityError, ValidationError):
                     continue
-        messages.success(request, f"Rolled over {copied_sections} sections and {copied_subjects} subjects from {source_year.label} to {target_year.label}.")
+            for vc in VirtualClassroom.objects.filter(
+                academic_year=source_year,
+                status=VirtualClassroom.STATUS_ACTIVE,
+            ):
+                target_section = section_map.get(vc.section_id)
+                target_subject = subject_map.get(vc.subject_id)
+                if not target_section or not target_subject:
+                    continue
+                try:
+                    created_vc = VirtualClassroom.objects.create(
+                        academic_year=target_year,
+                        section=target_section,
+                        subject=target_subject,
+                        teacher=vc.teacher,
+                        grading_period=vc.grading_period,
+                        status=VirtualClassroom.STATUS_ACTIVE,
+                    )
+                    from apps.virtual_classrooms.services import (
+                        populate_classroom_defaults,
+                    )
+
+                    populate_classroom_defaults(created_vc)
+                    copied_classes += 1
+                except (IntegrityError, ValidationError):
+                    continue
+        messages.success(
+            request,
+            f"Rolled over {copied_sections} sections, {copied_subjects} subjects and {copied_classes} classes from {source_year.label} to {target_year.label}.",
+        )
         return redirect(reverse("academic:academic_year_list"))
     return render(
         request,
@@ -221,7 +271,7 @@ def year_rollover(request, pk):
     )
 
 
-@perm_required("manage_academic_structure_template")
+@perm_required("academic_structure.view_section_custom")
 def section_list(request):
     sections = Section.objects.select_related("academic_year", "adviser").all()
     context = {
@@ -281,19 +331,24 @@ def section_update(request, pk):
 @perm_required("archive_section_custom")
 def section_archive(request, pk):
     section = get_object_or_404(Section, pk=pk)
+    now = timezone.now()
     section.status = Section.STATUS_ARCHIVED
     section.save()
-    section.student_enrollments.filter(
-        status=StudentEnrollment.STATUS_ENROLLED
-    ).update(
-        status=StudentEnrollment.STATUS_ARCHIVED,
-        archived_at=timezone.now(),
-    )
-    messages.success(request, "Section archived.")
+    VirtualClassroom.objects.filter(
+        section=section, status=VirtualClassroom.STATUS_ACTIVE
+    ).update(status=VirtualClassroom.STATUS_ARCHIVED)
+    VirtualClassroomEnrollment.objects.filter(
+        virtual_classroom__section=section,
+        status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+    ).update(status=VirtualClassroomEnrollment.STATUS_REMOVED, removed_at=now)
+    StudentEnrollment.objects.filter(
+        section=section, status=StudentEnrollment.STATUS_ENROLLED
+    ).update(status=StudentEnrollment.STATUS_ARCHIVED, archived_at=now)
+    messages.success(request, "Section and its related enrollments archived.")
     return redirect(reverse("academic:section_list"))
 
 
-@perm_required("manage_academic_structure_template")
+@perm_required("academic_structure.view_subject_custom")
 def subject_list(request):
     subjects = Subject.objects.select_related("academic_year").all()
     context = {
@@ -361,8 +416,11 @@ def subject_archive(request, pk):
 
 @perm_required("manage_academic_structure_template")
 def enrollment_list(request):
-    enrollments = StudentEnrollment.objects.select_related(
-        "student", "academic_year", "section"
+    enrollments = VirtualClassroomEnrollment.objects.select_related(
+        "student",
+        "virtual_classroom__academic_year",
+        "virtual_classroom__section",
+        "virtual_classroom__subject",
     ).all()
     years = AcademicYear.objects.all()
     sections = Section.objects.all()
@@ -373,10 +431,10 @@ def enrollment_list(request):
     section_filter = None
     if year_id:
         year_filter = get_object_or_404(AcademicYear, pk=year_id)
-        enrollments = enrollments.filter(academic_year=year_filter)
+        enrollments = enrollments.filter(virtual_classroom__academic_year=year_filter)
     if section_id:
         section_filter = get_object_or_404(Section, pk=section_id)
-        enrollments = enrollments.filter(section=section_filter)
+        enrollments = enrollments.filter(virtual_classroom__section=section_filter)
 
     context = {
         "enrollments": enrollments,
@@ -384,47 +442,50 @@ def enrollment_list(request):
         "sections": sections,
         "year_filter": year_filter,
         "section_filter": section_filter,
-        "total_enrolled": enrollments.filter(status=StudentEnrollment.STATUS_ENROLLED).count(),
+        "total_enrolled": enrollments.filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE).values("student_id").distinct().count(),
     }
     return render(request, "academic_structure/enrollment_list.html", context)
 
 
-@perm_required("create_student_enrollment_inline")
+@perm_required("manage_academic_structure_template")
 def enrollment_add(request):
-    form = StudentEnrollmentForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        try:
-            form.save()
-        except IntegrityError:
-            messages.error(request, "This student already has an active enrollment for the selected academic year.")
-            return render(
-                request,
-                "academic_structure/enrollment_form.html",
-                {"form": form, "title": "Add Enrollment"},
-            )
-        messages.success(request, "Enrollment created successfully.")
-        return redirect(reverse("academic:enrollment_list"))
-    return render(
-        request,
-        "academic_structure/enrollment_form.html",
-        {"form": form, "title": "Add Enrollment"},
-    )
+    messages.info(request, "Student enrollments are managed per Virtual Classroom.")
+    return redirect(reverse("enrollment:dashboard"))
 
 
 @require_POST
-@perm_required("archive_student_enrollment_inline")
+@perm_required("manage_academic_structure_template")
 def enrollment_archive(request, pk):
-    enrollment = get_object_or_404(StudentEnrollment, pk=pk)
-    enrollment.status = StudentEnrollment.STATUS_ARCHIVED
-    enrollment.archived_at = timezone.now()
+    enrollment = get_object_or_404(VirtualClassroomEnrollment, pk=pk)
+    enrollment.status = VirtualClassroomEnrollment.STATUS_REMOVED
+    enrollment.removed_at = timezone.now()
     enrollment.save()
-    messages.success(request, "Enrollment archived.")
+    messages.success(request, "Enrollment removed from the classroom.")
     return redirect(reverse("academic:enrollment_list"))
 
 
 @perm_required("promote_student")
 def promote_students(request):
-    sections = Section.objects.filter(status=Section.STATUS_ACTIVE)
+    sections = Section.objects.select_related("academic_year").filter(
+        status=Section.STATUS_ACTIVE
+    )
+    enrolled_counts = {
+        row["virtual_classroom__section_id"]: row["count"]
+        for row in VirtualClassroomEnrollment.objects.filter(
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE
+        )
+        .values("virtual_classroom__section_id")
+        .annotate(count=Count("student_id", distinct=True))
+    }
+    section_rows = [
+        {
+            "name": s.name,
+            "grade_level": s.grade_level,
+            "academic_year_label": s.academic_year.label,
+            "enrolled": enrolled_counts.get(s.pk, 0),
+        }
+        for s in sections
+    ]
     promote_form = PromoteForm(request.POST or None)
 
     if request.method == "POST" and promote_form.is_valid():
@@ -435,35 +496,48 @@ def promote_students(request):
             return render(
                 request,
                 "academic_structure/promote.html",
-                {"sections": sections, "promote_form": promote_form},
+                {"sections": section_rows, "promote_form": promote_form},
             )
         moved = 0
-        enrollments = StudentEnrollment.objects.filter(
-            section=source,
-            status=StudentEnrollment.STATUS_ENROLLED,
-        )
+        moved_student_ids = set()
+        enrollments = VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom__section=source,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).select_related("virtual_classroom")
         for enrollment in enrollments:
+            target_vc = (
+                VirtualClassroom.objects.filter(
+                    academic_year=source.academic_year,
+                    section=target,
+                    subject=enrollment.virtual_classroom.subject,
+                    status=VirtualClassroom.STATUS_ACTIVE,
+                )
+                .exclude(status=VirtualClassroom.STATUS_ARCHIVED)
+                .first()
+            )
+            if not target_vc:
+                continue
             try:
                 with transaction.atomic():
-                    StudentEnrollment.objects.create(
+                    VirtualClassroomEnrollment.objects.create(
+                        virtual_classroom=target_vc,
                         student=enrollment.student,
-                        academic_year=source.academic_year,
-                        section=target,
-                        status=StudentEnrollment.STATUS_ENROLLED,
+                        status=VirtualClassroomEnrollment.STATUS_ACTIVE,
                     )
-                    enrollment.status = StudentEnrollment.STATUS_ARCHIVED
-                    enrollment.archived_at = timezone.now()
+                    enrollment.status = VirtualClassroomEnrollment.STATUS_REMOVED
+                    enrollment.removed_at = timezone.now()
                     enrollment.save()
                     moved += 1
+                    moved_student_ids.add(enrollment.student_id)
             except IntegrityError:
                 continue
-        messages.success(request, f"Promoted {moved} student(s) to {target}.")
+        messages.success(request, f"Promoted {len(moved_student_ids)} student(s) to {target}.")
         return redirect(reverse("academic:enrollment_list"))
 
     return render(
         request,
         "academic_structure/promote.html",
-        {"sections": sections, "promote_form": promote_form},
+        {"sections": section_rows, "promote_form": promote_form},
     )
 
 

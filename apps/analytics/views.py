@@ -9,9 +9,9 @@ from django.http import FileResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.paginator import Paginator
 
-from apps.accounts.decorators import perm_required
+from apps.accounts.decorators import has_permission, perm_required
 from apps.accounts.models import ActivityLog, StudentProfile, User
-from apps.academic_structure.models import AcademicYear, Section, StudentEnrollment
+from apps.academic_structure.models import AcademicYear, Section
 from apps.assessments.models import Assessment, AssessmentAssignment, Submission
 from apps.attendance.models import AttendanceRecord
 from apps.virtual_classrooms.models import (
@@ -19,8 +19,8 @@ from apps.virtual_classrooms.models import (
     VirtualClassroomEnrollment,
 )
 
-from .forms import SFReportForm
-from .models import GeneratedReport
+from .forms import SFReportForm, SFReportTemplateForm
+from .models import GeneratedReport, SFReportTemplate
 
 
 def analytics_index(request):
@@ -35,7 +35,7 @@ def analytics_index(request):
 
 
 def _classrooms_for_user(user):
-    if user.is_superuser:
+    if user.is_superuser or user.groups.filter(name="tass_administrator").exists():
         return VirtualClassroom.objects.select_related(
             "academic_year", "section", "subject", "teacher"
         ).all()
@@ -62,13 +62,15 @@ def school_analytics(request):
 
     years = AcademicYear.objects.all()
 
-    enrollments = StudentEnrollment.objects.filter(status=StudentEnrollment.STATUS_ENROLLED)
+    enrollments = VirtualClassroomEnrollment.objects.filter(
+        status=VirtualClassroomEnrollment.STATUS_ACTIVE
+    )
     sections = Section.objects.all()
     submissions = Submission.objects.all()
     attendance = AttendanceRecord.objects.all()
 
     if year_filter:
-        enrollments = enrollments.filter(academic_year=year_filter)
+        enrollments = enrollments.filter(virtual_classroom__academic_year=year_filter)
         sections = sections.filter(academic_year=year_filter)
         submissions = submissions.filter(
             assessment_assignment__assessment__academic_year=year_filter
@@ -77,7 +79,7 @@ def school_analytics(request):
             session__virtual_classroom__academic_year=year_filter
         )
 
-    total_students = enrollments.values("student").distinct().count()
+    total_students = enrollments.values("student_id").distinct().count()
     total_sections = sections.count()
     total_submissions = submissions.count()
 
@@ -95,6 +97,12 @@ def school_analytics(request):
 
     avg_score = submissions.aggregate(avg=Avg("total_score"))["avg"]
 
+    classrooms = VirtualClassroom.objects.select_related("section", "subject").filter(
+        status=VirtualClassroom.STATUS_ACTIVE
+    )
+    if year_filter:
+        classrooms = classrooms.filter(academic_year=year_filter)
+
     context = {
         "years": years,
         "selected_year": year_filter,
@@ -104,6 +112,7 @@ def school_analytics(request):
         "attendance_rate": attendance_rate,
         "avg_score": _fmt_avg(avg_score),
         "attendance_stats": attendance_stats,
+        "classrooms": classrooms,
     }
     return render(request, "analytics/school_analytics.html", context)
 
@@ -283,40 +292,67 @@ def sf_report_home(request):
         structure_version = active_year.structure_version
 
     form = SFReportForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        report_type = form.cleaned_data["report_type"]
-        academic_year = form.cleaned_data["academic_year"]
-        generated = _generate_sf_report(request.user, report_type, academic_year)
-        messages.success(
-            request,
-            f"{generated.get_report_type_display()} generated successfully.",
-        )
-        return redirect("analytics:sf_report_home")
+    if request.method == "POST":
+        if "generate" in request.POST and form.is_valid():
+            report_type = form.cleaned_data["report_type"]
+            academic_year = form.cleaned_data["academic_year"]
+            generated = _generate_sf_report(request.user, report_type, academic_year)
+            messages.success(
+                request,
+                f"{generated.get_report_type_display()} generated successfully.",
+            )
+            return redirect("analytics:sf_report_home")
+        if "upload_template" in request.POST:
+            template_form = SFReportTemplateForm(request.POST, request.FILES)
+            if template_form.is_valid():
+                template = template_form.save(commit=False)
+                template.uploaded_by = request.user
+                template.save()
+                activity_log = ActivityLog(
+                    user=request.user,
+                    action=f"Uploaded SF template: {template.name}",
+                    related_entity_type="analytics.SFReportTemplate",
+                )
+                activity_log.save()
+                messages.success(request, f"SF template '{template.name}' uploaded successfully.")
+                return redirect("analytics:sf_report_home")
+    else:
+        template_form = SFReportTemplateForm()
 
     reports = (
         GeneratedReport.objects.select_related("academic_year", "generated_by")
         .filter(report_type__in=[GeneratedReport.TYPE_SF1, GeneratedReport.TYPE_SF2])
         .order_by("-generated_at")
     )
+    templates = SFReportTemplate.objects.select_related("uploaded_by").order_by("form_type", "name")
 
     context = {
         "form": form,
+        "template_form": template_form,
         "structure_version": structure_version,
         "active_year": active_year,
         "reports": reports,
+        "templates": templates,
     }
     return render(request, "analytics/sf_report_home.html", context)
 
 
 def _generate_sf_report(user, report_type, academic_year):
     students = (
-        StudentEnrollment.objects.filter(
-            academic_year=academic_year,
-            status=StudentEnrollment.STATUS_ENROLLED,
+        VirtualClassroomEnrollment.objects.select_related(
+            "student", "virtual_classroom__section"
         )
-        .select_related("student", "section")
-        .order_by("section__grade_level", "section__name", "student__last_name")
+        .filter(
+            virtual_classroom__academic_year=academic_year,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        )
+        .order_by(
+            "virtual_classroom__section__grade_level",
+            "virtual_classroom__section__name",
+            "student__last_name",
+        )
     )
+    students = students.distinct("student")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -334,8 +370,8 @@ def _generate_sf_report(user, report_type, academic_year):
                     s.first_name,
                     s.middle_initial,
                     s.suffix,
-                    e.section.grade_level,
-                    e.section.name,
+                    e.virtual_classroom.section.grade_level,
+                    e.virtual_classroom.section.name,
                 ]
             )
         scope = f"SF1 Learner Roster - {academic_year.label}"
@@ -360,7 +396,7 @@ def _generate_sf_report(user, report_type, academic_year):
                 [
                     f"{s.last_name}, {s.first_name}",
                     s.lrn,
-                    e.section.name,
+                    e.virtual_classroom.section.name,
                     stats["present"],
                     stats["late"],
                     stats["excused"],
@@ -392,13 +428,45 @@ def _generate_sf_report(user, report_type, academic_year):
     return report
 
 
+@login_required
 def report_download(request, pk):
+    if not (
+        has_permission(request.user, "analytics.generate_sf_reports")
+        or has_permission(request.user, "analytics.manage_sf_report_templates")
+    ):
+        return HttpResponseForbidden("You do not have permission to download this report.")
     report = get_object_or_404(GeneratedReport, pk=pk)
     return FileResponse(
         report.file.open("rb"),
         as_attachment=True,
         filename=report.file.name.rsplit("/", 1)[-1],
     )
+
+
+@perm_required("analytics.manage_sf_report_templates")
+def sf_template_download(request, pk):
+    template = get_object_or_404(SFReportTemplate, pk=pk)
+    return FileResponse(
+        template.template_file.open("rb"),
+        as_attachment=True,
+        filename=template.template_file.name.rsplit("/", 1)[-1],
+    )
+
+
+@perm_required("analytics.manage_sf_report_templates")
+def sf_template_delete(request, pk):
+    template = get_object_or_404(SFReportTemplate, pk=pk)
+    name = template.name
+    template.template_file.delete(save=False)
+    template.delete()
+    activity_log = ActivityLog(
+        user=request.user,
+        action=f"Deleted SF template: {name}",
+        related_entity_type="analytics.SFReportTemplate",
+    )
+    activity_log.save()
+    messages.success(request, f"SF template '{name}' deleted.")
+    return redirect("analytics:sf_report_home")
 
 
 @perm_required("analytics.monitor_student_activity_logs")

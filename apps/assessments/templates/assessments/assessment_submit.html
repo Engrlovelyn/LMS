@@ -50,8 +50,8 @@
   </div>
   {% endif %}
 
-  {% for part, field in part_fields %}
-  <div class="card">
+  {% for part, entries in item_groups %}
+  <div class="card" style="margin-bottom:18px;">
     <div class="card-header">
       <div class="card-title">
         <i class="fa-solid fa-question"></i>
@@ -62,13 +62,17 @@
       </span>
     </div>
     <div class="card-body">
-      <div class="form-group">
-        {% if part.is_objective %}
-        <label class="form-label">{{ part.question_text }}</label>
-        {{ field }}
+      {% if part.question_text %}
+      <p style="margin:0 0 12px;font-size:13px;color:var(--text-muted);">{{ part.question_text }}</p>
+      {% endif %}
+      {% for item_key, field, is_multi in entries %}
+      <div class="form-group" style="margin-bottom:16px;">
+        {% if is_multi %}
+          <label class="form-label">{{ field.0.label }}</label>
+          {% for f in field %}{{ f }}{% endfor %}
         {% else %}
-        <label class="form-label" for="{{ field.id_for_label }}">{{ part.question_text }}</label>
-        <textarea class="form-control" name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="4">{{ field.value|default:"" }}</textarea>
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
         {% endif %}
         {% if field.help_text %}
         <div class="help-text">{{ field.help_text }}</div>
@@ -77,6 +81,7 @@
         <div class="help-text">{{ error }}</div>
         {% endfor %}
       </div>
+      {% endfor %}
     </div>
   </div>
   {% endfor %}

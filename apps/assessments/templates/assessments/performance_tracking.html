@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Student Performance Tracking{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Student Performance Tracking</h1>
+    <p class="page-sub">Consolidated grades, assessment completion, and attendance per student.</p>
+  </div>
+</div>
+
+{% for row in classroom_rows %}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-chalkboard-user"></i>
+      {{ row.classroom.subject.name }} &middot; {{ row.classroom.section.name }} &middot; {{ row.classroom.academic_year.label }}
+    </div>
+    <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_detail' row.classroom.pk %}">
+      Open Classroom
+    </a>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Student</th>
+          <th>Assessments graded</th>
+          <th>Average</th>
+          <th>Attendance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in row.student_rows %}
+        <tr>
+          <td>{{ s.student.lrn }}</td>
+          <td>{{ s.student.last_name }}, {{ s.student.first_name }}</td>
+          <td>{{ s.assessments }}</td>
+          <td><strong>{{ s.avg_pct }}%</strong></td>
+          <td>{{ s.att_pct }}%</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-cell">No active students in this classroom.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% empty %}
+<div class="card">
+  <div class="card-body">
+    <p class="help-text" style="margin:0;">No classrooms available for performance tracking.</p>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

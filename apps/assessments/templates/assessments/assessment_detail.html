@@ -20,6 +20,11 @@
       <i class="fa-solid fa-share-nodes"></i> Assign
     </a>
     {% endif %}
+    {% if perms.assessments.update_assessment_custom and can_edit %}
+    <a class="btn btn-primary" href="{% url 'assessments:assessment_part_add' assessment.pk %}">
+      <i class="fa-solid fa-square-plus"></i> Add Part
+    </a>
+    {% endif %}
     {% if perms.assessments.complete_assessment_custom and assessment.status == "active" %}
     <a class="btn btn-primary" href="{% url 'assessments:assessment_submit' assessment.pk %}">
       <i class="fa-solid fa-paper-plane"></i> Submit
@@ -29,6 +34,14 @@
     <a class="btn btn-outline" href="{% url 'assessments:submissions_monitor' assessment.pk %}">
       <i class="fa-solid fa-list-check"></i> Submissions
     </a>
+    {% endif %}
+    {% if perms.assessments.trigger_missed_assessment_notification %}
+    <form method="post" action="{% url 'assessments:trigger_notifications' assessment.pk %}" class="inline-form">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline">
+        <i class="fa-solid fa-bell"></i> Send Missed Notices
+      </button>
+    </form>
     {% endif %}
   </div>
 </div>
@@ -104,8 +117,12 @@
           <th>#</th>
           <th>Question</th>
           <th>Type</th>
+          <th>Items</th>
           <th>Points</th>
           <th>Objective</th>
+          {% if can_edit %}
+          <th>Actions</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -114,6 +131,7 @@
           <td>{{ part.order }}</td>
           <td>{{ part.question_text|truncatewords:20 }}</td>
           <td>{{ part.get_question_type_display }}</td>
+          <td>{{ part.items|length }}</td>
           <td>{{ part.points }}</td>
           <td>
             {% if part.is_objective %}
@@ -122,6 +140,22 @@
             <span class="pill pending">Subjective</span>
             {% endif %}
           </td>
+          {% if can_edit %}
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_part_update' assessment.pk part.pk %}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{% url 'assessments:assessment_part_delete' assessment.pk part.pk %}"
+                class="inline-form" onsubmit="return confirm('Delete this part?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger-outline btn-sm">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>

@@ -14,3 +14,7 @@ db.sqlite3
 # OS files
 .DS_Store
 Thumbs.db
+
+# Logs and database backups
+*.log
+media/backups/

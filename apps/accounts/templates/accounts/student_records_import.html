@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import Student Records{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Bulk Import Student Records</h1>
+    <p class="page-sub">Import students from a CSV file into a section for the active year.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'accounts:student_record_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Student Records
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-file-csv"></i> CSV Import</div>
+  </div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="messages">
+        {% for error in form.non_field_errors %}
+        <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+          <div class="help-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for error in field.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'accounts:student_record_list' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-file-import"></i> Import Students
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-circle-info"></i> CSV Format</div>
+  </div>
+  <div class="card-body">
+    <p class="help-text">The CSV header must contain: <code>lrn, first_name, last_name, middle_initial, suffix, birthdate, sex, email, contact_number, address, guardian_name, guardian_email, guardian_contact_number</code>. Only <code>lrn</code>, <code>first_name</code> and <code>last_name</code> are required per row. Blank emails become <code>lrn@student.tass.edu.ph</code>. Duplicate LRN or email rows are skipped.</p>
+  </div>
+</div>
+
+{% if report %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clipboard-list"></i> Import Results</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <tbody>
+        <tr><th>Created</th><td>{{ report.created }}</td></tr>
+        <tr><th>Skipped (duplicates / not found)</th><td>{{ report.skipped }}</td></tr>
+        <tr><th>Errors</th><td>{{ report.errors|length }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% if report.errors %}
+  <div class="card-body">
+    <ul>
+      {% for error in report.errors %}
+      <li class="help-text">{{ error }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

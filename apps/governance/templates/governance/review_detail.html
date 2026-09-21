@@ -6,9 +6,19 @@
     <h1 class="page-title">Role Access Review - {{ review.academic_year }}</h1>
     <p class="page-sub">Review details and completion state.</p>
   </div>
-  <a class="btn btn-outline" href="{% url 'governance:review_list' %}">
-    <i class="fa-solid fa-arrow-left"></i> Back to List
-  </a>
+  <div id="action-buttons">
+    <a class="btn btn-outline" href="{% url 'governance:review_update' review.pk %}">
+      <i class="fa-solid fa-pen"></i> Edit
+    </a>
+    <a class="btn btn-outline" href="{% url 'governance:review_list' %}">
+      <i class="fa-solid fa-arrow-left"></i> Back to List
+    </a>
+    <form method="post" action="{% url 'governance:review_delete' review.pk %}"
+      class="inline-form" onsubmit="return confirm('Delete this review?')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Delete</button>
+    </form>
+  </div>
 </div>
 
 <div class="card">
@@ -51,6 +61,23 @@
         {% endif %}
       </div>
     </div>
+    {% if role_snapshot %}
+    <div class="form-group">
+      <span class="form-label">Role Snapshot (at completion)</span>
+      <table class="data-table" style="margin-top:8px;">
+        <thead>
+          <tr><th>Role</th><th>Active Members</th></tr>
+        </thead>
+        <tbody>
+          {% for role, count in role_snapshot.items %}
+          <tr><td>{{ role }}</td><td>{{ count }}</td></tr>
+          {% empty %}
+          <tr><td colspan="2" class="empty-cell">No roles captured.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
     {% if not is_completed %}
     <div class="form-actions">
       <form method="post" action="{% url 'governance:review_complete' review.pk %}">

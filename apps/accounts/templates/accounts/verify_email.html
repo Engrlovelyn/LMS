@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Verify Email{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Email Verification</h1>
+    <p class="page-sub">Confirm your email address to secure your account.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body text-center" style="padding:48px 32px;">
+    {% if ok %}
+    <div style="margin-bottom:18px;"><i class="fa-solid fa-circle-check" style="font-size:44px;color:var(--success);"></i></div>
+    <h2 style="margin:0 0 8px;">Email verified</h2>
+    <p style="color:var(--text-muted);margin:0 0 24px;">
+      {% if email %}Your address {{ email }} has been verified successfully.{% else %}Your email address has been verified successfully.{% endif %}
+    </p>
+    <a class="btn btn-primary" href="{% url 'accounts:login_page' %}">Go to Sign In</a>
+    {% else %}
+    <div style="margin-bottom:18px;"><i class="fa-solid fa-triangle-exclamation" style="font-size:44px;color:var(--danger);"></i></div>
+    <h2 style="margin:0 0 8px;">Link expired or invalid</h2>
+    <p style="color:var(--text-muted);margin:0 0 24px;">This verification link is no longer valid. Ask an administrator to resend a verification email.</p>
+    <a class="btn btn-outline" href="{% url 'accounts:login_page' %}">Back to Sign In</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

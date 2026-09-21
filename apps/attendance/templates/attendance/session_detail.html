@@ -56,6 +56,7 @@
           <th>Student</th>
           <th>Status</th>
           <th>Remark</th>
+          <th>Attachment</th>
         </tr>
       </thead>
       <tbody>
@@ -77,6 +78,15 @@
             {% endif %}
           </td>
           <td>{{ row.record.remark|default:"—" }}</td>
+          <td>
+            {% if row.record and row.record.attachment %}
+            <a class="btn btn-outline btn-sm" href="{{ row.record.attachment.url }}" target="_blank">
+              <i class="fa-solid fa-paperclip"></i> View
+            </a>
+            {% else %}
+            —
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

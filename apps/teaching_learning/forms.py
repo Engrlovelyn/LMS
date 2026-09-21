@@ -6,7 +6,17 @@ from .models import LearningResource, Topic
 class LearningResourceForm(forms.ModelForm):
     class Meta:
         model = LearningResource
-        fields = ["subject", "title", "resource_type", "file", "status"]
+        fields = [
+            "subject",
+            "title",
+            "resource_type",
+            "description",
+            "external_link",
+            "file",
+            "available_from",
+            "available_until",
+            "status",
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -2,12 +2,14 @@
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import RedirectView
+
+from apps.dashboards import views as dashboards_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("apps.accounts.urls")),
     path("dashboards/", include("apps.dashboards.urls")),
+    path("", dashboards_views.hub, name="hub"),
     path("academic/", include("apps.academic_structure.urls")),
     path("classes/", include("apps.virtual_classrooms.urls")),
     path("teaching/", include("apps.teaching_learning.urls")),
@@ -18,7 +20,6 @@ urlpatterns = [
     path("governance/", include("apps.governance.urls")),
     path("enrollment/", include("apps.enrollment.urls")),
     path("settings/", include("apps.system_settings.urls")),
-    path("", RedirectView.as_view(pattern_name="accounts:login_page", permanent=False)),
 ]
 
 if settings.DEBUG:

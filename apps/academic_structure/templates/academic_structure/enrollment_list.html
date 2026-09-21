@@ -1,16 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Enrollments{% endblock %}
+{% block title %}Classroom Enrollments{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1 class="page-title">Enrollments</h1>
-    <p class="page-sub">Manage student enrollments.</p>
+    <h1 class="page-title">Classroom Enrollments</h1>
+    <p class="page-sub">Review enrollments across Virtual Classrooms.</p>
   </div>
-  {% if perms.academic_structure.create_student_enrollment_inline %}
-  <a class="btn btn-primary" href="{% url 'academic:enrollment_add' %}">
-    <i class="fa-solid fa-plus"></i> Add Enrollment
+  <a class="btn btn-primary" href="{% url 'enrollment:dashboard' %}">
+    <i class="fa-solid fa-user-plus"></i> Manage Enrollments
   </a>
-  {% endif %}
 </div>
 
 <div class="stats-grid">
@@ -60,6 +58,7 @@
         <tr>
           <th>Student</th>
           <th>LRN</th>
+          <th>Virtual Classroom</th>
           <th>Section</th>
           <th>Academic Year</th>
           <th>Status</th>
@@ -71,20 +70,21 @@
         <tr>
           <td>{{ e.student.last_name }}, {{ e.student.first_name }}</td>
           <td>{{ e.student.lrn }}</td>
-          <td>{{ e.section.name }}</td>
-          <td>{{ e.academic_year.label }}</td>
+          <td>{{ e.virtual_classroom.subject.name }}</td>
+          <td>{{ e.virtual_classroom.section.name }}</td>
+          <td>{{ e.virtual_classroom.academic_year.label }}</td>
           <td>
             <span class="pill {{ e.status|lower }}">
-              {% if e.status == "ENROLLED" %}Enrolled{% else %}Archived{% endif %}
+              {% if e.status == "active" %}Active{% else %}Removed{% endif %}
             </span>
           </td>
           <td>
             <div class="row-actions">
-              {% if perms.academic_structure.archive_student_enrollment_inline and e.status == "ENROLLED" %}
-              <form method="post" action="{% url 'academic:enrollment_archive' e.pk %}" onsubmit="return confirm('Archive this enrollment?');">
+              {% if e.status == "active" %}
+              <form method="post" action="{% url 'academic:enrollment_archive' e.pk %}" onsubmit="return confirm('Remove this student from the classroom?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger btn-sm">
-                  <i class="fa-solid fa-box-archive"></i> Archive
+                  <i class="fa-solid fa-user-minus"></i> Remove
                 </button>
               </form>
               {% endif %}
