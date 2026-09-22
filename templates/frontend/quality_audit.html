@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -615,10 +615,12 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 </style>
 </head>
 <body>
+{{ qa_data|json_script:"qa-backend-data" }}
+<script>window.__TASS_REAL__ = true;</script>
 <!-- HEADER -->
 <header>
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
-  <div class="brand-block" onclick="window.location.href='{% url 'dashboards:hub' %}'" title="Dashboard Hub" style="cursor:pointer">
+  <div class="brand-block">
     <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
       <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
@@ -647,7 +649,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <div class="profile-panel-name">Elena V. Reyes</div>
       <div class="profile-panel-role">Quality Assurance Officer</div>
     </div>
-    <a class="profile-menu-item" href="{% url 'accounts:change_password' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a>
+    <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -657,12 +659,12 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
       <div class="sidebar-section-label">Main Menu</div>
-      <a class="nav-item active" href="{% url 'dashboards:quality_audit' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Overview</span></a>
-      <a class="nav-item" href="{% url 'assessments:performance_tracking' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Monitor</span></a>
-      <a class="nav-item" href="{% url 'classrooms:classroom_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></a>
-      <a class="nav-item" href="{% url 'attendance:attendance_report' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-calendar-xmark"></i></div><span class="nav-item-label">Attendance &amp; Absence</span></a>
-      <a class="nav-item" href="{% url 'accounts:student_record_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></a>
-      <a class="nav-item" href="{% url 'analytics:activity_logs' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Monitor</span></a>
+      <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Overview</span></button>
+      <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Monitor</span></button>
+      <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></button>
+      <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-xmark"></i></div><span class="nav-item-label">Attendance &amp; Absence</span></button>
+      <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></button>
+      <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Monitor</span></button>
       <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
       <div class="sidebar-spacer"></div>
     </div>
@@ -1361,7 +1363,7 @@ function toggleNotif(){notifOpen=!notifOpen;document.getElementById('notifPanel'
 function toggleProfile(){profileOpen=!profileOpen;document.getElementById('profilePanel').classList.toggle('open',profileOpen);notifOpen=false;document.getElementById('notifPanel').classList.remove('open');}
 function closeAllPanels(){notifOpen=false;profileOpen=false;document.getElementById('notifPanel').classList.remove('open');document.getElementById('profilePanel').classList.remove('open');}
 function markAllRead(){document.querySelectorAll('.notif-unread').forEach(n=>n.classList.remove('notif-unread'));showToast('All read','success');closeAllPanels();}
-function confirmLogout(){document.getElementById('confirmTitle').textContent='Log Out?';document.getElementById('confirmMsg').textContent='Are you sure you want to log out?';document.getElementById('confirmIcon').textContent='\uD83D\uDC4B';const btn=document.getElementById('confirmAction');btn.textContent='Log Out';btn.onclick=()=>{closeModal('confirmModal');document.getElementById('logoutForm').submit();};openModal('confirmModal');closeAllPanels();}
+function confirmLogout(){document.getElementById('confirmTitle').textContent='Log Out?';document.getElementById('confirmMsg').textContent='Are you sure you want to log out?';document.getElementById('confirmIcon').textContent='\uD83D\uDC4B';const btn=document.getElementById('confirmAction');btn.textContent='Log Out';btn.onclick=()=>{closeModal('confirmModal');showToast('Goodbye!','success');setTimeout(()=>{document.getElementById('logoutForm').submit();},600);};openModal('confirmModal');closeAllPanels();}
 
 // ── TOAST ──
 let toastTimer;
@@ -1983,5 +1985,63 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 <form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
+<script>
+(function(){
+  if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
+  var ORIG = window.showView;
+  if (typeof ORIG !== 'function') return;
+  var NAV = {'attendance':1,'dashboard':1,'demographics':1,'enrollment':1,'performance':1,'settings':1,'teachers':1};
+  function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
+  function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
+  function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
+  function activate(id){ try { ORIG(id); } catch (e) {} }
+  var first = current();
+  if (isRoutable(first)) activate(first);
+  window.showView = function(id){
+    if (isRoutable(id)) { var u = base() + id + '/'; if (window.location.pathname !== u) { try { window.history.pushState({}, '', u); } catch (e) {} } }
+    return ORIG.apply(this, arguments);
+  };
+  window.addEventListener('popstate', function(){ if (isRoutable(current())) activate(current()); });
+})();
+</script>
+<script>
+// Backend bridge: replace demo/mock data in the QA dashboard with real data.
+function qaBackendBridge() {
+  var el = document.getElementById('qa-backend-data');
+  if (!el) return;
+  var D;
+  try { D = JSON.parse(el.textContent); } catch (e) { return; }
+  if (!D || typeof D !== 'object') return;
+  if (!D.students || !D.students.length) return;
+
+  var keys = ['academicYear', 'students', 'sections', 'teachers', 'grades', 'attendance', 'assessments', 'activityLog'];
+  keys.forEach(function (k) { if (D[k] !== undefined) DATA[k] = D[k]; });
+
+  if (typeof AGG !== 'undefined' && AGG) AGG = null;
+  if (typeof aggGrades === 'function') aggGrades();
+
+  var reRender = function () {
+    if (typeof initAll === 'function') { try { initAll(); } catch (e) {} }
+  };
+  reRender();
+
+  if (typeof window.applyAYFilter !== 'function') return;
+  var sel = document.getElementById('ayFilterSel');
+  var saved = null; try { saved = localStorage.getItem('tass_ay_filter'); } catch (e) {}
+  if (saved && sel) {
+    var exists = [].slice.call(sel.options).some(function (o) { return o.value === saved; });
+    if (exists) sel.value = saved;
+  }
+  if (typeof initViewCharts === 'function') {
+    var active = document.querySelector('.view.active');
+    if (active) { try { initViewCharts(active.id.replace('view-', '')); } catch (e) {} }
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', qaBackendBridge);
+} else {
+  qaBackendBridge();
+}
+</script>
 </body>
 </html>

@@ -65,6 +65,7 @@ INSTALLED_APPS = [
 'apps.governance.apps.GovernanceConfig',
     'apps.dashboards.apps.DashboardsConfig',
     'apps.enrollment.apps.EnrollmentConfig',
+    'apps.api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [

@@ -13,12 +13,16 @@ class SystemConfiguration(models.Model):
     REGISTRATION_CHOICES = [
         (REGISTRATION_OPEN, "Open"),
         (REGISTRATION_INVITE_ONLY, "Invite Only"),
-    ]
+]
     user_registration_policy = models.CharField(
         max_length=20,
         choices=REGISTRATION_CHOICES,
         default=REGISTRATION_INVITE_ONLY
     )
+
+    # Automation preferences surfaced across dashboard cards, e.g.
+    # {"frequency": "Daily", "retention": 30, "auto": true}.
+    backup_settings = models.JSONField(default=dict, blank=True)
 
     updated_by = models.ForeignKey(
         "accounts.User",

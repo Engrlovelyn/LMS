@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -863,11 +863,13 @@ html{ scroll-behavior:smooth; }
 .btn-reg{ background:var(--blue); border-color:var(--blue); color:#fff; } .btn-reg:hover{ opacity:.92; } .btn-reg:disabled{ opacity:.55; cursor:not-allowed; }</style>
 </head>
 <body>
+{{ dashboard_json|json_script:"student-backend-data" }}
+<script>window.__TASS_REAL__ = true;</script>
 
 <!-- HEADER -->
 <header>
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
-  <div class="brand-block" onclick="window.location.href='{% url 'dashboards:hub' %}'" title="Dashboard Hub" style="cursor:pointer">
+  <div class="brand-block">
     <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
       <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
@@ -898,7 +900,7 @@ html{ scroll-behavior:smooth; }
       <div class="profile-panel-name">Student</div>
       <div class="profile-panel-role">Student</div>
     </div>
-    <a class="profile-menu-item" href="{% url 'accounts:change_password' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a>
+    <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -912,12 +914,12 @@ html{ scroll-behavior:smooth; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
     <div class="sidebar-section-label">Main Menu</div>
-    <a class="nav-item active" href="{% url 'dashboards:student' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a>
-    <a class="nav-item" href="{% url 'classrooms:classroom_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">My Classes</span></a>
-    <a class="nav-item" href="{% url 'communication:announcements' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></a>
-    <a class="nav-item" href="{% url 'communication:messages' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-comments"></i></div><span class="nav-item-label">Messages</span></a>
-    <a class="nav-item" href="{% url 'attendance:attendance_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></a>
-    <a class="nav-item" href="{% url 'assessments:performance_tracking' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Tracking</span></a>
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">My Classes</span></button>
+    <button class="nav-item" onclick="openStudentHub('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
+    <button class="nav-item" onclick="openStudentHub('messages')"><div class="nav-item-icon"><i class="fa-solid fa-comments"></i></div><span class="nav-item-label">Messages</span></button>
+    <button class="nav-item" onclick="openStudentHub('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></button>
+    <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Tracking</span></button>
     <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
     <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
     <div class="sidebar-spacer"></div>
@@ -943,10 +945,10 @@ html{ scroll-behavior:smooth; }
 
       <!-- Stats -->
       <div class="stats-grid">
-        <div class="stat-card" style="cursor:pointer;" title="View my classes" onclick="location.href='{% url 'classrooms:classroom_list' %}'"><div class="stat-icon blue"><i class="fa-solid fa-chalkboard"></i></div><div class="stat-val">—</div><div class="stat-label">Enrolled Subjects</div></div>
-        <div class="stat-card" style="cursor:pointer;" title="View my performance" onclick="location.href='{% url 'assessments:performance_tracking' %}'"><div class="stat-icon green"><i class="fa-solid fa-paper-plane"></i></div><div class="stat-val">—</div><div class="stat-label">Assessments Submitted</div></div>
-        <div class="stat-card" style="cursor:pointer;" title="View my performance" onclick="location.href='{% url 'assessments:performance_tracking' %}'"><div class="stat-icon red"><i class="fa-solid fa-calendar-xmark"></i></div><div class="stat-val">—</div><div class="stat-label">Missed Assessments</div></div>
-        <div class="stat-card" style="cursor:pointer;" title="View my classes" onclick="location.href='{% url 'classrooms:classroom_list' %}'"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><div class="stat-val">—</div><div class="stat-label">Pending Submissions</div></div>
+        <div class="stat-card" style="cursor:pointer;" title="View my classes" onclick="showView('subjects')"><div class="stat-icon blue"><i class="fa-solid fa-chalkboard"></i></div><div class="stat-val">—</div><div class="stat-label">Enrolled Subjects</div></div>
+        <div class="stat-card" style="cursor:pointer;" title="View my performance" onclick="showView('performance')"><div class="stat-icon green"><i class="fa-solid fa-paper-plane"></i></div><div class="stat-val">—</div><div class="stat-label">Assessments Submitted</div></div>
+        <div class="stat-card" style="cursor:pointer;" title="View my performance" onclick="showView('performance')"><div class="stat-icon red"><i class="fa-solid fa-calendar-xmark"></i></div><div class="stat-val">—</div><div class="stat-label">Missed Assessments</div></div>
+        <div class="stat-card" style="cursor:pointer;" title="View my classes" onclick="showView('subjects')"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><div class="stat-val">—</div><div class="stat-label">Pending Submissions</div></div>
       </div>
 
       <div class="dashboard-grid">
@@ -954,7 +956,7 @@ html{ scroll-behavior:smooth; }
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fa-solid fa-list-check" style="color:var(--blue);"></i>Pending Tasks</div>
-            <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_list' %}" style="text-decoration:none">View All</a>
+            <button class="btn btn-outline btn-sm" onclick="showView('subjects')">View All</button>
           </div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
             <div id="pendingTasksList"><div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div></div>
@@ -2037,33 +2039,35 @@ renderSchoolAnnouncements();
 // SAMPLE DATA SEED
 // ════════════════════════════════════════════════
 (function seedSampleData(){
-  // Sample class threads for messaging
-  if(sClassThreads.length===0){
-    sClassThreads.push(
-      {id:'g9c', name:'Grade 9 – Section C', icon:'fa-solid fa-users', sub:'Class group chat', msgs:[
-        {sent:false, text:'Good morning class! Don\'t forget our quiz on Friday.', time:'8:00 AM'},
-        {sent:true, text:'Good morning Ms. Aguilar! Noted.', time:'8:05 AM'}
-      ]}
-    );
-  }
-  if(sTeacherThreads.length===0){
-    sTeacherThreads.push(
-      {id:'t-malanot', name:'Ms. Lovelyn C. Malanot', icon:'fa-solid fa-chalkboard-user', sub:'Science Teacher', msgs:[
-        {sent:false, text:'Please review your notes on cell structure.', time:'Yesterday'}
-      ]}
-    );
-  }
+   // Sample class threads for messaging
+   if(sClassThreads.length===0){
+     sClassThreads.push(
+       {id:'g9c', name:'Grade 9 – Section C', icon:'fa-solid fa-users', sub:'Class group chat', msgs:[
+         {sent:false, text:'Good morning class! Don\'t forget our quiz on Friday.', time:'8:00 AM'},
+         {sent:true, text:'Good morning Ms. Aguilar! Noted.', time:'8:05 AM'}
+       ]}
+     );
+   }
+   if(sTeacherThreads.length===0){
+     sTeacherThreads.push(
+       {id:'t-malanot', name:'Ms. Lovelyn C. Malanot', icon:'fa-solid fa-chalkboard-user', sub:'Science Teacher', msgs:[
+         {sent:false, text:'Please review your notes on cell structure.', time:'Yesterday'}
+       ]}
+     );
+   }
 
-  // Populate dashboard stat cards
-  const setVal=(id,val)=>{const el=document.querySelector(id);if(el)el.textContent=val;};
-  setVal('.welcome-stat:nth-child(1) .val','7');      // Subjects
-  setVal('.welcome-stat:nth-child(2) .val','3');      // Submitted
-  setVal('.welcome-stat:nth-child(3) .val','2');      // Pending
-  setVal('.welcome-stat:nth-child(4) .val','1');      // Overdue
-  setVal('#view-dashboard .stats-grid .stat-card:nth-child(1) .stat-val','7');
-  setVal('#view-dashboard .stats-grid .stat-card:nth-child(2) .stat-val','3');
-  setVal('#view-dashboard .stats-grid .stat-card:nth-child(3) .stat-val','1');
-  setVal('#view-dashboard .stats-grid .stat-card:nth-child(4) .stat-val','2');
+   if(window.__TASS_REAL__) return;
+
+   // Populate dashboard stat cards
+   const setVal=(id,val)=>{const el=document.querySelector(id);if(el)el.textContent=val;};
+   setVal('.welcome-stat:nth-child(1) .val','7');      // Subjects
+   setVal('.welcome-stat:nth-child(2) .val','3');      // Submitted
+   setVal('.welcome-stat:nth-child(3) .val','2');      // Pending
+   setVal('.welcome-stat:nth-child(4) .val','1');      // Overdue
+   setVal('#view-dashboard .stats-grid .stat-card:nth-child(1) .stat-val','7');
+   setVal('#view-dashboard .stats-grid .stat-card:nth-child(2) .stat-val','3');
+   setVal('#view-dashboard .stats-grid .stat-card:nth-child(3) .stat-val','1');
+   setVal('#view-dashboard .stats-grid .stat-card:nth-child(4) .stat-val','2');
 
   // Seed subject cards into "Your Classrooms" grid
   const grid=document.querySelector('#view-subjects .subject-grid');
@@ -3003,5 +3007,62 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 <form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
+<script>
+(function(){
+  if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
+  var ORIG = window.showView;
+  if (typeof ORIG !== 'function') return;
+  var NAV = {'activitylog':1,'dashboard':1,'performance':1,'settings':1,'subjects':1};
+  function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
+  function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
+  function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
+  function activate(id){ try { ORIG(id); } catch (e) {} }
+  var first = current();
+  if (isRoutable(first)) activate(first);
+  window.showView = function(id){
+    if (isRoutable(id)) { var u = base() + id + '/'; if (window.location.pathname !== u) { try { window.history.pushState({}, '', u); } catch (e) {} } }
+    return ORIG.apply(this, arguments);
+  };
+  window.addEventListener('popstate', function(){ if (isRoutable(current())) activate(current()); });
+})();
+</script>
+<script>
+(function(){
+  if(!window.__TASS_REAL__) return;
+  var el=document.getElementById('student-backend-data');
+  if(!el) return;
+  var D; try{ D=JSON.parse(el.textContent||'{}'); }catch(e){ D={}; }
+  if(!D || !D.subjects) return;
+  var firstSubject = D.subjects.length ? D.subjects[0].title : '';
+
+  function fill(target, items){
+    if(!target) return;
+    target.length = 0;
+    (items||[]).forEach(function(x){ target.push(x); });
+  }
+  fill(SUBJECTS, D.subjects || []);
+  fill(STUDENT_ASSESSMENTS, D.assessments || []);
+  fill(STUDENT_SCORES, D.scores || []);
+  fill(CLASS_ANNOUNCEMENTS, D.announcements || []);
+  fill(STUDENT_NOTIFS, D.notifs || []);
+  if(D.schoolAnnouncements && D.schoolAnnouncements.length){
+    try{ localStorage.setItem(PRINCIPAL_KEY, JSON.stringify(D.schoolAnnouncements)); }catch(e){}
+  }
+  fill(STUDENT_ATTENDANCE, D.attendance || []);
+  try{ writeStore(ATTENDANCE_KEY, D.attendance || []); }catch(e){}
+
+  try{ refreshStudentStats(); }catch(e){}
+  try{ renderSubjectGrid(); }catch(e){}
+  try{ renderPendingTasks(); }catch(e){}
+  try{ renderRecentScores(); }catch(e){}
+  try{ renderStudentNotifs(); }catch(e){}
+  try{ renderActivityLog(); }catch(e){}
+  try{ renderSchoolAnnouncements(); }catch(e){}
+  if(firstSubject){ try{ renderStudentAttendance(firstSubject); }catch(e){} }
+  if(typeof renderStudentPerformance==='function'){ try{ renderStudentPerformance(); }catch(e){} }
+  try{ initDashboardChart(); }catch(e){}
+  try{ initPerfDetailChart(); }catch(e){}
+})();
+</script>
 </body>
 </html>

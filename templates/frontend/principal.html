@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -697,11 +697,12 @@ html,body{ width:100%; overflow-x:hidden; }
 </style>
 </head>
 <body>
+{{ dashboard_json|json_script:"principal-backend-data" }}<script>window.__TASS_REAL__ = true;</script>
 
 <!-- HEADER -->
 <header>
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
-  <div class="brand-block" onclick="window.location.href='{% url 'dashboards:hub' %}'" title="Dashboard Hub" style="cursor:pointer">
+  <div class="brand-block">
     <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
       <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
@@ -728,7 +729,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-name">Dr. Helena V.</div>
       <div class="profile-panel-role">Principal · Administration</div>
     </div>
-    <a class="profile-menu-item" href="{% url 'accounts:change_password' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a>
+    <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -739,16 +740,16 @@ html,body{ width:100%; overflow-x:hidden; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
       <div class="sidebar-section-label">Main Menu</div>
-      <a class="nav-item active" href="{% url 'dashboards:principal' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a>
-      <a class="nav-item" href="{% url 'accounts:employee_account_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Activity</span></a>
-      <a class="nav-item" href="{% url 'classrooms:classroom_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></a>
-      <a class="nav-item" href="{% url 'teaching:repository_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Learning Materials</span></a>
-      <a class="nav-item" href="{% url 'assessments:assessment_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></a>
-      <a class="nav-item" href="{% url 'attendance:attendance_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></a>
-      <a class="nav-item" href="{% url 'assessments:performance_tracking' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Performance</span></a>
-      <a class="nav-item" href="{% url 'analytics:analytics_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></a>
-      <a class="nav-item" href="{% url 'analytics:activity_logs' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></a>
-      <a class="nav-item" href="{% url 'communication:announcements' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></a>
+      <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+      <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Activity</span></button>
+      <button class="nav-item" onclick="showView('classes')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+      <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Learning Materials</span></button>
+      <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></button>
+      <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button>
+      <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Performance</span></button>
+      <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></button>
+      <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
+      <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
       <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
       <div class="sidebar-spacer"></div>
     </div>
@@ -796,14 +797,14 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="grid-65-35">
         <!-- Teacher Activity Summary -->
         <div class="card">
-          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chalkboard-user" style="color:var(--blue);margin-right:8px;"></i>Teacher Activity This Week</div><a class="btn btn-outline btn-sm" href="{% url 'accounts:employee_account_list' %}" style="text-decoration:none">View All</a></div>
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chalkboard-user" style="color:var(--blue);margin-right:8px;"></i>Teacher Activity This Week</div><button class="btn btn-outline btn-sm" onclick="showView('teachers')">View All</button></div>
           <div class="card-body">
             <div id="dashTeacherList"></div>
           </div>
         </div>
         <!-- Recent School Activity -->
         <div class="card">
-          <div class="card-header"><div class="card-title">Recent Activity</div><a class="btn btn-outline btn-sm" href="{% url 'analytics:activity_logs' %}" style="text-decoration:none">View All</a></div>
+          <div class="card-header"><div class="card-title">Recent Activity</div><button class="btn btn-outline btn-sm" onclick="showView('activitylog')">View All</button></div>
           <div class="card-body" id="dashActivityList" style="padding:6px 16px;">
             <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>
           </div>
@@ -1198,7 +1199,7 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="confirm-icon" id="confirmIcon">👋</div>
     <div class="confirm-title" id="confirmTitle">Log Out?</div>
     <div class="confirm-msg" id="confirmMsg">Are you sure you want to log out?</div>
-    <div class="confirm-actions"><button class="btn btn-outline" onclick="closeModal('confirmModal')">Cancel</button><button class="btn btn-primary" id="confirmAction" onclick="closeModal('confirmModal');document.getElementById('logoutForm').submit()">Log Out</button></div>
+    <div class="confirm-actions"><button class="btn btn-outline" onclick="closeModal('confirmModal')">Cancel</button><button class="btn btn-primary" id="confirmAction" onclick="closeModal('confirmModal');showToast('Goodbye!','success');setTimeout(function(){document.getElementById('logoutForm').submit();},600)">Log Out</button></div>
   </div>
 </div>
 
@@ -2531,5 +2532,84 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 <form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
+<script>
+(function(){
+  if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
+  var ORIG = window.showView;
+  if (typeof ORIG !== 'function') return;
+  var NAV = {'activitylog':1,'announcements':1,'assessments':1,'attendance':1,'classes':1,'dashboard':1,'materials':1,'performance':1,'reports':1,'settings':1,'teachers':1};
+  function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
+  function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
+  function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
+  function activate(id){ try { ORIG(id); } catch (e) {} }
+  var first = current();
+  if (isRoutable(first)) activate(first);
+  window.showView = function(id){
+    if (isRoutable(id)) { var u = base() + id + '/'; if (window.location.pathname !== u) { try { window.history.pushState({}, '', u); } catch (e) {} } }
+    return ORIG.apply(this, arguments);
+  };
+  window.addEventListener('popstate', function(){ if (isRoutable(current())) activate(current()); });
+})();
+</script>
+<script>
+/* Principal real-data bridge — loads backend records into the view-only simulator. */
+(function(){
+  if (!window.__TASS_REAL__) return;
+  var el = document.getElementById('principal-backend-data');
+  if (!el) return;
+  var data = null; try { data = JSON.parse(el.textContent); } catch (e) {}
+  if (!data || !data.stats) return;
+  var fill = function(arr, items){ arr.length = 0; (items || []).forEach(function(x){ arr.push(x); }); };
+
+  fill(teacherData, data.teachers);
+  fill(allClassData, data.classes);
+  fill(allMaterials, data.materials);
+  fill(assessmentData, data.assessments);
+  fill(attendanceRecords, data.attendance);
+  fill(activityLogData, data.activity);
+
+  var setDashStat = function(idx, val){
+    var card = document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child(' + idx + ') .stat-val');
+    if (card) card.textContent = val;
+  };
+  var st = data.stats;
+  setDashStat(1, String(st.teachers || 0));
+  setDashStat(2, String(st.students || 0));
+  setDashStat(3, String(st.materials || 0));
+  setDashStat(4, String(st.assessments || 0));
+  setDashStat(5, (st.attendanceRate || 0) + '%');
+  setDashStat(6, (st.submissionRate || 0) + '%');
+  setDashStat(7, String(st.classes || 0));
+  setDashStat(8, String(st.lowActivity || 0));
+
+  var ay = data.yearLabel;
+  if (ay) document.querySelectorAll('[data-ay]').forEach(function(el2){ el2.textContent = ay; });
+
+  if (data.announcements && announcementData && announcementData.length === 0){
+    data.announcements.forEach(function(a){ announcementData.push(a); });
+  }
+
+  if (typeof renderDashTeacherList === 'function') renderDashTeacherList();
+  if (typeof renderTeacherList === 'function') renderTeacherList();
+  if (typeof renderHeatmap === 'function') renderHeatmap();
+  if (typeof renderClasses === 'function') renderClasses(window._classTeacher || 'all');
+  if (typeof renderMaterials === 'function') renderMaterials(window._materialType || 'all');
+  if (typeof populatePrincipalFilters === 'function') populatePrincipalFilters();
+  if (typeof renderAssessments === 'function') renderAssessments();
+  if (typeof renderAttendanceOverview === 'function') renderAttendanceOverview();
+  if (typeof renderRecentActivity === 'function') renderRecentActivity();
+  if (typeof renderActivityLog === 'function') renderActivityLog('all');
+  if (typeof renderAnnouncements === 'function') renderAnnouncements();
+  if (typeof refreshPrincipalNotifications === 'function') refreshPrincipalNotifications();
+})();
+</script>
+
+<!-- TASS LMS - PostgreSQL write bridge -->
+<script src="/static/js/api_bridge.js"></script>
+<script>
+window.__TASS_BRIDGE__={interval:4000,watch:[
+ {key:'tassPrincipalAnnouncements',endpoint:'school-announcements/',guard:function(v){return Array.isArray(v)&&v.length>0;},map:function(v){return {announcements:v};}}
+]};
+</script>
 </body>
 </html>

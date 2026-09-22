@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -724,11 +724,13 @@ html,body{ width:100%; overflow-x:hidden; }
 </style>
 </head>
 <body>
+{{ dashboard_json|json_script:"system-admin-backend-data" }}
+<script>window.__TASS_REAL__ = true;</script>
 
 <!-- HEADER -->
 <header>
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
-  <div class="brand-block" onclick="window.location.href='{% url 'dashboards:hub' %}'" title="Dashboard Hub" style="cursor:pointer">
+  <div class="brand-block">
     <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
       <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
@@ -755,8 +757,8 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-name">Mr. Alex R.</div>
       <div class="profile-panel-role">System Administrator · Systems</div>
     </div>
-    <a class="profile-menu-item" href="{% url 'accounts:change_password' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a>
-    <a class="profile-menu-item" href="{% url 'settings:index' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</a>
+    <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
 </header>
@@ -765,22 +767,22 @@ html,body{ width:100%; overflow-x:hidden; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
     <div class="sidebar-section-label">Main Menu</div>
-    <a class="nav-item active" href="{% url 'dashboards:ict' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a>
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
     <div class="sidebar-label">User Management</div>
-    <a class="nav-item" href="{% url 'accounts:employee_account_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-users"></i></div><span class="nav-item-label">User Accounts</span></a>
-    <a class="nav-item" href="{% url 'accounts:role_assignment_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-user-shield"></i></div><span class="nav-item-label">Roles & Permissions</span></a>
+    <button class="nav-item" onclick="showView('accounts')"><div class="nav-item-icon"><i class="fa-solid fa-users"></i></div><span class="nav-item-label">User Accounts</span></button>
+    <button class="nav-item" onclick="showView('roles')"><div class="nav-item-icon"><i class="fa-solid fa-user-shield"></i></div><span class="nav-item-label">Roles & Permissions</span></button>
     <div class="sidebar-label">Reports</div>
-    <a class="nav-item" href="{% url 'analytics:sf_report_home' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-file-signature"></i></div><span class="nav-item-label">SF Report Templates</span></a>
+    <button class="nav-item" onclick="showView('sftemplates')"><div class="nav-item-icon"><i class="fa-solid fa-file-signature"></i></div><span class="nav-item-label">SF Report Templates</span></button>
     <div class="sidebar-label">Security</div>
-    <a class="nav-item" href="{% url 'settings:password_policy' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-shield-halved"></i></div><span class="nav-item-label">Security Center</span></a>
-    <a class="nav-item" href="{% url 'analytics:activity_logs' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></a>
-    <a class="nav-item" href="{% url 'accounts:my_sessions' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-laptop"></i></div><span class="nav-item-label">Active Sessions</span></a>
+    <button class="nav-item" onclick="showView('security')"><div class="nav-item-icon"><i class="fa-solid fa-shield-halved"></i></div><span class="nav-item-label">Security Center</span></button>
+    <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
+    <button class="nav-item" onclick="showView('sessions')"><div class="nav-item-icon"><i class="fa-solid fa-laptop"></i></div><span class="nav-item-label">Active Sessions</span></button>
     <div class="sidebar-label">System</div>
 
 
-    <a class="nav-item" href="{% url 'settings:index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">System Settings</span></a>
+    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">System Settings</span></button>
     <button class="nav-item" onclick="showView('systemhealth')"><div class="nav-item-icon"><i class="fa-solid fa-heart-pulse"></i></div><span class="nav-item-label">System Health</span></button>
-    <a class="nav-item" href="{% url 'settings:backups' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-database"></i></div><span class="nav-item-label">Backup & Recovery</span></a>
+    <button class="nav-item" onclick="showView('backup')"><div class="nav-item-icon"><i class="fa-solid fa-database"></i></div><span class="nav-item-label">Backup & Recovery</span></button>
     <div class="sidebar-spacer"></div>
     </div>
   </aside>
@@ -848,7 +850,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);margin-right:8px;"></i>Security Alerts</div>
-            <a class="btn btn-outline btn-sm" href="{% url 'settings:password_policy' %}" style="text-decoration:none"><i class="fa-solid fa-arrow-right"></i> View All</a>
+            <button class="btn btn-outline btn-sm" onclick="showView('security')"><i class="fa-solid fa-arrow-right"></i> View All</button>
           </div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
             <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>
@@ -1483,6 +1485,7 @@ const ROLE_STYLE={'Teacher':'#eef2ff:#4f46e5','Registrar':'#dcfce7:#16a34a','Pri
 const STATUS_STYLE={'Active':'#dcfce7:#16a34a','Pending Verification':'#fef9c3:#a16207','Pending Password Setup':'#fef9c3:#a16207','Locked':'#fee2e2:#dc2626','Archived':'#e5e7eb:#6b7280','Inactive':'#e5e7eb:#6b7280'};
 function seedAccounts(){
   try{ const raw=localStorage.getItem(accountsStoreKey); if(raw) return JSON.parse(raw); }catch(e){}
+  if(window.__TASS_REAL__) return [];
   const a=[
     {name:'Lovelyn Malanot',emp:'EMP-2023-0014',email:'lovelyn.malanot@sanvicente.edu.ph',role:'Teacher',initials:'LF',gradient:'linear-gradient(135deg,#1e5faf,#4ade80)',status:'Active',last:'Apr 11, 2026 · 8:02 AM'},
     {name:'Jose Ramirez',emp:'EMP-2021-0042',email:'jose.ramirez@sanvicente.edu.ph',role:'Teacher',initials:'JR',gradient:'linear-gradient(135deg,#16a34a,#4ade80)',status:'Active',last:'Apr 11, 2026 · 7:45 AM'},
@@ -1746,7 +1749,7 @@ function loadPersistedSettings(){
   }catch(e){}
 }
 // ── ACTIVE SESSIONS (FR 1.19) ──
-const sessionsSeed=[
+const sessionsSeed=window.__TASS_REAL__?[]:[
   {name:'Alex Ramos',role:'System Administrator',device:'Windows 11 · Desktop',browser:'Chrome 134',time:'Active now',initials:'AR',gradient:'linear-gradient(135deg,#0891b2,#22d3ee)'},
   {name:'Carlo Fernandez',role:'Registrar',device:'Windows 11 · Desktop',browser:'Edge 134',time:'Active now',initials:'CF',gradient:'linear-gradient(135deg,#f59e0b,#fbbf24)'},
   {name:'Lovelyn Malanot',role:'Teacher',device:'Chromebook · San Vicente PC 1',browser:'Chrome 133',time:'5 min ago',initials:'LF',gradient:'linear-gradient(135deg,#1e5faf,#3a86d4)'},
@@ -1766,17 +1769,19 @@ function renderSessions(){
 }
 // ── SECURITY CENTER (FR 1.19, 2.1) ──
 function renderSecurity(){
-  setMultipleText('#view-security .stats-grid .stat-card:nth-child(1) .stat-val', '2');
+  var secStats=window.__saSecurityStats||null;
+  setMultipleText('#view-security .stats-grid .stat-card:nth-child(1) .stat-val', secStats?secStats.alerts:'2');
   setMultipleText('#view-security .stats-grid .stat-card:nth-child(2) .stat-val', document.querySelectorAll('#lockedAccountsList .lock-row').length);
-  setMultipleText('#view-security .stats-grid .stat-card:nth-child(3) .stat-val', '148');
-  setMultipleText('#view-security .stats-grid .stat-card:nth-child(4) .stat-val', '100%');
+  setMultipleText('#view-security .stats-grid .stat-card:nth-child(3) .stat-val', secStats?secStats.logins:'148');
+  setMultipleText('#view-security .stats-grid .stat-card:nth-child(4) .stat-val', secStats?secStats.integrity:'100%');
   const locked=document.getElementById('lockedAccountsList');
   if(locked){
-    locked.innerHTML=[
+    const src=window.__saLockedData && window.__saLockedData.length ? window.__saLockedData : [
       {name:'Ben Castillo',email:'ben.castillo@sanvicente.edu.ph',reason:'3 failed login attempts',when:'9:12 PM · Apr 10, 2026',initials:'BC',gradient:'linear-gradient(135deg,#b45309,#fbbf24)'},
       {name:'Juan Dela Peña',email:'juan.delapena@sanvicente.edu.ph',reason:'Pending verification expired',when:'2:00 AM · Apr 11, 2026',initials:'JD',gradient:'linear-gradient(135deg,#334155,#64748b)'}
-    ].map(u=>'<div class="lock-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--card-border);border-radius:9px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:'+u.gradient+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">'+u.initials+'</div><div><div style="font-weight:600;font-size:13px;color:var(--navy);">'+u.name+'</div><div style="font-size:11px;color:var(--gray-400);">'+u.email+'</div></div></div><div style="text-align:right;"><span class="pill" style="background:#fee2e2;color:#dc2626;">Locked</span><div style="font-size:10px;color:var(--gray-400);margin-top:4px;">'+u.reason+' · '+u.when+'</div></div></div>').join('');
-    setMultipleText('#view-security .stats-grid .stat-card:nth-child(2) .stat-val', '2');
+    ];
+    locked.innerHTML=src.map(u=>'<div class="lock-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--card-border);border-radius:9px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:'+u.gradient+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;">'+u.initials+'</div><div><div style="font-weight:600;font-size:13px;color:var(--navy);">'+u.name+'</div><div style="font-size:11px;color:var(--gray-400);">'+u.email+'</div></div></div><div style="text-align:right;"><span class="pill" style="background:#fee2e2;color:#dc2626;">Locked</span><div style="font-size:10px;color:var(--gray-400);margin-top:4px;">'+u.reason+' · '+u.when+'</div></div></div>').join('');
+    setMultipleText('#view-security .stats-grid .stat-card:nth-child(2) .stat-val', src.length);
   }
   const logins=document.getElementById('recentLoginsList');
   if(logins){
@@ -1802,9 +1807,10 @@ const serviceSeed=[
 ];
 function renderSystemHealth(){
   const h=healthSeed;
+  const shStats=window.__saHealthStats||null;
   setMultipleText('#view-systemhealth .stats-grid .stat-card:nth-child(1) .stat-val', h.uptime);
   setMultipleText('#view-systemhealth .stats-grid .stat-card:nth-child(2) .stat-val', h.response);
-  setMultipleText('#view-systemhealth .stats-grid .stat-card:nth-child(3) .stat-val', h.sessions);
+  setMultipleText('#view-systemhealth .stats-grid .stat-card:nth-child(3) .stat-val', shStats?shStats.sessions:h.sessions);
   setMultipleText('#view-systemhealth .stats-grid .stat-card:nth-child(4) .stat-val', h.backup);
   const monitors=document.querySelectorAll('#view-systemhealth .monitor-card');
   if(monitors.length){
@@ -1867,7 +1873,7 @@ function setMultipleText(selector,val){ const el=document.querySelector(selector
 function addLog(cls,icon,text,role){logData.unshift({type:cls,icon,cls,text,role,time:'Just now'});}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-function confirmLogout(){document.getElementById('confirmTitle').textContent='Log Out?';document.getElementById('confirmMsg').textContent='Are you sure you want to log out of the System Administrator panel?';document.getElementById('confirmIcon').textContent='👋';document.getElementById('confirmAction').className='btn btn-danger';document.getElementById('confirmAction').textContent='Log Out';document.getElementById('confirmAction').onclick=()=>{closeModal('confirmModal');document.getElementById('logoutForm').submit();};openModal('confirmModal');closeAllPanels();}
+function confirmLogout(){document.getElementById('confirmTitle').textContent='Log Out?';document.getElementById('confirmMsg').textContent='Are you sure you want to log out of the System Administrator panel?';document.getElementById('confirmIcon').textContent='👋';document.getElementById('confirmAction').className='btn btn-danger';document.getElementById('confirmAction').textContent='Log Out';document.getElementById('confirmAction').onclick=()=>{closeModal('confirmModal');showToast('Logged out successfully','success');setTimeout(()=>{document.getElementById('logoutForm').submit();},600);};openModal('confirmModal');closeAllPanels();}
 
 function confirmLogoutOtherSessions(){if(confirm('Are you sure you want to terminate all other active sessions?')){showToast('All other sessions terminated.','success');addLog('security','fa-laptop','All other active sessions terminated','System Administrator');}}
 
@@ -1944,6 +1950,7 @@ document.addEventListener('click', function(e) {
 
 // ── INIT ──
 (function seedAdminSampleData(){
+  if(window.__TASS_REAL__) return;
   if(logData.length===0){
     logData.push(
       {type:'security',icon:'fa-shield-halved',cls:'security',text:'Annual Role & Access Review completed',role:'System Administrator',time:'Apr 11, 2026 · 8:15 AM'},
@@ -2678,5 +2685,88 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 <form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
+<script>
+(function(){
+  if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
+  var ORIG = window.showView;
+  if (typeof ORIG !== 'function') return;
+  var NAV = {'accounts':1,'activitylog':1,'backup':1,'dashboard':1,'roles':1,'security':1,'sessions':1,'settings':1,'sftemplates':1,'systemhealth':1};
+  function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
+  function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
+  function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
+  function activate(id){ try { ORIG(id); } catch (e) {} }
+  var first = current();
+  if (isRoutable(first)) activate(first);
+  window.showView = function(id){
+    if (isRoutable(id)) { var u = base() + id + '/'; if (window.location.pathname !== u) { try { window.history.pushState({}, '', u); } catch (e) {} } }
+    return ORIG.apply(this, arguments);
+  };
+  window.addEventListener('popstate', function(){ if (isRoutable(current())) activate(current()); });
+})();
+</script>
+<script>
+(function(){
+  if(!window.__TASS_REAL__) return;
+  var el=document.getElementById('system-admin-backend-data');
+  if(!el) return;
+  var D; try{ D=JSON.parse(el.textContent||'{}'); }catch(e){ D={}; }
+  if(!D) return;
+
+  if(D.stats && D.stats.total != null){
+    var setStat=function(idx,val){var el=document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child('+idx+') .stat-val'); if(el) el.textContent=val;};
+    setStat(1, D.stats.total.toLocaleString());
+    setStat(2, D.stats.active.toLocaleString());
+    setStat(3, D.stats.locked.toLocaleString());
+    setStat(4, D.stats.pending.toLocaleString());
+    var wels=document.querySelectorAll('#view-dashboard .welcome-stat .val');
+    if(wels.length>=3){ wels[0].textContent=D.stats.total.toLocaleString(); wels[1].textContent=D.stats.pending; wels[2].textContent='Active'; }
+  }
+
+  if(D.accounts && D.accounts.length){
+    try{ localStorage.setItem(accountsStoreKey, JSON.stringify(D.accounts)); }catch(e){}
+  }
+  if(D.sessions){
+    sessionsSeed.length=0;
+    D.sessions.forEach(function(s){ sessionsSeed.push(s); });
+  }
+  if(D.locked){
+    window.__saLockedData=D.locked;
+    window.__saSecurityStats={alerts:(D.locked.length?D.locked.length:0), logins:D.sessions?D.sessions.length:0, integrity:'100%'};
+  }
+  if(D.sessionCount != null){ window.__saHealthStats={sessions:D.sessionCount}; }
+  if(D.activity){
+    logData.length=0;
+    D.activity.forEach(function(a){ logData.push(a); });
+  }
+  if(D.userDist){
+    if(typeof userDistChart!=='undefined' && userDistChart && D.userDist.length){
+      userDistChart.data.labels=D.userDist.map(function(d){return d.label;});
+      userDistChart.data.datasets[0].data=D.userDist.map(function(d){return d.value;});
+      userDistChart.update();
+    }
+  }
+
+  try{ renderAccounts(); }catch(e){}
+  try{ renderRoleAssignments(); }catch(e){}
+  try{ renderSessions(); }catch(e){}
+  try{ renderSecurity(); }catch(e){}
+  try{ renderSystemHealth(); }catch(e){}
+  try{ renderActivityLog(); }catch(e){}
+  try{ renderPendingBanner(); }catch(e){}
+})();
+</script>
+
+<!-- TASS LMS - PostgreSQL write bridge -->
+<script src="/static/js/api_bridge.js"></script>
+<script>
+window.__TASS_BRIDGE__={interval:4000,watch:[
+ {key:'tass_sa_accounts_v2',endpoint:'accounts/',guard:function(v){return Array.isArray(v)&&v.length>0;},map:function(v){return {accounts:v};}},
+ {key:'tass_sa_settings',endpoint:'system-settings/',map:function(v){return v;}},
+ {key:'tass_sa_password_policy',endpoint:'password-policy/',map:function(v){return {minLength:v.minLength,expiration:v.expiration,reuse:v.reuse,upper:v.upper,lower:v.lower,number:v.number,special:v.special};}},
+ {key:'tass_sa_backup_history',endpoint:'backup/',guard:function(v){return Array.isArray(v)&&v.length>0;},map:function(){return {action:'run'};}},
+ {key:'tass_sa_backup_settings',endpoint:'backup/',map:function(v){return {action:'schedule',frequency:v.frequency,retention:v.retention,auto:!!v.auto};}},
+ {key:'tass_sa_annual_review_v2',endpoint:'role-access-review/',guard:function(v){return !!v&&Array.isArray(v.roles);},map:function(v){return {roles:v.roles,users:v.users};}}
+]};
+</script>
 </body>
 </html>

@@ -2,10 +2,12 @@
 from django.shortcuts import render
 from django.http import HttpResponseForbidden
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from . import context as dashboards_context
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def hub(request):
@@ -16,6 +18,7 @@ def _require_role(user, role_code):
     return user.groups.filter(name=role_code).exists()
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def system_admin(request, route=None):
@@ -25,6 +28,7 @@ def system_admin(request, route=None):
     return render(request, "frontend/system_admin.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def registrar(request, route=None):
@@ -34,6 +38,7 @@ def registrar(request, route=None):
     return render(request, "frontend/registrar.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def teacher(request, route=None):
@@ -43,6 +48,7 @@ def teacher(request, route=None):
     return render(request, "frontend/teacher.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def principal(request, route=None):
@@ -52,6 +58,7 @@ def principal(request, route=None):
     return render(request, "frontend/principal.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def academic_coordinator(request, route=None):
@@ -61,6 +68,7 @@ def academic_coordinator(request, route=None):
     return render(request, "frontend/academic_coordinator.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def student(request, route=None):
@@ -70,6 +78,7 @@ def student(request, route=None):
     return render(request, "frontend/student.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def tass_administrator(request, route=None):
@@ -79,6 +88,7 @@ def tass_administrator(request, route=None):
     return render(request, "frontend/system_admin.html", ctx)
 
 
+@ensure_csrf_cookie
 @never_cache
 @login_required
 def quality_audit(request, route=None):

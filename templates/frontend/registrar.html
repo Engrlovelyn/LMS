@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="en" data-theme="light">
 
@@ -696,13 +696,14 @@ html,body{ width:100%; overflow-x:hidden; }
 </head>
 
 <body>
+{{ dashboard_json|json_script:"registrar-backend-data" }}<script>window.__TASS_REAL__ = true;</script>
 
 
 
 <header>
 
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
-  <div class="brand-block" onclick="window.location.href='{% url 'dashboards:hub' %}'" title="Dashboard Hub" style="cursor:pointer">
+  <div class="brand-block">
 
    <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
@@ -730,7 +731,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-name">Mr. Carlo B. Fernandez</div> 
       <div class="profile-panel-role">Registrar · Records Office</div> 
     </div> 
-    <a class="profile-menu-item" href="{% url 'accounts:change_password' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a> 
+    <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button> 
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button> 
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button> 
   </div> 
@@ -740,20 +741,20 @@ html,body{ width:100%; overflow-x:hidden; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner"> 
     <div class="sidebar-section-label">Main Menu</div> 
-    <a class="nav-item active" href="{% url 'dashboards:registrar' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a> 
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button> 
     <div class="sidebar-label">Student Records</div> 
-    <a class="nav-item" href="{% url 'accounts:student_record_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student List</span></a> 
-    <a class="nav-item" href="{% url 'academic:enrollment_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Enrollment</span></a> 
-    <a class="nav-item" href="{% url 'academic:section_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sectioning</span></a> 
-        <a class="nav-item" href="{% url 'classrooms:classroom_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></a> 
-    <a class="nav-item" href="{% url 'academic:validate_coverage' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-check-double"></i></div><span class="nav-item-label">Subject Coverage</span></a>
-    <a class="nav-item" href="{% url 'academic:promote_students' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></div><span class="nav-item-label">Promotion / Rollover</span></a> 
+    <button class="nav-item" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student List</span></button> 
+    <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Enrollment</span></button> 
+    <button class="nav-item" onclick="showView('sectioning')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sectioning</span></button> 
+        <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button> 
+    <button class="nav-item" onclick="showView('coverage')"><div class="nav-item-icon"><i class="fa-solid fa-check-double"></i></div><span class="nav-item-label">Subject Coverage</span></button>
+    <button class="nav-item" onclick="showView('promotion')"><div class="nav-item-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></div><span class="nav-item-label">Promotion / Rollover</span></button> 
     <div class="sidebar-label">Academic Structure & Classes</div> 
-    <a class="nav-item" href="{% url 'academic:academic_year_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-calendar-days"></i></div><span class="nav-item-label">Academic Years</span></a> 
-    <a class="nav-item" href="{% url 'academic:subject_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></a> 
+    <button class="nav-item" onclick="showView('acadyears')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-days"></i></div><span class="nav-item-label">Academic Years</span></button> 
+    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button> 
     <div class="sidebar-label">Monitoring</div> 
-    <a class="nav-item" href="{% url 'attendance:attendance_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></a> 
-    <a class="nav-item" href="{% url 'analytics:analytics_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Reports</span></a> 
+    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button> 
+    <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Reports</span></button> 
     <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button> 
     <div class="sidebar-spacer"></div>
     </div> 
@@ -904,7 +905,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div style="font-size:13px;color:#92400e;margin-bottom:12px;">These students are enrolled but their LMS account has not been generated yet. Process these records to auto-generate the account, username, and temporary password.</div> 
         <div style="display:flex;gap:10px;flex-wrap:wrap;"> 
           <button class="btn btn-reg btn-sm" onclick="openMissingEmailsModal()"><i class="fa-solid fa-envelope"></i> Add Missing Emails</button> 
-          <a class="btn btn-outline btn-sm" href="{% url 'accounts:student_record_list' %}" style="text-decoration:none"><i class="fa-solid fa-eye"></i> View Students</a> 
+          <button class="btn btn-outline btn-sm" onclick="showView('students')"><i class="fa-solid fa-eye"></i> View Students</button> 
         </div> 
       </div> 
  
@@ -1853,8 +1854,7 @@ function downloadExcelTemplate(){
   const h=['LRN','Last Name','First Name','Grade Level','Section','Subject Applied']; 
   const d=['136100100021','Santos','Maria','Grade 7','Section A','Science']; 
   let html='<table><tr>'+h.map(c=>'<th>'+c+'</th>').join('')+'</tr><tr>'+d.map(c=>'<td>'+c+'</td>').join('')+'</tr></table>'; 
-  const xls='\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'+html+'<form id="logoutForm" method="post" action="{% url "accounts:logout" %}" style="display:none;">{% csrf_token %}</form>' +
-'</body></html>'; 
+  const xls='\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'+html+'</body></html>'; 
   const a=document.createElement('a'); 
   a.href=URL.createObjectURL(new Blob([xls],{type:'application/vnd.ms-excel'})); 
   a.download='Subject_Applied_Import_Template.xls';document.body.appendChild(a);a.click();a.remove(); 
@@ -3668,6 +3668,66 @@ window.tassValidate=tassValidate;
 window.tassDecimal=tassDecimal;
 window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(el.value,10)||0);if(max!=null)v=Math.min(v,max);if(min!=null)v=Math.max(v,min);el.value=v;return v;};
 })();
+</script>
+<form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
+<script>
+(function(){
+  if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
+  var ORIG = window.showView;
+  if (typeof ORIG !== 'function') return;
+  var NAV = {'acadyears':1,'attendance':1,'classrooms':1,'coverage':1,'dashboard':1,'enrollment':1,'import':1,'promotion':1,'reports':1,'sectioning':1,'settings':1,'students':1,'subjects':1};
+  function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
+  function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
+  function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
+  function activate(id){ try { ORIG(id); } catch (e) {} }
+  var first = current();
+  if (isRoutable(first)) activate(first);
+  window.showView = function(id){
+    if (isRoutable(id)) { var u = base() + id + '/'; if (window.location.pathname !== u) { try { window.history.pushState({}, '', u); } catch (e) {} } }
+    return ORIG.apply(this, arguments);
+  };
+  window.addEventListener('popstate', function(){ if (isRoutable(current())) activate(current()); });
+})();
+</script>
+<script>
+/* Registrar real-data bridge — loads backend records into the demo state store. */
+(function(){
+  if (!window.__TASS_REAL__) return;
+  var el = document.getElementById('registrar-backend-data');
+  if (!el) return;
+  var data = null; try { data = JSON.parse(el.textContent); } catch (e) {}
+  if (!data || !data.students || !window.getRegState) return;
+  var st = window.getRegState();
+  if (!st) return;
+  var fill = function(arr, items){ arr.length = 0; (items || []).forEach(function(x){ arr.push(x); }); };
+  fill(st.students, data.students);
+  fill(st.sections, data.sections);
+  fill(st.subjects, data.subjects);
+  fill(st.virtualClassrooms, data.virtualClassrooms);
+  fill(st.academicYears, data.academicYears);
+  fill(st.logs, data.logs);
+  if (data.virtualClassrooms) st.vcCount = data.virtualClassrooms.length;
+  if (data.yearLabel) st.academicYear = data.yearLabel;
+  if (window.__regSave) window.__regSave();
+  if (window.renderStudentList) window.renderStudentList();
+  if (window.renderAddedSections) window.renderAddedSections();
+  if (window.populateAdvisers) window.populateAdvisers();
+  if (window.renderAcadYears) window.renderAcadYears();
+  if (window.renderSubjects) window.renderSubjects();
+  if (window.populateVCFilters) window.populateVCFilters();
+  if (window.renderVCTable) window.renderVCTable();
+  if (window.populateSubjFilters) window.populateSubjFilters();
+  if (window.refreshRegistrarNotifications) window.refreshRegistrarNotifications();
+})();
+</script>
+
+<!-- TASS LMS - PostgreSQL write bridge -->
+<script src="/static/js/api_bridge.js"></script>
+<script>
+window.__TASS_BRIDGE__={interval:4000,watch:[
+ {key:'tass_registrar_demo_v2',endpoint:'students/',guard:function(v){return Array.isArray(v.students)&&v.students.length>0;},map:function(v){return {students:v.students};}},
+ {key:'tass_registrar_demo_v2',endpoint:'academic-structure/',guard:function(v){return (v.sections&&v.sections.length)||(v.subjects&&v.subjects.length)||(v.virtualClassrooms&&v.virtualClassrooms.length);},map:function(v){return {sections:v.sections||[],subjects:v.subjects||[],vcs:v.virtualClassrooms||[]};}}
+]};
 </script>
 </body> 
 </html>  

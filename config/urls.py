@@ -20,6 +20,7 @@ urlpatterns = [
     path("governance/", include("apps.governance.urls")),
     path("enrollment/", include("apps.enrollment.urls")),
     path("settings/", include("apps.system_settings.urls")),
+    path("api/", include("apps.api.urls")),
 ]
 
 if settings.DEBUG:

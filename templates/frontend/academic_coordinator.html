@@ -1,5 +1,5 @@
 {% load static %}
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -799,11 +799,12 @@ html,body{ width:100%; overflow-x:hidden; }
 </style>
 </head>
 <body>
+{{ dashboard_json|json_script:"academic-backend-data" }}<script>window.__TASS_REAL__ = true;</script>
 
 <!-- HEADER -->
 <header>
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
-  <div class="brand-block" onclick="window.location.href='{% url 'dashboards:hub' %}'" title="Dashboard Hub" style="cursor:pointer">
+  <div class="brand-block">
     <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
       <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
@@ -830,7 +831,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-name">Ms. Maria B.</div>
       <div class="profile-panel-role">Academic Coordinator · Assistant Principal Access</div>
     </div>
-    <a class="profile-menu-item" href="{% url 'accounts:change_password' %}" style="color:inherit;text-decoration:none;width:100%;display:flex;align-items:center"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a>
+    <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -841,15 +842,15 @@ html,body{ width:100%; overflow-x:hidden; }
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
     <div class="sidebar-section-label">Main Menu</div>
-    <a class="nav-item active" href="{% url 'dashboards:academic_coordinator' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a>
-    <a class="nav-item" href="{% url 'academic:academic_year_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-sitemap"></i></div><span class="nav-item-label">Academic Structure</span></a>
-    <a class="nav-item" href="{% url 'classrooms:classroom_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></a>
-    <a class="nav-item" href="{% url 'teaching:repository_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Learning Materials</span></a>
-    <a class="nav-item" href="{% url 'assessments:assessment_list' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></a>
-    <a class="nav-item" href="{% url 'attendance:attendance_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></a>
-    <a class="nav-item" href="{% url 'assessments:performance_tracking' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Student Performance</span></a>
-    <a class="nav-item" href="{% url 'analytics:analytics_index' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-chart-pie"></i></div><span class="nav-item-label">Analytics & Reports</span></a>
-    <a class="nav-item" href="{% url 'communication:announcements' %}" style="color:inherit;text-decoration:none;text-align:left"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></a>
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+    <button class="nav-item" onclick="showView('structure')"><div class="nav-item-icon"><i class="fa-solid fa-sitemap"></i></div><span class="nav-item-label">Academic Structure</span></button>
+    <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+    <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Learning Materials</span></button>
+    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></button>
+    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></button>
+    <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Student Performance</span></button>
+    <button class="nav-item" onclick="showView('analytics')"><div class="nav-item-icon"><i class="fa-solid fa-chart-pie"></i></div><span class="nav-item-label">Analytics & Reports</span></button>
+    <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
     <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
     <div class="sidebar-spacer"></div>
     </div>
@@ -905,7 +906,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fa-solid fa-chalkboard" style="color:var(--blue);"></i> Recently Created Virtual Classrooms</div>
-            <a class="btn btn-outline btn-sm" href="{% url 'classrooms:classroom_list' %}" style="text-decoration:none">View All</a>
+            <button class="btn btn-outline btn-sm" onclick="showView('classrooms')">View All</button>
           </div>
           <div class="card-body" id="dashVCList"></div>
         </div>
@@ -1453,7 +1454,7 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="confirm-msg">Are you sure you want to log out of the Academic Coordinator dashboard?</div>
     <div class="confirm-actions">
       <button class="btn btn-outline" onclick="closeModal('confirmModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="closeModal('confirmModal');document.getElementById('logoutForm').submit()">Log Out</button>
+      <button class="btn btn-primary" onclick="closeModal('confirmModal');showToast('Goodbye, Ms. Maria!','teal');setTimeout(function(){document.getElementById('logoutForm').submit();},600)">Log Out</button>
     </div>
   </div>
 </div>
@@ -2754,5 +2755,71 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 <form id="logoutForm" method="post" action="{% url 'accounts:logout' %}" style="display:none;">{% csrf_token %}</form>
+<script>
+(function(){
+  if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
+  var ORIG = window.showView;
+  if (typeof ORIG !== 'function') return;
+  var NAV = {'analytics':1,'announcements':1,'assessments':1,'attendance':1,'classrooms':1,'dashboard':1,'materials':1,'performance':1,'settings':1,'structure':1};
+  function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
+  function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
+  function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
+  function activate(id){ try { ORIG(id); } catch (e) {} }
+  var first = current();
+  if (isRoutable(first)) activate(first);
+  window.showView = function(id){
+    if (isRoutable(id)) { var u = base() + id + '/'; if (window.location.pathname !== u) { try { window.history.pushState({}, '', u); } catch (e) {} } }
+    return ORIG.apply(this, arguments);
+  };
+  window.addEventListener('popstate', function(){ if (isRoutable(current())) activate(current()); });
+})();
+</script>
+<script>
+/* Academic Coordinator real-data bridge — loads backend records into the simulator. */
+(function(){
+  if (!window.__TASS_REAL__) return;
+  var el = document.getElementById('academic-backend-data');
+  if (!el) return;
+  var data = null; try { data = JSON.parse(el.textContent); } catch (e) {}
+  if (!data || !data.vcList) return;
+  var fill = function(arr, items){ arr.length = 0; (items || []).forEach(function(x){ arr.push(x); }); };
+
+  fill(sectionsData, data.sections);
+  fill(subjectsData, data.subjects);
+  fill(vcData, data.vcList);
+
+  var setStat = function(idx, val){ var el = document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child(' + idx + ') .stat-val'); if (el) el.textContent = val; };
+  var st = data.stats;
+  setStat(1, String(st.vcs || 0));
+  setStat(2, String(st.sections || 0));
+  setStat(3, String(st.subjects || 0));
+  setStat(4, String(st.teacherAssigned || st.teachers || 0));
+  setStat(5, st.avgScore || '—');
+  setStat(6, st.avgAttendance || '—');
+  setStat(7, String(st.elective || 0));
+  setStat(8, data.yearLabel || '—');
+
+  var ay = data.yearLabel;
+  if (ay) document.querySelectorAll('[data-ay]').forEach(function(el2){ el2.textContent = ay; });
+
+  if (window.persistACState) persistACState();
+  if (typeof renderSectionsTable === 'function') renderSectionsTable();
+  if (typeof renderSubjectsTable === 'function') renderSubjectsTable();
+  if (typeof renderVCTable === 'function') renderVCTable();
+  if (typeof renderDashVCList === 'function') renderDashVCList();
+  if (typeof refreshACNotifications === 'function') refreshACNotifications();
+})();
+</script>
+
+<!-- TASS LMS - PostgreSQL write bridge -->
+<script src="/static/js/api_bridge.js"></script>
+<script>
+window.__TASS_BRIDGE__={interval:4000,watch:[
+ {key:'tass_ac_sections',endpoint:'academic-structure/',map:function(v){return {sections:v};},guard:function(v){return Array.isArray(v)&&v.length>0;}},
+ {key:'tass_ac_subjects',endpoint:'academic-structure/',map:function(v){return {subjects:v};},guard:function(v){return Array.isArray(v)&&v.length>0;}},
+ {key:'tass_ac_vcs',endpoint:'academic-structure/',map:function(v){return {vcs:v};},guard:function(v){return Array.isArray(v)&&v.length>0;}},
+ {key:'tass_ac_topics',endpoint:'academic-structure/',guard:function(v){return !!v&&Object.keys(v).length>0;},map:function(v){var out={},keymap={science10:'Science',math9:'Mathematics',genbio1:'General Biology 1'};Object.keys(v).forEach(function(k){out[keymap[k]||k]=v[k];});return {topics:out};}}
+]};
+</script>
 </body>
 </html>
