@@ -230,6 +230,12 @@ def accounts(request):
         return _err("Expected a list under 'accounts'.")
 
     seen, created, updated = [], 0, 0
+    # The sweep below only has meaning when the board is showing real DB
+    # accounts. When the demo data set (emails/employee numbers that don't
+    # exist in PostgreSQL) is synced, "updated" rows are the demo's fabrications
+    # and archiving every genuine employee account would be destructive.
+    # So we only sweep when every row reconciled to an existing user+employee.
+    real_mode = True
     for row in incoming:
         if not isinstance(row, dict):
             continue
@@ -290,16 +296,24 @@ def accounts(request):
                 RoleAssignment.objects.get_or_create(user=user, role=role, academic_year=year)
         _log(request.user, f"account_saved:{email}", entity_type="User", entity_id=user.pk)
 
+        if created or _employee(user) is None:
+            real_mode = False
+        elif emp_no and employee.employee_number != emp_no:
+            real_mode = False
+
     # Soft-archive employee accounts the board no longer lists (never self).
-    managed = Role.objects.values_list("code", flat=True)
-    for user in User.objects.filter(groups__name__in=managed).exclude(pk=request.user.pk):
-        if _employee(user) is None:
-            continue
-        if user.email not in seen and user.status != User.Status.ARCHIVED:
-            user.status = User.Status.ARCHIVED
-            user.save(update_fields=["status", "is_active"])
-            RoleAssignment.objects.filter(user=user, academic_year=year).delete()
-            _log(request.user, f"account_archived:{user.email}", entity_type="User", entity_id=user.pk)
+    # Only in real mode: in demo mode the visible roster may be unrelated to
+    # the DB records, so archiving would silently disable demo accounts.
+    if real_mode:
+        managed = Role.objects.values_list("code", flat=True)
+        for user in User.objects.filter(groups__name__in=managed).exclude(pk=request.user.pk):
+            if _employee(user) is None:
+                continue
+            if user.email not in seen and user.status != User.Status.ARCHIVED:
+                user.status = User.Status.ARCHIVED
+                user.save(update_fields=["status", "is_active"])
+                RoleAssignment.objects.filter(user=user, academic_year=year).delete()
+                _log(request.user, f"account_archived:{user.email}", entity_type="User", entity_id=user.pk)
 
     return _ok(created=created, updated=updated)
 
