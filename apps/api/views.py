@@ -13,10 +13,10 @@ objects it previously stored in localStorage.
 import json
 from collections import defaultdict
 from datetime import date, timedelta
-
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -33,7 +33,12 @@ from apps.accounts.models import (
 from apps.academic_structure.models import AcademicYear, Section, StudentEnrollment, Subject
 from apps.assessments.models import Assessment, AssessmentAssignment, AssessmentPart
 from apps.attendance.models import AttendanceRecord, AttendanceSession
-from apps.communication.models import ClassAnnouncement, SchoolAnnouncement
+from apps.communication.models import (
+    ClassAnnouncement,
+    GroupMessage,
+    PrivateMessage,
+    SchoolAnnouncement,
+)
 from apps.governance.models import RoleAccessReview
 from apps.system_settings.models import BackupRecord, PasswordPolicy, SystemConfiguration
 from apps.teaching_learning.models import LearningResource, LearningResourcePlacement, Topic, TopicTemplate
@@ -1079,3 +1084,213 @@ def role_access_review(request):
     review.save()
     _log(request.user, "annual_role_access_review_completed", entity_type="RoleAccessReview", entity_id=review.pk)
     return _ok(review_id=review.pk)
+
+
+# ---------------------------------------------------------------------------
+# /api/messages/ — one-on-one (private) and group chat for the dashboards
+#
+# GET  /api/messages/              -> threads (group + private) and contacts
+# GET  /api/messages/?peer=ID      -> the private thread with that peer
+# GET  /api/messages/?thread=ID    -> the group thread for that classroom
+# POST /api/messages/ {recipient_id, body} -> send a private message
+# POST /api/messages/ {classroom_id, body} -> send a group message
+# ---------------------------------------------------------------------------
+def _msg_display(user):
+    if hasattr(user, "employee_profile"):
+        p = user.employee_profile
+        return f"{p.first_name} {p.last_name}".strip() or user.email
+    if hasattr(user, "student_profile"):
+        p = user.student_profile
+        return f"{p.first_name} {p.last_name}".strip() or user.email
+    return user.email
+
+
+def _msg_initials(display):
+    parts = display.split()
+    return "".join(part[0] for part in parts[:2] if part[0].isalpha() or part[0].isdigit()).upper()[:2] or "?"
+
+
+def _msg_gradient(seed):
+    palette = [
+        "linear-gradient(135deg,#1e5faf,#3a86d4)",
+        "linear-gradient(135deg,#e11d48,#f43f5e)",
+        "linear-gradient(135deg,#7c3aed,#a78bfa)",
+        "linear-gradient(135deg,#16a34a,#4ade80)",
+        "linear-gradient(135deg,#d97706,#fbbf24)",
+        "linear-gradient(135deg,#0891b2,#22d3ee)",
+        "linear-gradient(135deg,#dc2626,#f87171)",
+        "linear-gradient(135deg,#4f46e5,#818cf8)",
+    ]
+    return palette[hash(str(seed)) % len(palette)]
+
+
+def _coerce_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _msg_payload(msg, current_user):
+    sender = msg.sender
+    display = _msg_display(sender)
+    return {
+        "id": msg.pk,
+        "sent": sender.pk == current_user.pk,
+        "sender": display,
+        "sender_id": sender.pk,
+        "text": msg.content,
+        "time": msg.sent_at.strftime("%Y-%m-%d %H:%M"),
+        "iso": msg.sent_at.isoformat(),
+    }
+
+
+@login_required
+def messages(request):
+    from apps.communication.views import _classrooms_for_user
+
+    user = request.user
+
+    if request.method == "GET":
+        peer_id = request.GET.get("peer")
+        group_id = request.GET.get("thread")
+
+        if peer_id:
+            peer = User.objects.filter(pk=_coerce_int(peer_id), status=User.Status.ACTIVE).first()
+            if peer is None or peer.pk == user.pk:
+                return _err("Recipient not found.", 404)
+            PrivateMessage.objects.filter(
+                sender=peer, recipient=user, read_at__isnull=True
+            ).update(read_at=timezone.now())
+            qs = (
+                PrivateMessage.objects.filter(Q(sender=user, recipient=peer) | Q(sender=peer, recipient=user))
+                .select_related("sender", "recipient")
+                .order_by("sent_at")
+            )
+            return _ok(
+                peer={"id": peer.pk, "name": _msg_display(peer)},
+                messages=[_msg_payload(m, user) for m in qs],
+            )
+
+        if group_id:
+            classroom = VirtualClassroom.objects.filter(pk=_coerce_int(group_id)).first()
+            if classroom is None or classroom not in _classrooms_for_user(user):
+                return _err("You do not access this class chat.", 403)
+            qs = (
+                GroupMessage.objects.filter(virtual_classroom=classroom)
+                .select_related("sender")
+                .order_by("sent_at")
+            )
+            return _ok(
+                classroom={"id": classroom.pk, "name": f"{classroom.subject.name} - {classroom.section.name}"},
+                messages=[_msg_payload(m, user) for m in qs],
+            )
+
+        classrooms = list(_classrooms_for_user(user))
+
+        group_map = {}
+        for m in (
+            GroupMessage.objects.filter(virtual_classroom__in=classrooms)
+            .select_related("virtual_classroom", "sender", "virtual_classroom__subject", "virtual_classroom__section")
+        ):
+            entry = group_map.get(m.virtual_classroom_id)
+            if entry is None or m.sent_at > entry[-1].sent_at:
+                group_map[m.virtual_classroom_id] = m
+
+        group_threads = []
+        for vc in classrooms:
+            last = group_map.get(vc.pk)
+            name = f"{vc.subject.name} - {vc.section.name}"
+            group_threads.append({
+                "id": f"c-{vc.pk}",
+                "classroom_id": vc.pk,
+                "name": name,
+                "sub": (f"{_msg_display(last.sender)}: {last.content}" if last else "Class group chat"),
+                "unread": 0,
+            })
+        group_threads.sort(key=lambda t: t["name"])
+
+        peer_ids = set(
+            PrivateMessage.objects.filter(sender=user).values_list("recipient_id", flat=True)
+        ) | set(
+            PrivateMessage.objects.filter(recipient=user).values_list("sender_id", flat=True)
+        )
+
+        private_threads = []
+        for peer in User.objects.filter(pk__in=peer_ids).order_by("email"):
+            unread = PrivateMessage.objects.filter(
+                sender=peer, recipient=user, read_at__isnull=True
+            ).count()
+            last = (
+                PrivateMessage.objects.filter(Q(sender=user, recipient=peer) | Q(sender=peer, recipient=user))
+                .order_by("-sent_at")
+                .first()
+            )
+            display = _msg_display(peer)
+            private_threads.append({
+                "id": f"p-{peer.pk}",
+                "peer_id": peer.pk,
+                "name": display,
+                "sub": (f"{_msg_display(last.sender)}: {last.content}" if last else "No messages yet"),
+                "unread": unread,
+                "time": last.sent_at.strftime("%Y-%m-%d %H:%M") if last else "",
+            })
+        private_threads.sort(key=lambda t: t["name"])
+
+        contacts = []
+        seen = set()
+        vc_ids = [vc.pk for vc in classrooms]
+        if vc_ids:
+            for vc in VirtualClassroom.objects.filter(pk__in=vc_ids):
+                candidates = [vc.teacher] if vc.teacher_id else []
+                for t in candidates:
+                    if t and t.pk != user.pk and t.status == User.Status.ACTIVE and t.pk not in seen:
+                        seen.add(t.pk)
+                        d = _msg_display(t)
+                        contacts.append({"id": t.pk, "name": d, "role": "Teacher"})
+                enrolls = VirtualClassroomEnrollment.objects.filter(
+                    virtual_classroom=vc,
+                    status=STATUS_ACTIVE,
+                    student__user__status=User.Status.ACTIVE,
+                ).select_related("student__user", "student")
+                for e in enrolls:
+                    su = e.student.user
+                    if su.pk == user.pk or su.pk in seen:
+                        continue
+                    seen.add(su.pk)
+                    d = _msg_display(su)
+                    contacts.append({"id": su.pk, "name": d, "role": "Student"})
+        contacts.sort(key=lambda c: (c["role"], c["name"]))
+
+        return _ok(
+            group=group_threads,
+            private=private_threads,
+            contacts=contacts,
+            school_name=getattr(settings, "SCHOOL_NAME", "San Vicente Institute"),
+        )
+
+    # POST — send message
+    data = _payload(request)
+    body = (data.get("body") or "").strip()
+    if not body:
+        return _err("Message text is required.")
+
+    if data.get("recipient_id"):
+        peer = User.objects.filter(
+            pk=_coerce_int(data["recipient_id"]), status=User.Status.ACTIVE
+        ).first()
+        if peer is None or peer.pk == user.pk:
+            return _err("Recipient not found.", 404)
+        msg = PrivateMessage.objects.create(sender=user, recipient=peer, content=body)
+        _log(user, "private_message_sent", entity_type="PrivateMessage", entity_id=msg.pk)
+        return _ok(message=_msg_payload(msg, user))
+
+    if data.get("classroom_id"):
+        classroom = VirtualClassroom.objects.filter(pk=_coerce_int(data["classroom_id"])).first()
+        if classroom is None or classroom not in _classrooms_for_user(user):
+            return _err("You do not have access to this class chat.", 403)
+        msg = GroupMessage.objects.create(sender=user, virtual_classroom=classroom, content=body)
+        _log(user, "group_message_sent", entity_type="GroupMessage", entity_id=msg.pk)
+        return _ok(message=_msg_payload(msg, user))
+
+    return _err("Missing recipient or classroom.")

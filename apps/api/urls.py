@@ -18,4 +18,5 @@ urlpatterns = [
     path("password-policy/", views.password_policy, name="api_password_policy"),
     path("backup/", views.backup, name="api_backup"),
     path("role-access-review/", views.role_access_review, name="api_role_access_review"),
+    path("messages/", views.messages, name="api_messages"),
 ]

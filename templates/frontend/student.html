@@ -1402,6 +1402,45 @@ const sampleQuiz = [];
 // ════════════════════════════════════════════════
 const sClassThreads = [];
 const sTeacherThreads = [];
+let sMsgRealLoaded=false;
+function msgApi(path,opts){return fetch(path,opts||{}).then(r=>r.json()).catch(()=>({ok:false}));}
+function msgCsrf(){const m=document.cookie.match(/csrftoken=([^;]+)/);return m?m[1]:'';}
+function msgGradFor(name){const palette=['linear-gradient(135deg,#1e5faf,#3a86d4)','linear-gradient(135deg,#e11d48,#f43f5e)','linear-gradient(135deg,#7c3aed,#a78bfa)','linear-gradient(135deg,#16a34a,#4ade80)','linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#0891b2,#22d3ee)','linear-gradient(135deg,#dc2626,#f87171)','linear-gradient(135deg,#4f46e5,#818cf8)'];let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return palette[h%palette.length];}
+function msgIcon(name){const parts=name.replace(/[^0-9A-Za-z]/g,' ').split(' ').filter(Boolean).slice(0,2);return parts.map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';}
+function sMsgFromData(t,kind){return {id:t.id,name:t.name,grad:kind==='class'?'linear-gradient(135deg,#1e5faf,#3a86d4)':msgGradFor(t.name),icon:msgIcon(t.name),sub:t.sub,unread:t.unread||0,peer_id:t.peer_id,classroom_id:t.classroom_id,msgs:[],_loaded:false};}
+function sMsgEmptyChat(){return '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-comments" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No messages yet. Say hi!</div>';}
+function sMsgEmptyScreen(){return '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';}
+function sMsgRenderBody(t){
+  if(!t)return;
+  sMsgActive=t.id;
+  document.getElementById('sMsgChatTitle').innerHTML=`<span style="display:flex;align-items:center;gap:8px;"><div style="background:${t.grad};width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">${t.icon}</div>${t.name}</span>`;
+  const msgs=document.getElementById('sMsgMessages');msgs.innerHTML='';
+  if(!t.msgs.length){msgs.innerHTML=sMsgEmptyChat();return;}
+  t.msgs.forEach(m=>{msgs.innerHTML+='<div class="msg '+(m.sent?'sent':'received')+'"><div class="msg-bubble">'+escHtml(m.text)+'</div><div class="msg-time">'+(m.sent?'':m.sender+' · ')+m.time+'</div></div>';});
+  msgs.scrollTop=msgs.scrollHeight;
+}
+function sMsgFetchHistory(t){
+  const q=t.id.indexOf('c-')===0?'thread='+t.classroom_id:'peer='+t.peer_id;
+  msgApi('/api/messages/?'+q).then(d=>{
+    if(d&&d.ok){t.msgs=(d.messages||[]).map(m=>({sent:m.sent,text:m.text,sender:m.sender,time:m.time}));if(t.unread>0){t.unread=0;renderSMsgThreads();}}
+    if(sMsgActive===t.id)sMsgRenderBody(t);
+  });
+}
+function syncSMsgThreads(){
+  return msgApi('/api/messages/',{credentials:'same-origin'}).then(d=>{
+    if(!(d&&d.ok))return false;
+    sMsgRealLoaded=true;
+    sClassThreads.length=0;sTeacherThreads.length=0;
+    (d.group||[]).forEach(t=>sClassThreads.push(sMsgFromData(t,'class')));
+    (d.private||[]).forEach(t=>sTeacherThreads.push(sMsgFromData(t,'private')));
+    renderSMsgThreads();
+    const threads=currentSMsgTab==='class'?sClassThreads:sTeacherThreads;
+    const keep=threads.find(x=>x.id===sMsgActive)||threads[0];
+    if(keep){setSMsgThread(keep);}else{document.getElementById('sMsgChatTitle').innerHTML='Class Chat';document.getElementById('sMsgMessages').innerHTML=sMsgEmptyScreen();}
+    startSMsgPoll();
+    return true;
+  });
+}
 
 // ════════════════════════════════════════════════
 // VIEW NAVIGATION
@@ -1763,10 +1802,33 @@ function confirmQuitQuiz() {
 // ════════════════════════════════════════════════
 // MESSAGING
 // ════════════════════════════════════════════════
+function pollSMsgActive(){
+  const pane=document.getElementById('tab-smessages');if(!pane||pane.offsetParent===null)return;
+  const all=[...sClassThreads,...sTeacherThreads];
+  const t=all.find(x=>x.id===sMsgActive);
+  if(!t||!sMsgRealLoaded||!t._loaded||!((t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='')||(t.classroom_id!==undefined&&t.classroom_id!==null&&t.classroom_id!=='')))return;
+  const q=t.id.indexOf('c-')===0?'thread='+t.classroom_id:'peer='+t.peer_id;
+  msgApi('/api/messages/?'+q).then(d=>{
+    if(!(d&&d.ok)||sMsgActive!==t.id)return;
+    const msgs=(d.messages||[]).map(m=>({sent:m.sent,text:m.text,sender:m.sender,time:m.time}));
+    if(msgs.length>t.msgs.length){t.msgs=msgs;sMsgRenderBody(t);}
+  });
+}
+function pollSMsgSummary(){
+  const pane=document.getElementById('tab-smessages');if(!pane||pane.offsetParent===null)return;
+  msgApi('/api/messages/').then(d=>{
+    if(!(d&&d.ok)||!sMsgRealLoaded)return;
+    (d.group||[]).forEach(td=>{const ex=sClassThreads.find(x=>x.id===td.id);if(ex){if(td.sub)ex.sub=td.sub;}else{sClassThreads.push(sMsgFromData(td,'class'));}});
+    (d.private||[]).forEach(td=>{const ex=sTeacherThreads.find(x=>x.id===td.id);if(ex){if(td.sub)ex.sub=td.sub;}else{sTeacherThreads.push(sMsgFromData(td,'private'));}});
+    renderSMsgThreads();
+  });
+}
+function startSMsgPoll(){if(window.__sMsgPollStarted)return;window.__sMsgPollStarted=true;setInterval(()=>{pollSMsgActive();pollSMsgSummary();},15000);}
 function initStudentMsgTab() {
+  syncSMsgThreads();
   renderSMsgThreads();
   if (sClassThreads.length > 0) setSMsgThread(sClassThreads[0]);
-  else document.getElementById('sMsgMessages').innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';
+  else document.getElementById('sMsgMessages').innerHTML = sMsgEmptyScreen();
 }
 function renderSMsgThreads() {
   const list = document.getElementById('sMsgThreadList');
@@ -1790,13 +1852,12 @@ function setSMsgThread_byId(id) {
 function setSMsgThread(t) {
   if (!t) return;
   sMsgActive = t.id;
-  document.getElementById('sMsgChatTitle').innerHTML = `<span style="display:flex;align-items:center;gap:8px;"><div style="background:${t.grad};width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">${t.icon}</div>${t.name}</span>`;
-  const msgs = document.getElementById('sMsgMessages');
-  msgs.innerHTML = '';
-  t.msgs.forEach(m => {
-    msgs.innerHTML += `<div class="msg ${m.sent?'sent':'received'}"><div class="msg-bubble">${escHtml(m.text)}</div><div class="msg-time">${m.sent?'':m.sender+' · '}${m.time}</div></div>`;
-  });
-  msgs.scrollTop = msgs.scrollHeight;
+  if (sMsgRealLoaded && !t._loaded && ((t.peer_id!==undefined&&t.peer_id!==null) || (t.classroom_id!==undefined&&t.classroom_id!==null))) {
+    t._loaded = true;
+    sMsgFetchHistory(t);
+    return;
+  }
+  sMsgRenderBody(t);
   renderSMsgThreads();
 }
 function switchSMsgTab(tab) {
@@ -1821,10 +1882,22 @@ function sendStudentMsg() {
   if (!t) return;
   const now = new Date();
   const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  t.msgs.push({sent:true,sender:'You',text,time});
+  const optimistic = {sent:true,sender:'You',text,time};
+  t.msgs.push(optimistic);
   t.sub = 'You: '+text.substring(0,30);
   input.value = '';
-  setSMsgThread(t);
+  sMsgRenderBody(t);
+  if (!sMsgRealLoaded) return;
+  const payload = (t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='') ? {recipient_id:t.peer_id,body:text} : (t.classroom_id!==undefined&&t.classroom_id!==null&&t.classroom_id!=='') ? {classroom_id:t.classroom_id,body:text} : null;
+  if (!payload) return;
+  msgApi('/api/messages/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)}).then(d=>{
+    if (d && d.ok) return;
+    const i = t.msgs.indexOf(optimistic);
+    if (i > -1) t.msgs.splice(i,1);
+    t.sub = t.sub.replace(/^You: /,'');
+    if (sMsgActive===t.id) sMsgRenderBody(t);
+    showToast('Message not sent','error');
+  });
 }
 
 // ════════════════════════════════════════════════
