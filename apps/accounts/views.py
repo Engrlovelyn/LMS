@@ -478,11 +478,16 @@ def _send_verification_email(user, request, password="", recipient_name=""):
         "login_password": password,
         "verify_url": verify_url,
         "expiry_hours": VERIFY_TOKEN_EXPIRY_HOURS,
-        "school_name": getattr(settings, "SCHOOL_NAME", "Saint Joseph's College of Baggao"),
+        "school_name": getattr(settings, "SCHOOL_NAME", "San Vicente Institute"),
         "contact_email": getattr(settings, "SCHOOL_CONTACT_EMAIL", "info@whitestrings.io"),
         "account_kind": kind,
     }
-    from .brevo import send_html_email, verification_email_html, verification_email_text
+    from .brevo import (
+        send_html_email,
+        svi_logo_path,
+        verification_email_html,
+        verification_email_text,
+    )
     try:
         send_html_email(
             subject="Verify your email address",
@@ -490,6 +495,7 @@ def _send_verification_email(user, request, password="", recipient_name=""):
             to_name=name,
             html=verification_email_html(context),
             text=verification_email_text(context),
+            logo_cid=svi_logo_path(),
         )
     except Exception:
         import logging

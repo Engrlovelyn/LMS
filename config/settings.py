@@ -208,6 +208,6 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@tass-lms.local")
 # Sender must exist in your Brevo account (verified domain / verified sender).
 BREVO_API_KEY = _brevo_key
 BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "TASS LMS")
-SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Saint Joseph's College of Baggao")
+SCHOOL_NAME = os.getenv("SCHOOL_NAME", "San Vicente Institute")
 SCHOOL_CONTACT_EMAIL = os.getenv("SCHOOL_CONTACT_EMAIL", "info@whitestrings.io")
 

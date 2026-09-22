@@ -119,11 +119,15 @@ def send_html_email(
     html=None,
     text=None,
     from_email=None,
+    logo_cid=None,
 ):
     """Send an HTML email through the configured backend.
 
     Works with the console backend too (prints the HTML), so development
     behaves identically whether or not BREVO_API_KEY is set.
+
+    ``logo_cid`` is a path to an image attached inline and referenced in the
+    HTML as ``cid:<filename>`` (e.g. the SVI logo).
     """
     message = EmailMultiAlternatives(
         subject=subject,
@@ -131,9 +135,24 @@ def send_html_email(
         from_email=from_email or getattr(settings, "DEFAULT_FROM_EMAIL", ""),
         to=[to_email],
     )
+    if logo_cid and os.path.exists(logo_cid):
+        with open(logo_cid, "rb") as logo_file:
+            logo_data = logo_file.read()
+        message.attach(os.path.basename(logo_cid), logo_data, "image/png")
     if html:
         message.attach_alternative(html, "text/html")
     return message.send(fail_silently=False)
+
+
+def svi_logo_path():
+    candidates = (
+        os.path.join(getattr(settings, "BASE_DIR", ""), "static", "dashboards", "img", "SVI_logo.png"),
+        os.path.join(os.getcwd(), "static", "dashboards", "img", "SVI_logo.png"),
+    )
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+    return ""
 
 
 def verification_email_html(context):
@@ -149,7 +168,7 @@ def verification_email_html(context):
       contact_email  – footer contact address
       account_kind   – "student" | "employee" (tweaks the pitch line)
     """
-    school = context.get("school_name") or "Saint Joseph's College of Baggao"
+    school = context.get("school_name") or "San Vicente Institute"
     contact = context.get("contact_email") or "info@whitestrings.io"
     name = context.get("greeting_name") or context.get("login_email") or "there"
     login_email = context.get("login_email") or ""
@@ -169,9 +188,8 @@ def verification_email_html(context):
             "child's career and future!"
         )
 
-    logo_initials = "".join(
-        part[0] for part in school.split() if part and part[0].isupper()
-    )[:2] or "TASS"
+    brand = "#1e5faf"   # SVI blue
+    accent = "#3a86d4"  # SVI sky
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -179,18 +197,19 @@ def verification_email_html(context):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{school} – Verify your email address</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f1ec;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1f2937;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#f4f1ec;">
+<body style="margin:0;padding:0;background-color:#eef2f7;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#eef2f7;">
   <tr><td align="center" style="padding:28px 12px;">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;background-color:#ffffff;border:1px solid #e7dfd4;border-radius:12px;overflow:hidden;">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;background-color:#ffffff;border:1px solid #d8e2ee;border-radius:12px;overflow:hidden;">
       <tr>
-        <td style="background:linear-gradient(135deg,#7a1f2b 0%,#a3263a 55%,#7a1f2b 100%);padding:26px 32px;">
+        <td style="background:linear-gradient(135deg,{brand} 0%,{accent} 55%,{brand} 100%);padding:22px 32px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td style="vertical-align:middle;">
-                <span style="display:inline-block;width:44px;height:44px;line-height:44px;text-align:center;background:#ffffff;border-radius:8px;font-size:18px;font-weight:800;color:#7a1f2b;letter-spacing:1px;">{logo_initials}</span>
+              <td style="vertical-align:middle;width:1%;">
+                <img src="cid:SVI_logo.png" alt="{school} logo" width="52"
+                     style="display:inline-block;background:#ffffff;border-radius:10px;padding:4px;">
               </td>
-              <td style="vertical-align:middle;padding-left:14px;color:#ffffff;font-size:20px;font-weight:700;">Verify your email address</td>
+              <td style="vertical-align:middle;padding-left:16px;color:#ffffff;font-size:20px;font-weight:700;">Verify your email address</td>
             </tr>
           </table>
         </td>
@@ -201,8 +220,8 @@ def verification_email_html(context):
         <p style="margin:0 0 18px 0;">{pitch}</p>
 """
     html += f"""
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fbf6ee;border:1px solid #e7dfd4;border-radius:8px;margin:0 0 20px 0;">
-          <tr><td style="padding:14px 18px;font-size:12px;font-weight:800;letter-spacing:1px;color:#7a1f2b;border-bottom:1px solid #e7dfd4;">SIS LOGIN CREDENTIAL</td></tr>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f8fc;border:1px solid #d8e2ee;border-radius:8px;margin:0 0 20px 0;">
+          <tr><td style="padding:14px 18px;font-size:12px;font-weight:800;letter-spacing:1px;color:{brand};border-bottom:1px solid #d8e2ee;">SIS LOGIN CREDENTIAL</td></tr>
           <tr><td style="padding:14px 18px;font-size:14px;">
             <p style="margin:0 0 8px 0;"><span style="color:#6b7280;font-weight:600;">Email:</span> {login_email}</p>
             <p style="margin:0;"><span style="color:#6b7280;font-weight:600;">Password:</span> {login_password}</p>
@@ -214,23 +233,23 @@ def verification_email_html(context):
           Click this link within <strong>{hours} hours</strong> to verify your account:
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0;">
-          <tr><td style="border-radius:8px;background-color:#7a1f2b;">
+          <tr><td style="border-radius:8px;background:linear-gradient(135deg,{brand},{accent});">
             <a href="{verify_url}" style="display:inline-block;padding:12px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;border-radius:8px;">Verify Email</a>
           </td></tr>
         </table>
         <p style="margin:0 0 24px 0;font-size:13px;color:#6b7280;">
           If the button does not open, copy this link into your browser:<br>
-          <a href="{verify_url}" style="color:#7a1f2b;word-break:break-all;">{verify_url}</a>
+          <a href="{verify_url}" style="color:{brand};word-break:break-all;">{verify_url}</a>
         </p>
         <p style="margin:0 0 6px 0;">Thanks,</p>
-        <p style="margin:0 0 28px 0;font-weight:700;color:#7a1f2b;">{school}</p>
+        <p style="margin:0 0 28px 0;font-weight:700;color:{brand};">{school}</p>
       </td></tr>
       <tr>
-        <td style="background-color:#f6f1ea;border-top:1px solid #e7dfd4;padding:18px 32px;font-size:11px;color:#8b8277;line-height:1.7;">
+        <td style="background-color:#eef2f7;border-top:1px solid #d8e2ee;padding:18px 32px;font-size:11px;color:#6b7280;line-height:1.7;">
           This email is auto generated. Do not reply.<br>
           If you received this email by mistake, simply delete it.<br>
           For questions and more information, please contact:
-          <a href="mailto:{contact}" style="color:#7a1f2b;">{contact}</a>
+          <a href="mailto:{contact}" style="color:{brand};">{contact}</a>
         </td>
       </tr>
     </table>
@@ -243,7 +262,7 @@ def verification_email_html(context):
 
 def verification_email_text(context):
     """Plain-text fallback mirroring the HTML content."""
-    school = context.get("school_name") or "Saint Joseph's College of Baggao"
+    school = context.get("school_name") or "San Vicente Institute"
     name = context.get("greeting_name") or "there"
     contact = context.get("contact_email") or "info@whitestrings.io"
     hours = context.get("expiry_hours", 48)
