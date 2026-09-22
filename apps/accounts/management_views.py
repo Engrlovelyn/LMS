@@ -54,7 +54,7 @@ def _make_student(email, password, profile_fields, section, academic_year, reque
         PasswordHistory.objects.create(user=user, hashed_password=user.password)
         if request is not None:
             from .views import _send_verification_email
-            _send_verification_email(user, request)
+            _send_verification_email(user, request, password=password or "")
         student = StudentProfile(user=user, lrn=lrn, **profile_fields)
         student.save()
         ActivityLog.objects.create(
@@ -114,7 +114,7 @@ def employee_account_add(request):
                 user.save()
                 PasswordHistory.objects.create(user=user, hashed_password=user.password)
                 from .views import _send_verification_email
-                _send_verification_email(user, request)
+                _send_verification_email(user, request, password=initial_password)
                 profile = form.save(commit=False)
                 profile.user = user
                 profile.save()

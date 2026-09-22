@@ -29,7 +29,7 @@ from .models import (
 
 DEFAULT_MAX_FAILED_ATTEMPTS = 5
 RESET_TOKEN_EXPIRY_MINUTES = 30
-VERIFY_TOKEN_EXPIRY_HOURS = 24
+VERIFY_TOKEN_EXPIRY_HOURS = 48
 
 ROLE_DASHBOARD_URLS = {
     "system_admin": "dashboards:ict",
@@ -454,7 +454,7 @@ def logout_other_sessions(request):
     return redirect("accounts:my_sessions")
 
 
-def _send_verification_email(user, request):
+def _send_verification_email(user, request, password="", recipient_name=""):
     token_value = str(uuid.uuid4())
     expires_at = timezone.now() + timedelta(hours=VERIFY_TOKEN_EXPIRY_HOURS)
     EmailVerificationToken.objects.create(
@@ -463,19 +463,39 @@ def _send_verification_email(user, request):
     verify_url = request.build_absolute_uri(
         reverse("accounts:verify_email", args=[token_value])
     )
-    send_mail(
-        subject="TASS LMS – Verify Your Email Address",
-        message=(
-            f"Hello,\n\n"
-            f"Welcome to TASS LMS. Please verify your email address by clicking the link below:\n\n"
-            f"{verify_url}\n\n"
-            f"This link will expire in {VERIFY_TOKEN_EXPIRY_HOURS} hours.\n"
-            f"If you did not create this account, please ignore this email."
-        ),
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@tass-lms.local"),
-        recipient_list=[user.email],
-        fail_silently=True,
-    )
+
+    name = recipient_name or user.get_full_name() or user.email
+    kind = "employee"
+    try:
+        if hasattr(user, "student_profile") and user.student_profile_id:
+            kind = "student"
+    except Exception:
+        pass
+
+    context = {
+        "greeting_name": name,
+        "login_email": user.email,
+        "login_password": password,
+        "verify_url": verify_url,
+        "expiry_hours": VERIFY_TOKEN_EXPIRY_HOURS,
+        "school_name": getattr(settings, "SCHOOL_NAME", "Saint Joseph's College of Baggao"),
+        "contact_email": getattr(settings, "SCHOOL_CONTACT_EMAIL", "info@whitestrings.io"),
+        "account_kind": kind,
+    }
+    from .brevo import send_html_email, verification_email_html, verification_email_text
+    try:
+        send_html_email(
+            subject="Verify your email address",
+            to_email=user.email,
+            to_name=name,
+            html=verification_email_html(context),
+            text=verification_email_text(context),
+        )
+    except Exception:
+        import logging
+        logging.getLogger("accounts").exception(
+            "Failed to send verification email to %s", user.email
+        )
     return token_value
 
 

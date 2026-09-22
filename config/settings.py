@@ -188,13 +188,26 @@ LOGIN_URL = 'accounts:login_page'
 
 # Dev default: print emails to the console (visible when running runserver).
 # Set EMAIL_BACKEND + SMTP vars in .env to switch to a real mail server.
-EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
-)
+# When BREVO_API_KEY is set, all outbound mail goes through Brevo's REST API
+# v3 (see apps/accounts/brevo.py) instead.
+_brevo_key = os.getenv("BREVO_API_KEY", "")
+if _brevo_key:
+    EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "apps.accounts.brevo.BrevoEmailBackend")
+else:
+    EMAIL_BACKEND = os.getenv(
+        "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+    )
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@tass-lms.local")
+
+# Brevo transactional sender + school branding (used by the verification mail).
+# Sender must exist in your Brevo account (verified domain / verified sender).
+BREVO_API_KEY = _brevo_key
+BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "TASS LMS")
+SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Saint Joseph's College of Baggao")
+SCHOOL_CONTACT_EMAIL = os.getenv("SCHOOL_CONTACT_EMAIL", "info@whitestrings.io")
 
