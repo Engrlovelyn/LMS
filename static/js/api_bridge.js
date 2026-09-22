@@ -1,5 +1,5 @@
 /**
- * TASS LMS — localStorage → PostgreSQL write bridge.
+ * SVI LMS — localStorage → PostgreSQL write bridge.
  *
  * The dashboards persist every save to localStorage. This poller watches the
  * keys listed in window.__TASS_BRIDGE__.watch and, whenever one of them

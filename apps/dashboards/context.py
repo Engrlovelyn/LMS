@@ -192,7 +192,7 @@ def system_admin_context(user):
             {"label": "Teachers", "value": role_counts["teacher"]},
             {"label": "Registrars", "value": role_counts["registrar"]},
             {"label": "Principals", "value": role_counts["principal"] + role_counts["assistant_principal"]},
-            {"label": "TASS Admins", "value": role_counts["tass_administrator"] + role_counts["quality_audit"] + role_counts["system_admin"]},
+            {"label": "SVI Admins", "value": role_counts["tass_administrator"] + role_counts["quality_audit"] + role_counts["system_admin"]},
         ],
     }
 
@@ -826,7 +826,7 @@ def principal_context(user):
         )
         vc_assess = AssessmentAssignment.objects.filter(virtual_classroom=vc).count()
         grade_lbl = ("Grade {}".format(vc.subject.grade_level)) if vc.subject and vc.subject.grade_level else "Grade 7"
-        tname = vc.teacher.get_full_name() if vc.teacher else "TASS Faculty"
+        tname = vc.teacher.get_full_name() if vc.teacher else "SVI Faculty"
         classes_json.append(
             {
                 "title": "{} – {}".format(grade_lbl, vc.subject.name if vc.subject else "Class"),
@@ -1041,7 +1041,7 @@ def assistant_principal_context(user):
                 "subject": vc.subject.name if vc.subject else "Class",
                 "grade": grade_label,
                 "section": sec.name if sec else "",
-                "teacher": vc.teacher.get_full_name() if vc.teacher else "TASS Faculty",
+                "teacher": vc.teacher.get_full_name() if vc.teacher else "SVI Faculty",
                 "type": "elective" if is_elective else "core",
                 "students": vc.enrollments.filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE).count(),
                 "status": "active" if vc.status == STATUS_ACTIVE else "archived",
@@ -1239,7 +1239,7 @@ def student_context(user):
         grade = getattr(subj, "grade_level", None)
         grade_label = ("Grade " + str(grade)) if grade else "Grade 9"
         title = _subj_label(subj)
-        teacher_name = vc.teacher.get_full_name() if vc.teacher else "TASS Faculty"
+        teacher_name = vc.teacher.get_full_name() if vc.teacher else "SVI Faculty"
         subjects_json.append(
             {
                 "title": title,

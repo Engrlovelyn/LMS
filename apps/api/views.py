@@ -1,5 +1,5 @@
 """
-TASS LMS JSON write bridge.
+SVI LMS JSON write bridge.
 
 Every SPA dashboard persists its state to localStorage. These endpoints give
 the front-ends a real database sink that mirrors those localStorage payloads,
@@ -64,7 +64,7 @@ ROLE_CODE_BY_LABEL = {
     "Assistant Principal": Role.Code.ASSISTANT_PRINCIPAL,
     "Academic Coordinator": Role.Code.ASSISTANT_PRINCIPAL,
     "Student": Role.Code.STUDENT,
-    "TASS Administrator": Role.Code.TASS_ADMINISTRATOR,
+    "SVI Administrator": Role.Code.TASS_ADMINISTRATOR,
     "TASS Admin": Role.Code.TASS_ADMINISTRATOR,
     "Quality Assurance": Role.Code.QUALITY_AUDIT,
 }
@@ -146,7 +146,7 @@ def _name_tokens(name):
 
 
 def _resolve_teacher(name):
-    if not name or not str(name).strip() or str(name).strip() in ("—", "TASS Faculty", "TASS Admin"):
+    if not name or not str(name).strip() or str(name).strip() in ("—", "SVI Faculty", "TASS Admin"):
         return None
     target = [t.lower() for t in _name_tokens(name) if t.lower() not in _TITLES]
     if not target:

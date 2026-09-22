@@ -137,7 +137,7 @@ class Role(models.Model):
         PRINCIPAL = "principal", "Principal"
         ASSISTANT_PRINCIPAL = "assistant_principal", "Assistant Principal"
         STUDENT = "student", "Student"
-        TASS_ADMINISTRATOR = "tass_administrator", "TASS Administrator"
+        TASS_ADMINISTRATOR = "tass_administrator", "SVI Administrator"
         QUALITY_AUDIT = "quality_audit", "Quality Assurance"
 
     code = models.CharField(max_length=20, choices=Code.choices, unique=True)

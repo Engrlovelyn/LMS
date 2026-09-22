@@ -82,7 +82,7 @@ class DashboardRenderTests(TestCase):
         self._login("hub@tass.test", "student")
         resp = self.client.get(reverse("dashboards:hub"))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "TASS")
+        self.assertContains(resp, "San Vicente Institute")
 
     def test_wrong_role_blocked(self):
         user = self._login("teacher@tass.test", "teacher")

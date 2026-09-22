@@ -71,7 +71,7 @@ class StudentAccountForm(forms.ModelForm):
     email = forms.EmailField(
         label="Email Address",
         required=False,
-        help_text="Leave blank to auto-generate (lrn@student.tass.edu.ph).",
+        help_text="Leave blank to auto-generate (lrn@student.sanvicente.edu.ph).",
     )
     initial_password = forms.CharField(
         label="Initial Password",

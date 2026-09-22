@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TASS LMS - Unified front-end styles (NEW DESIGN)
+   SVI LMS - Unified front-end styles (NEW DESIGN)
    ---------------------------------------------------------------------------
    Single source of truth for the app front-end.
 
@@ -2799,9 +2799,9 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 
 .brand-text span { display:block; font-family:'Plus Jakarta Sans',sans-serif; font-size:9.5px; color:rgba(255,255,255,0.55); font-weight:500; letter-spacing:.6px; margin-top:2px; text-transform:uppercase; }
 
-.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#3a86d4,#22a877); border:2px solid rgba(255,255,255,0.4); }
+.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); border:2px solid rgba(255,255,255,0.4); }
 
-.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#3a86d4,#22a877); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
+.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
 
 .q-media-preview { margin-top:8px; padding:8px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; display:flex; align-items:center; gap:10px; font-size:12px; }
 
@@ -2837,7 +2837,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 
 .profile-btn:hover { background:rgba(255,255,255,0.2); }
 
-.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#3a86d4,#22a877); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 
 .profile-name { font-size:12.5px; font-weight:600; }
 
@@ -2885,7 +2885,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 
 .sidebar-user-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; }
 
-.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#3a86d4,#22a877); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 
 
 /* LAYOUT */
@@ -3615,7 +3615,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 
 .profile-panel-header{padding:18px;text-align:center;border-bottom:1px solid var(--gray-100)}
 
-.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#3a86d4,#22a877);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
+.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#1e5faf,#3a86d4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
 
 .profile-panel-name{font-weight:700;font-size:14px;color:var(--navy)}
 
@@ -4513,7 +4513,7 @@ header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
 
 .profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
 
-.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#3a86d4,#22a877); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1e5faf,#3a86d4); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
 
 .profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 

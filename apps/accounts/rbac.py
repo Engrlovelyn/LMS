@@ -1,4 +1,4 @@
-"""User Role Matrix (FINAL_TASS_MANUSCRIPT-2_0_with_TASS_Administrator.docx, Table 84).
+"""User Role Matrix (FINAL_SVI_MANUSCRIPT-2_0_with_TASS_Administrator.docx, Table 84).
 
 Single source of truth for the role -> Django-permission grants. Each entry is an
 "app_label.codename" string matching a Meta.permissions codename in the codebase.

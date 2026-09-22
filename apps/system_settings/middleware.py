@@ -25,7 +25,7 @@ MAINTENANCE_HTML = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TASS LMS - Under Maintenance</title>
+  <title>SVI LMS - Under Maintenance</title>
   <style>
     body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; background: #f4f7fc;
            color: #1e2e42; display: flex; min-height: 100vh; margin: 0;
@@ -38,7 +38,7 @@ MAINTENANCE_HTML = """<!doctype html>
 </head>
 <body>
   <div class="box">
-    <h1>TASS LMS is under maintenance</h1>
+    <h1>SVI LMS is under maintenance</h1>
     <p>We are performing scheduled maintenance and will be back shortly.
        Please try again later. If you are a System Administrator, you can still
        sign in to manage the platform.</p>

@@ -9,7 +9,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>TASS LMS – Registrar Dashboard</title>
+<title>SVI LMS – Registrar Dashboard</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 
@@ -44,8 +44,8 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .brand-icon-img + .brand-icon-img { margin-left:4px; }
 .brand-text { font-family:'Fraunces',serif; font-size:14px; font-weight:600; color:#fff; line-height:1.2; white-space:nowrap; letter-spacing:.2px; }
 .brand-text span { display:block; font-family:'Plus Jakarta Sans',sans-serif; font-size:9.5px; color:rgba(255,255,255,0.55); font-weight:500; letter-spacing:.6px; margin-top:2px; text-transform:uppercase; }
-.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#3a86d4,#22a877); border:2px solid rgba(255,255,255,0.4); }
-.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#3a86d4,#22a877); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
+.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); border:2px solid rgba(255,255,255,0.4); }
+.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
 .q-media-preview { margin-top:8px; padding:8px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; display:flex; align-items:center; gap:10px; font-size:12px; }
 .q-media-preview img { max-width:100px; max-height:70px; border-radius:6px; object-fit:cover; }
 .q-media-btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -63,7 +63,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .badge { position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#f97316; border:1.5px solid var(--header-bg); }
 .profile-btn { display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.1); border:none; border-radius:9px; padding:5px 10px 5px 5px; cursor:pointer; color:#fff; transition:background .2s; }
 .profile-btn:hover { background:rgba(255,255,255,0.2); }
-.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#3a86d4,#22a877); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 .profile-name { font-size:12.5px; font-weight:600; }
 .profile-role { font-size:10px; color:rgba(255,255,255,0.55); margin-top:1px; }
 .dark-toggle { width:38px; height:38px; border-radius:9px; background:rgba(255,255,255,0.1); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:14px; transition:background .2s; }
@@ -88,7 +88,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar-footer { padding:12px 8px; border-top:1px solid rgba(255,255,255,0.08); }
 .sidebar-user { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; overflow:hidden; }
 .sidebar-user-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; }
-.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#3a86d4,#22a877); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 
 /* LAYOUT */
 .layout { display:flex; margin-top:var(--header-h); min-height:calc(100vh - var(--header-h)); }
@@ -480,7 +480,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .profile-panel{position:fixed;top:calc(var(--header-h) + 8px);right:20px;width:250px;background:var(--card-bg);border-radius:14px;box-shadow:0 8px 40px rgba(10,36,99,0.2);border:1px solid var(--card-border);z-index:300;display:none;animation:fadeDown .2s ease}
 .profile-panel.open{display:block}
 .profile-panel-header{padding:18px;text-align:center;border-bottom:1px solid var(--gray-100)}
-.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#3a86d4,#22a877);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
+.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#1e5faf,#3a86d4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
 .profile-panel-name{font-weight:700;font-size:14px;color:var(--navy)}
 [data-theme="dark"] .profile-panel-name{color:#d0dce8}
 .profile-panel-role{font-size:11.5px;color:var(--text-muted)}
@@ -707,7 +707,6 @@ html,body{ width:100%; overflow-x:hidden; }
 
    <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
-      <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
     </div>
     <div class="brand-text">San Vicente Institute<span>Learning Management System</span></div> 
   </div> 
@@ -1761,7 +1760,7 @@ function viewStudentAttendance(){
 function resetStudentPassword(){ 
   const st=window.getStudentByLRN?window.getStudentByLRN(currentStudentLRN):null; 
   if(!st){showToast('Student record not found.','error');return;} 
-  const pass='TASS'+(String(st.lrn||'').slice(-4)||'0000'); 
+  const pass='SVI'+(String(st.lrn||'').slice(-4)||'0000'); 
   st.tempPass=pass; st.account='Generated'; 
   if(window.__regSave)window.__regSave(); 
   if(window.__regLog)window.__regLog('Reset password','Temporary password regenerated for '+st.last+', '+st.first+' · '+(st.email||'no email')); 
@@ -1823,7 +1822,7 @@ function saveMissingEmails(){
     if(!st)return; 
     const email=inp.value.trim(); 
     if(!email||!/^\S+@\S+\.\S+$/.test(email)){skipped++;return;} 
-    st.email=email;st.acctUsername=email;st.account='Generated';st.tempPass='TASS'+String(lrn).slice(-4);st.accountVerified=false; 
+    st.email=email;st.acctUsername=email;st.account='Generated';st.tempPass='SVI'+String(lrn).slice(-4);st.accountVerified=false; 
     if(window.__regLog)window.__regLog('Generate Student Account','Account auto-created for '+st.first+' '+st.last+' ('+lrn+') · credentials sent to '+email); 
     else if(window.__regSave)window.__regSave(); 
     done++; 
@@ -1997,7 +1996,7 @@ initCharts();
 })(); 
 </script> 
 <script>
-/* TASS Registrar functional patch — implements the Business Rule Specification. */
+/* SVI Registrar functional patch — implements the Business Rule Specification. */
 (function(){
   const GRADES=['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
   const PASSING_GRADE=75;
@@ -2007,22 +2006,22 @@ initCharts();
   window.GRADES=GRADES;
   const DEFAULTS={
     students:[
-      {last:'Santos',first:'Maria',middle:'Dela Cruz',lrn:'136100100001',gender:'Female',birth:'2012-05-14',contact:'09171234501',grade:'Grade 7',section:'Section A',guardian:'R. Santos',email:'maria.santos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'maria.santos@sanvicente.edu.ph',tempPass:'TASS0101',accountVerified:false},
-      {last:'Reyes',first:'Juan',middle:'Ramos',lrn:'136100100002',gender:'Male',birth:'2012-03-21',contact:'09171234502',grade:'Grade 7',section:'Section A',guardian:'M. Reyes',email:'juan.reyes@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'juan.reyes@sanvicente.edu.ph',tempPass:'TASS0002',accountVerified:false},
-      {last:'Dela Cruz',first:'Juan',middle:'Ramos',lrn:'136100100013',gender:'Male',birth:'2012-01-15',contact:'09171234513',grade:'Grade 7',section:'Section A',guardian:'M. Dela Cruz',email:'juan.delacruz@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'juan.delacruz@sanvicente.edu.ph',tempPass:'TASS0013',accountVerified:false},
-      {last:'Garcia',first:'Ana',middle:'Reyes',lrn:'136100100003',gender:'Female',birth:'2011-09-08',contact:'09171234503',grade:'Grade 8',section:'Section B',guardian:'L. Garcia',email:'ana.garcia@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'ana.garcia@sanvicente.edu.ph',tempPass:'TASS0003',accountVerified:false},
-      {last:'Mendoza',first:'Pedro',middle:'Santos',lrn:'136100100004',gender:'Male',birth:'2011-12-02',contact:'09171234504',grade:'Grade 8',section:'Section B',guardian:'J. Mendoza',email:'pedro.mendoza@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'pedro.mendoza@sanvicente.edu.ph',tempPass:'TASS0004',accountVerified:false},
-      {last:'Lopez',first:'Liza',middle:'Cruz',lrn:'136100100005',gender:'Female',birth:'2010-06-25',contact:'09171234505',grade:'Grade 9',section:'Section C',guardian:'A. Lopez',email:'liza.lopez@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'liza.lopez@sanvicente.edu.ph',tempPass:'TASS0005',accountVerified:false},
-      {last:'Torres',first:'Miguel',middle:'Diaz',lrn:'136100100006',gender:'Male',birth:'2010-01-30',contact:'09171234506',grade:'Grade 9',section:'Section C',guardian:'E. Torres',email:'miguel.torres@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'miguel.torres@sanvicente.edu.ph',tempPass:'TASS0006',accountVerified:false},
-      {last:'Lopez',first:'Liza',middle:'Cruz',lrn:'136100100015',gender:'Female',birth:'2010-06-25',contact:'09171234515',grade:'Grade 9',section:'Section C',guardian:'A. Lopez',email:'liza.lopez@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'liza.lopez@sanvicente.edu.ph',tempPass:'TASS0015',accountVerified:false},
-      {last:'Villanueva',first:'Sofia',middle:'Mercado',lrn:'136100100007',gender:'Female',birth:'2009-11-11',contact:'09171234507',grade:'Grade 10',section:'Section D',guardian:'C. Villanueva',email:'sofia.villanueva@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'sofia.villanueva@sanvicente.edu.ph',tempPass:'TASS0007',accountVerified:false},
-      {last:'Castro',first:'Andres',middle:'Bautista',lrn:'136100100008',gender:'Male',birth:'2009-04-17',contact:'09171234508',grade:'Grade 10',section:'Section D',guardian:'F. Castro',email:'andres.castro@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'andres.castro@sanvicente.edu.ph',tempPass:'TASS0008',accountVerified:false},
-      {last:'Santos',first:'Pedro',middle:'Mendoza',lrn:'136100100014',gender:'Male',birth:'2009-12-12',contact:'09171234514',grade:'Grade 10',section:'Section D',guardian:'A. Santos',email:'pedro.santos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'pedro.santos@sanvicente.edu.ph',tempPass:'TASS0014',accountVerified:false},
-      {last:'Ramos',first:'Bianca',middle:'Soriano',lrn:'136100100009',gender:'Female',birth:'2008-08-09',contact:'09171234509',grade:'Grade 11',section:'STEM-A',guardian:'P. Ramos',email:'bianca.ramos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'bianca.ramos@sanvicente.edu.ph',tempPass:'TASS0009',accountVerified:false},
-      {last:'Navarro',first:'Carlos',middle:'Espino',lrn:'136100100010',gender:'Male',birth:'2008-02-27',contact:'09171234510',grade:'Grade 11',section:'STEM-A',guardian:'D. Navarro',email:'carlos.navarro@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'carlos.navarro@sanvicente.edu.ph',tempPass:'TASS0010',accountVerified:false},
-      {last:'Aguilar',first:'Diana',middle:'Flores',lrn:'136100100011',gender:'Female',birth:'2007-07-19',contact:'09171234511',grade:'Grade 12',section:'ABM-A',guardian:'S. Aguilar',email:'diana.aguilar@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'diana.aguilar@sanvicente.edu.ph',tempPass:'TASS0011',accountVerified:false},
-      {last:'Bautista',first:'Eduardo',middle:'Capili',lrn:'136100100012',gender:'Male',birth:'2007-10-05',contact:'09171234512',grade:'Grade 12',section:'ABM-A',guardian:'T. Bautista',email:'eduardo.bautista@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'eduardo.bautista@sanvicente.edu.ph',tempPass:'TASS0012',accountVerified:false},
-      {last:'Reyes',first:'Marco',middle:'Antonio',lrn:'136100100016',gender:'Male',birth:'2007-03-08',contact:'09171234516',grade:'Grade 12',section:'ABM-A',guardian:'R. Reyes',email:'marco.reyes@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'marco.reyes@sanvicente.edu.ph',tempPass:'TASS0016',accountVerified:false},
+      {last:'Santos',first:'Maria',middle:'Dela Cruz',lrn:'136100100001',gender:'Female',birth:'2012-05-14',contact:'09171234501',grade:'Grade 7',section:'Section A',guardian:'R. Santos',email:'maria.santos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'maria.santos@sanvicente.edu.ph',tempPass:'SVI0101',accountVerified:false},
+      {last:'Reyes',first:'Juan',middle:'Ramos',lrn:'136100100002',gender:'Male',birth:'2012-03-21',contact:'09171234502',grade:'Grade 7',section:'Section A',guardian:'M. Reyes',email:'juan.reyes@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'juan.reyes@sanvicente.edu.ph',tempPass:'SVI0002',accountVerified:false},
+      {last:'Dela Cruz',first:'Juan',middle:'Ramos',lrn:'136100100013',gender:'Male',birth:'2012-01-15',contact:'09171234513',grade:'Grade 7',section:'Section A',guardian:'M. Dela Cruz',email:'juan.delacruz@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'juan.delacruz@sanvicente.edu.ph',tempPass:'SVI0013',accountVerified:false},
+      {last:'Garcia',first:'Ana',middle:'Reyes',lrn:'136100100003',gender:'Female',birth:'2011-09-08',contact:'09171234503',grade:'Grade 8',section:'Section B',guardian:'L. Garcia',email:'ana.garcia@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'ana.garcia@sanvicente.edu.ph',tempPass:'SVI0003',accountVerified:false},
+      {last:'Mendoza',first:'Pedro',middle:'Santos',lrn:'136100100004',gender:'Male',birth:'2011-12-02',contact:'09171234504',grade:'Grade 8',section:'Section B',guardian:'J. Mendoza',email:'pedro.mendoza@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'pedro.mendoza@sanvicente.edu.ph',tempPass:'SVI0004',accountVerified:false},
+      {last:'Lopez',first:'Liza',middle:'Cruz',lrn:'136100100005',gender:'Female',birth:'2010-06-25',contact:'09171234505',grade:'Grade 9',section:'Section C',guardian:'A. Lopez',email:'liza.lopez@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'liza.lopez@sanvicente.edu.ph',tempPass:'SVI0005',accountVerified:false},
+      {last:'Torres',first:'Miguel',middle:'Diaz',lrn:'136100100006',gender:'Male',birth:'2010-01-30',contact:'09171234506',grade:'Grade 9',section:'Section C',guardian:'E. Torres',email:'miguel.torres@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'miguel.torres@sanvicente.edu.ph',tempPass:'SVI0006',accountVerified:false},
+      {last:'Lopez',first:'Liza',middle:'Cruz',lrn:'136100100015',gender:'Female',birth:'2010-06-25',contact:'09171234515',grade:'Grade 9',section:'Section C',guardian:'A. Lopez',email:'liza.lopez@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'liza.lopez@sanvicente.edu.ph',tempPass:'SVI0015',accountVerified:false},
+      {last:'Villanueva',first:'Sofia',middle:'Mercado',lrn:'136100100007',gender:'Female',birth:'2009-11-11',contact:'09171234507',grade:'Grade 10',section:'Section D',guardian:'C. Villanueva',email:'sofia.villanueva@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'sofia.villanueva@sanvicente.edu.ph',tempPass:'SVI0007',accountVerified:false},
+      {last:'Castro',first:'Andres',middle:'Bautista',lrn:'136100100008',gender:'Male',birth:'2009-04-17',contact:'09171234508',grade:'Grade 10',section:'Section D',guardian:'F. Castro',email:'andres.castro@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'andres.castro@sanvicente.edu.ph',tempPass:'SVI0008',accountVerified:false},
+      {last:'Santos',first:'Pedro',middle:'Mendoza',lrn:'136100100014',gender:'Male',birth:'2009-12-12',contact:'09171234514',grade:'Grade 10',section:'Section D',guardian:'A. Santos',email:'pedro.santos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'pedro.santos@sanvicente.edu.ph',tempPass:'SVI0014',accountVerified:false},
+      {last:'Ramos',first:'Bianca',middle:'Soriano',lrn:'136100100009',gender:'Female',birth:'2008-08-09',contact:'09171234509',grade:'Grade 11',section:'STEM-A',guardian:'P. Ramos',email:'bianca.ramos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'bianca.ramos@sanvicente.edu.ph',tempPass:'SVI0009',accountVerified:false},
+      {last:'Navarro',first:'Carlos',middle:'Espino',lrn:'136100100010',gender:'Male',birth:'2008-02-27',contact:'09171234510',grade:'Grade 11',section:'STEM-A',guardian:'D. Navarro',email:'carlos.navarro@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'carlos.navarro@sanvicente.edu.ph',tempPass:'SVI0010',accountVerified:false},
+      {last:'Aguilar',first:'Diana',middle:'Flores',lrn:'136100100011',gender:'Female',birth:'2007-07-19',contact:'09171234511',grade:'Grade 12',section:'ABM-A',guardian:'S. Aguilar',email:'diana.aguilar@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'diana.aguilar@sanvicente.edu.ph',tempPass:'SVI0011',accountVerified:false},
+      {last:'Bautista',first:'Eduardo',middle:'Capili',lrn:'136100100012',gender:'Male',birth:'2007-10-05',contact:'09171234512',grade:'Grade 12',section:'ABM-A',guardian:'T. Bautista',email:'eduardo.bautista@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'eduardo.bautista@sanvicente.edu.ph',tempPass:'SVI0012',accountVerified:false},
+      {last:'Reyes',first:'Marco',middle:'Antonio',lrn:'136100100016',gender:'Male',birth:'2007-03-08',contact:'09171234516',grade:'Grade 12',section:'ABM-A',guardian:'R. Reyes',email:'marco.reyes@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'marco.reyes@sanvicente.edu.ph',tempPass:'SVI0016',accountVerified:false},
       {last:'Diaz',first:'Rosa',middle:'Pineda',lrn:'136100100017',gender:'Female',birth:'2012-08-19',contact:'09171234517',grade:'Grade 7',section:'Section A',guardian:'N. Diaz',email:'rosa.diaz@sanvicente.edu.ph',status:'Enrolled',account:'Pending',accountVerified:false},
       {last:'Peralta',first:'Miguel',middle:'Cabrera',lrn:'136100100018',gender:'Male',birth:'2010-11-03',contact:'09171234518',grade:'Grade 9',section:'Section B',guardian:'O. Peralta',email:'miguel.peralta@sanvicente.edu.ph',status:'Retained',account:'Pending',details:'G9 · Retained',accountVerified:false}
     ],
@@ -2371,7 +2370,7 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
       showToast('Student record updated successfully.','success');
       return;
     }
-    const newStudent={last,first,middle,lrn,gender,birth,contact,address,guardian,email:acctEmail,ay,grade,section,status:'Enrolled',account:'Generated',acctUsername:acctEmail,tempPass:'TASS'+lrn.slice(-4),accountVerified:false};
+    const newStudent={last,first,middle,lrn,gender,birth,contact,address,guardian,email:acctEmail,ay,grade,section,status:'Enrolled',account:'Generated',acctUsername:acctEmail,tempPass:'SVI'+lrn.slice(-4),accountVerified:false};
     state.students.push(newStudent);
     log('Enroll Student',first+' '+last+' ('+lrn+') → '+grade+' – '+section+' · LMS account generated for '+acctEmail);
     save();renderStudentList();renderAddedSections();
@@ -2474,7 +2473,7 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
       const [last,first,middle,lrn,gender,section,guardian]=d;
       const grade=grades[i];
       if(state.students.some(x=>x.lrn===lrn))return;
-      state.students.push({last,first,middle,lrn,gender,birth:'2008-05-1'+((i%9)+1),contact:'09171234567',grade,section,guardian,email:(first+'.'+last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:(first+'.'+last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph',tempPass:'TASS'+lrn.slice(-4),accountVerified:false});
+      state.students.push({last,first,middle,lrn,gender,birth:'2008-05-1'+((i%9)+1),contact:'09171234567',grade,section,guardian,email:(first+'.'+last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:(first+'.'+last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph',tempPass:'SVI'+lrn.slice(-4),accountVerified:false});
     });
     log('Load Demo Data','8 sample students seeded across Elementary, JHS, and SHS');
     save();renderStudentList();renderAddedSections();populateAdvisers();
@@ -2643,7 +2642,7 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     recs.forEach(function(r){
       if(state.students.some(function(x){return x.lrn===r.lrn;}))return;
       const email=(r.first+'.'+r.last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph';
-      state.students.push({last:r.last,first:r.first,middle:r.middle,lrn:r.lrn,gender:r.gender,birth:r.birth,contact:r.contact,grade:r.grade,section:r.section,guardian:r.guardian,email:email,status:'Enrolled',account:'Generated',acctUsername:email,tempPass:'TASS'+r.lrn.slice(-4),accountVerified:false,details:'Imported from file'});
+      state.students.push({last:r.last,first:r.first,middle:r.middle,lrn:r.lrn,gender:r.gender,birth:r.birth,contact:r.contact,grade:r.grade,section:r.section,guardian:r.guardian,email:email,status:'Enrolled',account:'Generated',acctUsername:email,tempPass:'SVI'+r.lrn.slice(-4),accountVerified:false,details:'Imported from file'});
       imported++;
     });
     if(imported){log('Bulk Import',imported+' student record(s) imported from file · LMS accounts generated');save();renderStudentList();renderAddedSections();updateStats();}
@@ -3282,7 +3281,7 @@ header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
 /* ---------- My Profile modal ---------- */
 .modal-box.profile-box{ width:min(94vw,480px); }
 .profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
-.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#3a86d4,#22a877); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1e5faf,#3a86d4); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
 .profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .profile-photo-btn{ display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border:1.5px solid var(--input-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; transition:border-color .18s,color .18s,background .18s; }
 .profile-photo-btn:hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
@@ -3721,7 +3720,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 
-<!-- TASS LMS - PostgreSQL write bridge -->
+<!-- SVI LMS - PostgreSQL write bridge -->
 <script src="/static/js/api_bridge.js"></script>
 <script>
 window.__TASS_BRIDGE__={interval:4000,watch:[

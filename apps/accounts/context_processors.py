@@ -16,7 +16,7 @@ ROLE_LABELS = {
     "assistant_principal": "Assistant Principal",
     "teacher": "Teacher",
     "student": "Student",
-    "tass_administrator": "TASS Administrator",
+    "tass_administrator": "SVI Administrator",
     "quality_audit": "Quality Assurance",
 }
 

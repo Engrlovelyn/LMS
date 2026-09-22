@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TASS LMS – Principal Dashboard</title>
+<title>SVI LMS – Principal Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -43,8 +43,8 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .brand-icon-img + .brand-icon-img { margin-left:4px; }
 .brand-text { font-family:'Fraunces',serif; font-size:14px; font-weight:600; color:#fff; line-height:1.2; white-space:nowrap; letter-spacing:.2px; }
 .brand-text span { display:block; font-family:'Plus Jakarta Sans',sans-serif; font-size:9.5px; color:rgba(255,255,255,0.55); font-weight:500; letter-spacing:.6px; margin-top:2px; text-transform:uppercase; }
-.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#3a86d4,#22a877); border:2px solid rgba(255,255,255,0.4); }
-.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#3a86d4,#22a877); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
+.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); border:2px solid rgba(255,255,255,0.4); }
+.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
 .q-media-preview { margin-top:8px; padding:8px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; display:flex; align-items:center; gap:10px; font-size:12px; }
 .q-media-preview img { max-width:100px; max-height:70px; border-radius:6px; object-fit:cover; }
 .q-media-btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -62,7 +62,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .badge { position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#f97316; border:1.5px solid var(--header-bg); }
 .profile-btn { display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.1); border:none; border-radius:9px; padding:5px 10px 5px 5px; cursor:pointer; color:#fff; transition:background .2s; }
 .profile-btn:hover { background:rgba(255,255,255,0.2); }
-.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#3a86d4,#22a877); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 .profile-name { font-size:12.5px; font-weight:600; }
 .profile-role { font-size:10px; color:rgba(255,255,255,0.55); margin-top:1px; }
 .dark-toggle { width:38px; height:38px; border-radius:9px; background:rgba(255,255,255,0.1); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:14px; transition:background .2s; }
@@ -87,7 +87,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar-footer { padding:12px 8px; border-top:1px solid rgba(255,255,255,0.08); }
 .sidebar-user { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; overflow:hidden; }
 .sidebar-user-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; }
-.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#3a86d4,#22a877); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 
 /* LAYOUT */
 .layout { display:flex; margin-top:var(--header-h); min-height:calc(100vh - var(--header-h)); }
@@ -478,7 +478,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .profile-panel{position:fixed;top:calc(var(--header-h) + 8px);right:20px;width:250px;background:var(--card-bg);border-radius:14px;box-shadow:0 8px 40px rgba(10,36,99,0.2);border:1px solid var(--card-border);z-index:300;display:none;animation:fadeDown .2s ease}
 .profile-panel.open{display:block}
 .profile-panel-header{padding:18px;text-align:center;border-bottom:1px solid var(--gray-100)}
-.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#3a86d4,#22a877);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
+.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#1e5faf,#3a86d4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
 .profile-panel-name{font-weight:700;font-size:14px;color:var(--navy)}
 [data-theme="dark"] .profile-panel-name{color:#d0dce8}
 .profile-panel-role{font-size:11.5px;color:var(--text-muted)}
@@ -705,7 +705,6 @@ html,body{ width:100%; overflow-x:hidden; }
   <div class="brand-block">
     <div class="brand-logos">
       <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
-      <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
     </div>
     <div class="brand-text">San Vicente Institute<span>Learning Management System</span></div>
   </div>
@@ -2144,7 +2143,7 @@ header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
 /* ---------- My Profile modal ---------- */
 .modal-box.profile-box{ width:min(94vw,480px); }
 .profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
-.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#3a86d4,#22a877); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1e5faf,#3a86d4); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
 .profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .profile-photo-btn{ display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border:1.5px solid var(--input-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; transition:border-color .18s,color .18s,background .18s; }
 .profile-photo-btn:hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
@@ -2604,7 +2603,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 })();
 </script>
 
-<!-- TASS LMS - PostgreSQL write bridge -->
+<!-- SVI LMS - PostgreSQL write bridge -->
 <script src="/static/js/api_bridge.js"></script>
 <script>
 window.__TASS_BRIDGE__={interval:4000,watch:[

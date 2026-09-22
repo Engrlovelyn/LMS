@@ -10,7 +10,7 @@ ACCOUNTS = [
     ("Dina", "Respicio", "dinarespicio@gmail.com", "dina12345", "assistant_principal", "EMP-0003"),
     ("Jay Ar", "Antonio", "jayarantonio@gmail.com", "jayar12345", "registrar", "EMP-0004"),
     ("Vince", "Arnedo", "vincearnedo@gmail.com", "vince12345", "system_admin", "EMP-0005"),
-    ("TASS", "Administrator", "tass.admin@tass.edu.ph", "tassadmin12345", "tass_administrator", "EMP-0006"),
+    ("SVI", "Administrator", "tass.admin@tass.edu.ph", "tassadmin12345", "tass_administrator", "EMP-0006"),
 ]
 
 STUDENT = ("Khaizer", "Reyes", "khaizerreyes@gmail.com", "khaizer12345", "000000000001")

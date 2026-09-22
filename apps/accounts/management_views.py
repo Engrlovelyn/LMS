@@ -43,7 +43,7 @@ def _make_student(email, password, profile_fields, section, academic_year, reque
     email = (email or "").strip().lower()
     lrn = profile_fields.pop("lrn")
     if not email:
-        email = f"{lrn}@student.tass.edu.ph"
+        email = f"{lrn}@student.sanvicente.edu.ph"
 
     student = StudentProfile.objects.filter(lrn=lrn).first()
     if student is None:

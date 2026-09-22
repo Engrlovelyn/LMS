@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   TASS LMS · Shared UI helpers (final front-end reference shell)
+   SVI LMS · Shared UI helpers (final front-end reference shell)
    Sidebar, dark mode, view router, tabs, modals, toasts, panels.
    ═══════════════════════════════════════════════════════════ */
 

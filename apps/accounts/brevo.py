@@ -1,5 +1,5 @@
 """
-Brevo (Sendinblue) transactional email integration for TASS LMS.
+Brevo (Sendinblue) transactional email integration for SVI LMS.
 
 Why REST API v3 instead of SMTP: the API key given by Brevo is an `xkeysib-`
 bearer API key. SMTP relay authentication requires a *separate* SMTP login +

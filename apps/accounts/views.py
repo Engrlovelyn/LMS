@@ -189,7 +189,7 @@ def login_view(request):
         ).exclude(pk=login_session.pk).exists()
         if not seen_before:
             send_mail(
-                subject="TASS LMS – New Device Sign-In",
+                subject="SVI LMS – New Device Sign-In",
                 message=(
                     f"Hello {authenticated_user.get_full_name()},\n\n"
                     f"Your account was just signed into from a new device.\n"
@@ -199,7 +199,7 @@ def login_view(request):
                     f"If this was you, you can ignore this message. If not, "
                     f"reset your password and review your active sessions."
                 ),
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@tass-lms.local"),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@svi-lms.local"),
                 recipient_list=[authenticated_user.email],
                 fail_silently=True,
             )
@@ -247,7 +247,7 @@ def forgot_password(request):
             reverse("accounts:reset_password_confirm", args=[token_value])
         )
         send_mail(
-            subject="TASS LMS – Reset Your Password",
+            subject="SVI LMS – Reset Your Password",
             message=(
                 f"Hello,\n\n"
                 f"You requested a password reset. Click the link below to set a new password.\n\n"
@@ -255,7 +255,7 @@ def forgot_password(request):
                 f"This link will expire in {RESET_TOKEN_EXPIRY_MINUTES} minutes.\n\n"
                 f"If you did not request this, please ignore this email."
             ),
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@tass-lms.local"),
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@svi-lms.local"),
             recipient_list=[user.email],
             fail_silently=True,
         )

@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TASS LMS – Login</title>
+<title>SVI LMS – Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
 <style>
@@ -1026,7 +1026,7 @@
   }
 
   .left-hero::before {
-    content: 'TASS DIGITAL LEARNING';
+    content: 'SVI DIGITAL LEARNING';
     display: inline-flex;
     align-items: center;
     height: 27px;
@@ -1515,7 +1515,7 @@ body{ -webkit-font-smoothing:antialiased; letter-spacing:.1px; }
 /* ---------- My Profile modal ---------- */
 .modal-box.profile-box{ width:min(94vw,480px); }
 .profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
-.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#3a86d4,#22a877); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1e5faf,#3a86d4); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
 .profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .profile-photo-btn{ display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border:1.5px solid var(--input-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; transition:border-color .18s,color .18s,background .18s; }
 .profile-photo-btn:hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
@@ -1664,7 +1664,6 @@ canvas{ max-width:100% !important; }
     <!-- Brand block -->
     <div class="right-logo-row">
       <img src="{% static 'dashboards/img/SVI_logo_clear.png' %}" class="logo-box" alt="SVI Logo">
-      <img src="{% static 'dashboards/img/TASS_logo_clear.png' %}" class="logo-box" alt="TASS Logo">
       <div class="right-logo-title">
         <div class="big">San Vicente Institute</div>
         <div class="small">LEARNING MANAGEMENT SYSTEM</div>
@@ -1676,7 +1675,7 @@ canvas{ max-width:100% !important; }
       <div class="desktop-login-header" aria-hidden="true">
         <span class="desktop-login-kicker"><i class="fa-solid fa-shield-halved"></i> Secure school access</span>
         <h2>Welcome back.</h2>
-        <p>Sign in to continue to your TASS learning dashboard.</p>
+        <p>Sign in to continue to your SVI learning dashboard.</p>
       </div>
       <!-- Toast area -->
       {% if session_expired %}<div class="redirect-notice" style="display:flex;justify-content:center;align-items:center;gap:8px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:16px;"><i class="fa-solid fa-circle-info"></i> Your session expired. Please sign in again.</div>{% endif %}
@@ -1802,7 +1801,7 @@ canvas{ max-width:100% !important; }
           <a href="#" onclick="event.preventDefault();openContactModal()">Contact Support</a>
         </span>
       </nav>
-      <p>&copy; {% now 'Y' %} San Vicente Institute &middot; TASS LMS &middot; All rights reserved.</p>
+      <p>&copy; {% now 'Y' %} San Vicente Institute &middot; SVI LMS &middot; All rights reserved.</p>
     </footer>
 
   </div>
@@ -1815,7 +1814,7 @@ canvas{ max-width:100% !important; }
       <div style="position:absolute;width:200px;height:200px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.07);top:-60px;right:-60px;"></div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
         <img src="{% static 'dashboards/img/SVI_logo.png' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
-        <img src="{% static 'dashboards/img/TASS_logo.webp' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
+        <img src="{% static 'dashboards/img/SVI_logo.png' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
         <div>
           <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:#fff;">San Vicente Institute</div>
           <div style="font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:.5px;margin-top:1px;">TUGUEGARAO ARCHDIOCESAN SCHOOL SYSTEM</div>
@@ -1899,7 +1898,7 @@ canvas{ max-width:100% !important; }
         </div>
         <div>
           <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;">Contact Support</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">San Vicente Institute · TASS LMS</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">San Vicente Institute · SVI LMS</div>
         </div>
       </div>
       <button onclick="closeContactModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
@@ -1923,7 +1922,7 @@ canvas{ max-width:100% !important; }
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
             <i class="fa-solid fa-church" style="color:#1e5faf;width:16px;"></i>
-            <span>Tuguegarao Archdiocesan School System (TASS)</span>
+            <span>Affiliated with the Tuguegarao Archdiocesan School System</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
             <i class="fa-solid fa-phone" style="color:#1e5faf;width:16px;"></i>

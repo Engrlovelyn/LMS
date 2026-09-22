@@ -202,12 +202,12 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@tass-lms.local")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@svi-lms.local")
 
 # Brevo transactional sender + school branding (used by the verification mail).
 # Sender must exist in your Brevo account (verified domain / verified sender).
 BREVO_API_KEY = _brevo_key
-BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "TASS LMS")
+BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "SVI LMS")
 SCHOOL_NAME = os.getenv("SCHOOL_NAME", "San Vicente Institute")
 SCHOOL_CONTACT_EMAIL = os.getenv("SCHOOL_CONTACT_EMAIL", "info@whitestrings.io")
 
