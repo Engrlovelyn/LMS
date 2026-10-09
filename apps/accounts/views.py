@@ -1,4 +1,5 @@
 ﻿import json
+import threading
 import uuid
 
 from datetime import timedelta
@@ -7,16 +8,18 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login as django_login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.files.storage import default_storage
 from django.core.mail import send_mail
-from django.http import JsonResponse
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_http_methods
 
 from apps.academic_structure.models import AcademicYear
 from apps.system_settings.models import PasswordPolicy, SystemConfiguration
+from .account_admin import lock_user_account
 from .models import (
     ActivityLog,
     EmailVerificationToken,
@@ -36,9 +39,9 @@ ROLE_DASHBOARD_URLS = {
     "registrar": "dashboards:registrar",
     "teacher": "dashboards:teacher",
     "principal": "dashboards:principal",
+    "elementary_principal": "dashboards:principal",
     "assistant_principal": "dashboards:academic_coordinator",
     "student": "dashboards:student",
-    "tass_administrator": "dashboards:tass_administrator",
     "quality_audit": "dashboards:quality_audit",
 }
 
@@ -61,16 +64,49 @@ def login_page(request):
     )
 
 
+@csrf_exempt
 @require_http_methods(["POST", "GET"])
 def logout_view(request):
-    if request.method == "POST":
-        logout(request)
-        return redirect("accounts:login_page")
+    logout(request)
     return redirect("accounts:login_page")
 
 
 @csrf_protect
 @require_http_methods(["POST"])
+def _send_new_device_notice(user, device_info, ip_address):
+    """Send the courtesy "new device" email off the request path.
+
+    Runs on a daemon thread from the login view, so a slow SMTP relay can never
+    hold up the sign-in. ``fail_silently`` hides delivery problems from the
+    login outcome, and ``EMAIL_TIMEOUT`` (settings) caps how long a relay may
+    take before the thread gives up.
+    """
+    try:
+        send_mail(
+            subject="SVI LMS – New Device Sign-In",
+            message=(
+                "Hello {},\n\n"
+                "Your account was just signed into from a new device.\n"
+                "Device: {}\n"
+                "IP address: {}\n"
+                "Time: {:%Y-%m-%d %H:%M:%S %Z}\n\n"
+                "If this was you, you can ignore this message. If not, "
+                "reset your password and review your active sessions."
+            ).format(
+                user.get_full_name(),
+                device_info,
+                ip_address,
+                timezone.now(),
+            ),
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@svi-lms.local"),
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+    except Exception:
+        # A courtesy notice must never break the sign-in its thread is racing.
+        pass
+
+
 def login_view(request):
     try:
         payload = json.loads(request.body)
@@ -122,14 +158,7 @@ def login_view(request):
         max_attempts = _max_failed_attempts()
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= max_attempts:
-            user.status = User.Status.LOCKED
-            user.save()
-            ActivityLog.objects.create(
-                user=user,
-                action="account_locked",
-                related_entity_type="User",
-                related_entity_id=user.pk,
-            )
+            lock_user_account(user)
             return JsonResponse({
                 "ok": False,
                 "reason": "locked",
@@ -147,7 +176,6 @@ def login_view(request):
     if authenticated_user.password_changed_at is None:
         authenticated_user.password_changed_at = timezone.now()
     authenticated_user.save(update_fields=["failed_login_attempts", "password_changed_at"])
-
     role_assignments = list(
         RoleAssignment.objects
         .filter(user=authenticated_user, academic_year__status=AcademicYear.STATUS_ACTIVE)
@@ -172,6 +200,13 @@ def login_view(request):
 
     role_assignment = min(role_assignments, key=_role_priority)
 
+    # Handle remember me
+    remember_me = payload.get("remember_me", False) if 'payload' in locals() else False
+    if remember_me:
+        request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
+    else:
+        request.session.set_expiry(0)  # browser session expires
+
     django_login(request, authenticated_user)
 
     device_info = request.META.get("HTTP_USER_AGENT", "")[:255]
@@ -188,21 +223,17 @@ def login_view(request):
             device_info=device_info,
         ).exclude(pk=login_session.pk).exists()
         if not seen_before:
-            send_mail(
-                subject="SVI LMS – New Device Sign-In",
-                message=(
-                    f"Hello {authenticated_user.get_full_name()},\n\n"
-                    f"Your account was just signed into from a new device.\n"
-                    f"Device: {device_info}\n"
-                    f"IP address: {request.META.get('REMOTE_ADDR')}\n"
-                    f"Time: {timezone.now():%Y-%m-%d %H:%M:%S %Z}\n\n"
-                    f"If this was you, you can ignore this message. If not, "
-                    f"reset your password and review your active sessions."
+            # The new-device notice is a courtesy email: it must never make the
+            # sign-in wait on SMTP. It used to be sent in the request, so a
+            # slow or offline relay stalled the login POST for its full socket
+            # timeout. Fire a daemon thread instead and return straight away.
+            threading.Thread(
+                target=lambda: _send_new_device_notice(
+                    authenticated_user, device_info,
+                    request.META.get("REMOTE_ADDR"),
                 ),
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@svi-lms.local"),
-                recipient_list=[authenticated_user.email],
-                fail_silently=True,
-            )
+                daemon=True,
+            ).start()
             ActivityLog.objects.create(
                 user=authenticated_user,
                 action="new_device_login",
@@ -219,7 +250,15 @@ def login_view(request):
 
     redirect_url = reverse(ROLE_DASHBOARD_URLS[role_assignment.role.code])
     policy = PasswordPolicy.get_solo()
-    if policy.expiration_days and authenticated_user.password_changed_at:
+
+    # An administrator issued this password on the user's behalf, so the user
+    # knows it and must not keep it. This outranks the expiry check below: a
+    # freshly reset password has a brand-new password_changed_at and would
+    # otherwise sail past the expiry rule.
+    if authenticated_user.must_change_password:
+        request.session["force_password_change"] = True
+        redirect_url = reverse("accounts:change_password") + "?reset=1"
+    elif policy.expiration_days and authenticated_user.password_changed_at:
         if (timezone.now() - authenticated_user.password_changed_at).days >= policy.expiration_days:
             request.session["force_password_change"] = True
             redirect_url = reverse("accounts:change_password") + "?expired=1"
@@ -302,14 +341,25 @@ def reset_password_confirm(request, token):
 
         user.password = make_password(new_password)
         user.failed_login_attempts = 0
+        user.locked_at = None
+        # Setting their own password through the emailed link satisfies an
+        # outstanding admin-issued temporary password.
+        user.must_change_password = False
         was_locked = user.status in (User.Status.LOCKED, User.Status.PENDING_PASSWORD_SETUP)
         if hasattr(user, "password_changed_at"):
             user.password_changed_at = timezone.now()
         if was_locked:
             user.status = User.Status.ACTIVE
-        update_fields = ["password", "failed_login_attempts"] + (["password_changed_at"] if hasattr(user, "password_changed_at") else [])
+        update_fields = [
+            "password",
+            "failed_login_attempts",
+            "locked_at",
+            "must_change_password",
+        ]
+        if hasattr(user, "password_changed_at"):
+            update_fields.append("password_changed_at")
         if was_locked:
-            update_fields.append("status")
+            update_fields.extend(["status", "is_active"])
         user.save(update_fields=update_fields)
         _record_password_history(user)
         record.used_at = timezone.now()
@@ -367,6 +417,9 @@ def change_password(request):
     from .forms import ChangePasswordForm
 
     expired = bool(request.GET.get("expired") or request.session.pop("force_password_change", False))
+    # Distinguishes "your password aged out" from "an administrator set a
+    # password for you", which is a different explanation for the user.
+    admin_reset = bool(request.GET.get("reset")) or bool(getattr(request.user, "must_change_password", False))
     form = ChangePasswordForm(request.POST or None)
     if request.method == "POST":
         form = ChangePasswordForm(request.POST)
@@ -390,7 +443,10 @@ def change_password(request):
                 else:
                     request.user.password = make_password(new)
                     request.user.password_changed_at = timezone.now()
-                    request.user.save(update_fields=["password", "password_changed_at"])
+                    request.user.must_change_password = False
+                    request.user.save(
+                        update_fields=["password", "password_changed_at", "must_change_password"]
+                    )
                     _record_password_history(request.user)
                     ActivityLog.objects.create(
                         user=request.user,
@@ -402,7 +458,7 @@ def change_password(request):
                     from django.contrib import messages
                     messages.success(request, "Your password has been updated successfully.")
                     return redirect("accounts:my_sessions")
-    context = {"form": form, "expired": expired}
+    context = {"form": form, "expired": expired, "admin_reset": admin_reset}
     return render(request, "accounts/change_password.html", context)
 
 
@@ -460,49 +516,51 @@ def _send_verification_email(user, request, password="", recipient_name=""):
     EmailVerificationToken.objects.create(
         user=user, token=token_value, expires_at=expires_at
     )
-    verify_url = request.build_absolute_uri(
-        reverse("accounts:verify_email", args=[token_value])
-    )
-
     name = recipient_name or user.get_full_name() or user.email
     kind = "employee"
-    try:
-        if hasattr(user, "student_profile") and user.student_profile_id:
-            kind = "student"
-    except Exception:
-        pass
+    if getattr(user, "student_profile", None) is not None:
+        kind = "student"
 
-    context = {
-        "greeting_name": name,
-        "login_email": user.email,
-        "login_password": password,
-        "verify_url": verify_url,
-        "expiry_hours": VERIFY_TOKEN_EXPIRY_HOURS,
-        "school_name": getattr(settings, "SCHOOL_NAME", "San Vicente Institute"),
-        "contact_email": getattr(settings, "SCHOOL_CONTACT_EMAIL", "info@whitestrings.io"),
-        "account_kind": kind,
-    }
-    from .brevo import (
+    from .email_branding import (
         send_html_email,
-        svi_logo_path,
         verification_email_html,
         verification_email_text,
     )
     try:
+        verify_url = request.build_absolute_uri(
+            reverse("accounts:verify_email", args=[token_value])
+        )
+        context = {
+            "greeting_name": name,
+            "login_email": user.email,
+            "login_password": password,
+            "verify_url": verify_url,
+            "expiry_hours": VERIFY_TOKEN_EXPIRY_HOURS,
+            "school_name": getattr(settings, "SCHOOL_NAME", "San Vicente Institute"),
+            "contact_email": getattr(settings, "SCHOOL_CONTACT_EMAIL", "info@whitestrings.io"),
+            "account_kind": kind,
+        }
+        html = verification_email_html(context)
+        text = verification_email_text(context)
         send_html_email(
             subject="Verify your email address",
             to_email=user.email,
             to_name=name,
-            html=verification_email_html(context),
-            text=verification_email_text(context),
-            logo_cid=svi_logo_path(),
+            html=html,
+            text=text,
+            logo_cid="SVI_logo.png",
         )
-    except Exception:
+    except Exception as exc:
         import logging
         logging.getLogger("accounts").exception(
             "Failed to send verification email to %s", user.email
         )
-    return token_value
+        return {
+            "ok": False,
+            "user": user,
+            "message": f"The verification email could not be sent to {user.email}: {exc}",
+        }
+    return {"ok": True, "user": user, "token": token_value}
 
 
 def verify_email(request, token):
@@ -512,19 +570,80 @@ def verify_email(request, token):
         .select_related("user")
         .first()
     )
-    context = {"ok": False}
+    context = {"ok": False, "expired": False}
     if record is not None and record.expires_at >= timezone.now():
         record.verified_at = timezone.now()
         record.save(update_fields=["verified_at"])
         user = record.user
         if user.status == User.Status.PENDING_VERIFICATION:
             user.status = User.Status.ACTIVE
-            user.save(update_fields=["status"])
+            user.save(update_fields=["status", "is_active"])
         ActivityLog.objects.create(
             user=user,
             action="email_verified",
             related_entity_type="User",
             related_entity_id=user.pk,
         )
-        context = {"ok": True, "email": user.email}
+        # Show a short "Email successfully verified" confirmation, then send
+        # the user straight to the login page.
+        context = {
+            "ok": True,
+            "email": user.email,
+            "next_url": reverse("accounts:login_page"),
+            "user_email": user.email,
+        }
+    elif record is not None:
+        # Link older than 48 hours: expired, not yet verified.
+        context = {"ok": False, "expired": True}
     return render(request, "accounts/verify_email.html", context)
+
+# ---------------------------------------------------------------------------
+# Avatar delivery
+# ---------------------------------------------------------------------------
+# Avatar files live in the default storage, which is private Cloudflare R2 in
+# production (settings.AWS_QUERYSTRING_AUTH = True). `FieldFile.url` therefore
+# returns a *presigned* URL carrying `X-Amz-Expires` (one hour by default).
+#
+# Rendering that URL straight into a page is what made profile photos vanish:
+# the HTML was correct at render time, but once the page had been open (or sat
+# in a back/forward cache) longer than the signature lifetime, R2 rejected the
+# image and the browser dropped it. Every dashboard was affected because they
+# all read `user_avatar_url`.
+#
+# The fix is to keep a stable, same-origin path in the HTML and mint the
+# signature per request instead.
+AVATAR_PREFIX = "avatars/"
+
+
+def _avatar_storage_name(name):
+    """Return `name` if it is a safe avatars/ object key, else None."""
+    if not name or len(name) > 255:
+        return None
+    if name.startswith("/") or "\\" in name or ".." in name:
+        return None
+    if not name.startswith(AVATAR_PREFIX):
+        return None
+    return name
+
+
+@require_http_methods(["GET", "HEAD"])
+@login_required
+def avatar_redirect(request, name):
+    """302 to a freshly signed URL for the stored avatar `name`.
+
+    Auth is required because the avatars are private objects; the path is
+    scoped to the `avatars/` prefix so it cannot be used to fetch arbitrary
+    keys out of the bucket.
+    """
+    storage_name = _avatar_storage_name(name)
+    if storage_name is None:
+        raise Http404("Not found.")
+    try:
+        target = default_storage.url(storage_name)
+    except (NotImplementedError, ValueError):
+        raise Http404("Not found.")
+    response = HttpResponseRedirect(target)
+    # The redirect target is signed per request and must not be cached, or a
+    # stale signature would outlive its own expiry.
+    response["Cache-Control"] = "private, no-store"
+    return response

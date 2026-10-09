@@ -42,16 +42,40 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# ------------------------------------------------------------------
+# Production security (opt-in via .env). Enable SECURE_SSL=True when the
+# site is served over HTTPS behind a reverse proxy / load balancer. Left
+# off by default so the LAN pilot can run over plain HTTP.
+# ------------------------------------------------------------------
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if not DEBUG:
+    SECURE_COOKIES = os.getenv("SECURE_COOKIES", "False") == "True"
+    SESSION_COOKIE_SECURE = SECURE_COOKIES
+    CSRF_COOKIE_SECURE = SECURE_COOKIES
+    SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL", "False") == "True"
+    if SECURE_SSL_REDIRECT:
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+        SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = True
+
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
+    'channels',
 
     'apps.accounts.apps.AccountsConfig',
     'apps.system_settings.apps.SystemSettingsConfig',
@@ -78,6 +102,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.accounts.middleware.NoCacheMiddleware',
     'apps.accounts.middleware.SessionTimeoutMiddleware',
+    'apps.accounts.middleware.MustChangePasswordMiddleware',
     'apps.system_settings.middleware.MaintenanceModeMiddleware',
 ]
 
@@ -100,6 +125,30 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+
+# ASGI (WebSockets). `runserver` and `daphne` both use this application, which
+# routes realtime chat traffic to the ChatConsumer over Redis-backed channels.
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channel layer for realtime messaging. Defaults to a local Redis on port 6379.
+# Point REDIS_URL at the server's Redis for production (e.g. redis://:pass@host:6379/1).
+# Tests fall back to the in-memory layer so they don't need Redis running.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                {
+                    "address": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"),
+                    # redis-py 8 requires an explicit socket_timeout: without it the
+                    # blocking receive (brpop_timeout=5s) raises redis TimeoutError.
+                    # See django/channels_redis#422.
+                    "socket_timeout": 30,
+                }
+            ],
+        },
+    }
+}
 
 
 # Database
@@ -127,6 +176,15 @@ if "test" in sys.argv:
         }
     }
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+    }
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 
 # Password validation
@@ -165,6 +223,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STATICFILES_DIRS = [
     BASE_DIR / "static"
 ]
@@ -172,6 +232,50 @@ STATICFILES_DIRS = [
 # Media files (User-uploaded files)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+# ------------------------------------------------------------------
+# Cloudflare R2 (S3-compatible object storage) for media files
+# ------------------------------------------------------------------
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID")
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
+R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME")
+R2_CUSTOM_DOMAIN = os.getenv("R2_CUSTOM_DOMAIN", "")  # optional, only if bucket is public
+
+# Only switch media storage to R2 if the credentials are actually set.
+# Local dev without R2 configured falls back to local MEDIA_ROOT.
+USE_R2 = all([R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME])
+
+if USE_R2:
+    AWS_ACCESS_KEY_ID = R2_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
+    AWS_STORAGE_BUCKET_NAME = R2_BUCKET_NAME
+    AWS_S3_ENDPOINT_URL = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+    AWS_S3_REGION_NAME = "auto"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+    AWS_S3_VERIFY = True
+    AWS_QUERYSTRING_AUTH = True  # signed URLs; works even for a private bucket
+
+    if R2_CUSTOM_DOMAIN:
+        AWS_S3_CUSTOM_DOMAIN = R2_CUSTOM_DOMAIN
+        AWS_QUERYSTRING_AUTH = False  # public bucket via custom domain
+
+# Django 4.2+ storages API
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "storages.backends.s3.S3Storage"
+            if USE_R2
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 
 # Default primary key field type
@@ -186,28 +290,25 @@ LOGIN_URL = 'accounts:login_page'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-# Dev default: print emails to the console (visible when running runserver).
-# Set EMAIL_BACKEND + SMTP vars in .env to switch to a real mail server.
-# When BREVO_API_KEY is set, all outbound mail goes through Brevo's REST API
-# v3 (see apps/accounts/brevo.py) instead.
-_brevo_key = os.getenv("BREVO_API_KEY", "")
-if _brevo_key:
-    EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "apps.accounts.brevo.BrevoEmailBackend")
-else:
-    EMAIL_BACKEND = os.getenv(
-        "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
-    )
-EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+# All outbound mail (verification, password reset, new-device, manual resends)
+# goes through EMAIL_BACKEND. Gmail SMTP is the configured relay; point EMAIL_*
+# at any SMTP server in .env to change it. (The Brevo REST backend was removed.)
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@svi-lms.local")
+EMAIL_HOST_USER = os.getenv("GMAIL_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or os.getenv("DEFAULT_FROM_EMAIL", "noreply@svi-lms.local")
+# Cap a single delivery attempt so a slow or offline SMTP relay cannot stall the
+# request that triggered it (most visibly the login "new device" notice, which
+# runs in the sign-in request).
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 
-# Brevo transactional sender + school branding (used by the verification mail).
-# Sender must exist in your Brevo account (verified domain / verified sender).
-BREVO_API_KEY = _brevo_key
-BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "SVI LMS")
+# School branding used by the verification/reset mail.
+# Durable public HTTPS URL of the SVI logo used inside emails (Gmail cannot
+# render inline cid: images). Leave empty to embed the local logo as a data URI.
+EMAIL_LOGO_URL = os.getenv("EMAIL_LOGO_URL", "")
 SCHOOL_NAME = os.getenv("SCHOOL_NAME", "San Vicente Institute")
 SCHOOL_CONTACT_EMAIL = os.getenv("SCHOOL_CONTACT_EMAIL", "info@whitestrings.io")
 
