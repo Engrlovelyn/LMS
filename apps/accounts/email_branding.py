@@ -1,115 +1,21 @@
 """
-Brevo (Sendinblue) transactional email integration for SVI LMS.
+Branded HTML/plain-text email helpers for SVI LMS.
 
-Why REST API v3 instead of SMTP: the API key given by Brevo is an `xkeysib-`
-bearer API key. SMTP relay authentication requires a *separate* SMTP login +
-master password, so calling https://api.brevo.com/v3/smtp/email directly with
-the bearer key is the only dependency-free way to send with what we already
-have. Every Django `send_mail` / `EmailMultiAlternatives` call is routed
-through `BrevoEmailBackend`, so verification, password reset and
-new-device-sign-in mails all go out through Brevo once BREVO_API_KEY is set.
+All outbound mail (verification, password reset, new-device sign-in, and the
+manual resend actions) is delivered through the Django mail backend configured
+in settings.EMAIL_BACKEND - Gmail SMTP by default. This module only builds the
+branded bodies and sends them via ``send_html_email``; it has no transport of
+its own. (The old Brevo REST-API backend was removed; key an SMTP relay in
+``settings.EMAIL_*`` instead.)
 """
 
 from __future__ import annotations
 
-import json
 import os
-import urllib.request
 
 from django.conf import settings
 
 from django.core.mail import EmailMultiAlternatives
-
-BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
-
-
-def _api_key():
-    return os.getenv("BREVO_API_KEY") or getattr(settings, "BREVO_API_KEY", "") or ""
-
-
-def _post_payload(payload):
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(BREVO_API_URL, data=data, method="POST")
-    req.add_header("api-key", _api_key())
-    req.add_header("Content-Type", "application/json")
-    req.add_header("Accept", "application/json")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.status, resp.read().decode("utf-8", "replace")
-
-
-def _names(pairs):
-    people = []
-    for item in pairs or []:
-        if isinstance(item, str):
-            people.append({"email": item})
-        elif isinstance(item, (list, tuple)) and len(item) >= 2:
-            people.append({"name": item[0], "email": item[1]})
-    return people
-
-
-class BrevoEmailBackend:
-    """Minimal EmailBackend-compatible object sending via the Brevo REST API.
-
-    Not a Django ``BaseEmailBackend`` subclass on purpose: the API key is a
-    bearer key and there is no SMTP configuration, so Django's SMTP machinery
-    never needs to bootstrap. The object exposes the two methods Django's
-    email layer calls (``open`` / ``close`` / ``send_messages``).
-    """
-
-    def __init__(self, fail_silently=False, **kwargs):
-        self.fail_silently = fail_silently
-
-    def open(self):
-        return True
-
-    def close(self):
-        pass
-
-    def send_messages(self, email_messages):
-        if not _api_key():
-            raise RuntimeError(
-                "BREVO_API_KEY is empty. Add it to .env (see settings)."
-            )
-        sent = 0
-        for message in email_messages:
-            try:
-                self._send_one(message)
-                sent += 1
-            except Exception:
-                if not self.fail_silently:
-                    raise
-        return sent
-
-    def _send_one(self, message):
-        sender_email = message.from_email or getattr(
-            settings, "DEFAULT_FROM_EMAIL", ""
-        )
-        sender_name = os.getenv("BREVO_SENDER_NAME") or getattr(
-            settings, "BREVO_SENDER_NAME", ""
-        )
-        html = None
-        text = message.body or ""
-        for content, mimetype in (getattr(message, "alternatives", None) or ()):
-            if mimetype == "text/html" and content:
-                html = content
-
-        payload = {
-            "sender": {"email": sender_email, "name": sender_name},
-            "to": _names(getattr(message, "to", None)) or [],
-            "subject": message.subject or "",
-        }
-        if html:
-            payload["htmlContent"] = html
-        if text:
-            payload["textContent"] = text
-        try:
-            status, body = _post_payload(payload)
-        except Exception as exc:  # network / HTTP errors
-            if not self.fail_silently:
-                raise RuntimeError(f"Brevo send failed: {exc}") from exc
-            return
-        if status >= 400:
-            raise RuntimeError(f"Brevo rejected mail ({status}): {body[:300]}")
 
 
 def send_html_email(
@@ -121,13 +27,14 @@ def send_html_email(
     from_email=None,
     logo_cid=None,
 ):
-    """Send an HTML email through the configured backend.
+    """Send an HTML email through the configured Django mail backend.
 
     Works with the console backend too (prints the HTML), so development
-    behaves identically whether or not BREVO_API_KEY is set.
+    behaves identically whether or not a real relay is configured.
 
-    ``logo_cid`` is a path to an image attached inline and referenced in the
-    HTML as ``cid:<filename>`` (e.g. the SVI logo).
+    ``logo_cid`` is the path to the SVI logo; any ``cid:<logo>`` references in
+    the HTML are swapped for a working src (settings.EMAIL_LOGO_URL, or a
+    base64 data URI) because Gmail does not render inline Content-ID images.
     """
     message = EmailMultiAlternatives(
         subject=subject,
@@ -135,11 +42,8 @@ def send_html_email(
         from_email=from_email or getattr(settings, "DEFAULT_FROM_EMAIL", ""),
         to=[to_email],
     )
-    if logo_cid and os.path.exists(logo_cid):
-        with open(logo_cid, "rb") as logo_file:
-            logo_data = logo_file.read()
-        message.attach(os.path.basename(logo_cid), logo_data, "image/png")
     if html:
+        html = _inject_logo(html, logo_cid)
         message.attach_alternative(html, "text/html")
     return message.send(fail_silently=False)
 
@@ -147,12 +51,55 @@ def send_html_email(
 def svi_logo_path():
     candidates = (
         os.path.join(getattr(settings, "BASE_DIR", ""), "static", "dashboards", "img", "SVI_logo.png"),
+        os.path.join(getattr(settings, "BASE_DIR", ""), "static", "accounts", "img", "SVI_logo.png"),
         os.path.join(os.getcwd(), "static", "dashboards", "img", "SVI_logo.png"),
     )
     for path in candidates:
         if path and os.path.exists(path):
             return path
     return ""
+
+
+def svi_logo_src():
+    """An <img src> value for the SVI logo.
+
+    Priority:
+      1. settings.EMAIL_LOGO_URL — a durable public HTTPS URL (recommended;
+         Gmail renders external https images, not data URIs).
+      2. A base64 data URI built from the local logo file.
+    """
+    url = (os.getenv("EMAIL_LOGO_URL") or getattr(settings, "EMAIL_LOGO_URL", "") or "").strip()
+    if url:
+        return url
+    path = svi_logo_path()
+    if path and os.path.exists(path):
+        import base64
+
+        with open(path, "rb") as logo_file:
+            b64 = base64.b64encode(logo_file.read()).decode("ascii")
+        return "data:image/png;base64," + b64
+    return ""
+
+
+def _inject_logo(html, logo_cid):
+    """Replace Gmail-unsupported cid: logo references with a working src.
+
+    Gmail does not render inline (Content-ID) images, so the logo must be
+    referenced by an https URL or embedded as a data URI.
+    """
+    if not html or not logo_cid:
+        return html
+    src = svi_logo_src()
+    if not src:
+        return html
+    name = os.path.basename(logo_cid)
+    stem, _ext = os.path.splitext(name)
+    return (
+        html.replace('src="cid:%s"' % name, 'src="%s"' % src)
+        .replace('src="cid:%s"' % stem, 'src="%s"' % src)
+        .replace("src='cid:%s'" % name, 'src="%s"' % src)
+        .replace("src='cid:%s'" % stem, 'src="%s"' % src)
+    )
 
 
 def verification_email_html(context):
@@ -166,27 +113,19 @@ def verification_email_html(context):
       expiry_hours   – link validity window (48)
       school_name    – closing "Thanks, ..." / header brand
       contact_email  – footer contact address
-      account_kind   – "student" | "employee" (tweaks the pitch line)
     """
     school = context.get("school_name") or "San Vicente Institute"
     contact = context.get("contact_email") or "info@whitestrings.io"
     name = context.get("greeting_name") or context.get("login_email") or "there"
     login_email = context.get("login_email") or ""
     login_password = context.get("login_password") or ""
+    # A resend cannot include the password (only its hash is stored), so fall
+    # back to telling the user to keep the one they already have.
+    password_display = login_password or "(unchanged &ndash; use your current password)"
     verify_url = context.get("verify_url") or "#"
     hours = context.get("expiry_hours", 48)
-    kind = context.get("account_kind") or "student"
 
-    if kind == "employee":
-        pitch = (
-            "Your account has been created for the staff of "
-            f"{school}. Your login credentials are below."
-        )
-    else:
-        pitch = (
-            "Thank you for choosing us to be part of your "
-            "child's career and future!"
-        )
+    pitch = "Thank you for choosing us to be part of your career."
 
     brand = "#1e5faf"   # SVI blue
     accent = "#3a86d4"  # SVI sky
@@ -209,22 +148,25 @@ def verification_email_html(context):
                 <img src="cid:SVI_logo.png" alt="{school} logo" width="52"
                      style="display:inline-block;background:#ffffff;border-radius:10px;padding:4px;">
               </td>
-              <td style="vertical-align:middle;padding-left:16px;color:#ffffff;font-size:20px;font-weight:700;">Verify your email address</td>
+              <td style="vertical-align:middle;padding-left:16px;color:#ffffff;">
+                <div style="font-size:22px;font-weight:800;letter-spacing:.5px;line-height:1.1;">SVI LMS</div>
+                <div style="font-size:12px;opacity:.88;letter-spacing:.8px;margin-top:2px;">VERIFY YOUR EMAIL ADDRESS</div>
+              </td>
             </tr>
           </table>
         </td>
       </tr>
       <tr><td style="padding:28px 32px 8px 32px;font-size:15px;line-height:1.6;">
-        <p style="margin:0 0 12px 0;">Hi {name},</p>
+        <p style="margin:0 0 14px 0;font-size:20px;font-weight:800;color:{brand};">Welcome to SVI, {name}!</p>
         <p style="margin:0 0 12px 0;"><strong>Your account was successfully created!</strong></p>
         <p style="margin:0 0 18px 0;">{pitch}</p>
 """
     html += f"""
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f8fc;border:1px solid #d8e2ee;border-radius:8px;margin:0 0 20px 0;">
-          <tr><td style="padding:14px 18px;font-size:12px;font-weight:800;letter-spacing:1px;color:{brand};border-bottom:1px solid #d8e2ee;">SIS LOGIN CREDENTIAL</td></tr>
+          <tr><td style="padding:14px 18px;font-size:12px;font-weight:800;letter-spacing:1px;color:{brand};border-bottom:1px solid #d8e2ee;">SVI LMS LOGIN CREDENTIAL</td></tr>
           <tr><td style="padding:14px 18px;font-size:14px;">
             <p style="margin:0 0 8px 0;"><span style="color:#6b7280;font-weight:600;">Email:</span> {login_email}</p>
-            <p style="margin:0;"><span style="color:#6b7280;font-weight:600;">Password:</span> {login_password}</p>
+            <p style="margin:0;"><span style="color:#6b7280;font-weight:600;">Password:</span> {password_display}</p>
           </td></tr>
         </table>
 """
@@ -266,19 +208,17 @@ def verification_email_text(context):
     name = context.get("greeting_name") or "there"
     contact = context.get("contact_email") or "info@whitestrings.io"
     hours = context.get("expiry_hours", 48)
-    kind = context.get("account_kind") or "student"
-    pitch = (
-        "Your account has been created for the staff of " + school + "."
-        if kind == "employee"
-        else "Thank you for choosing us to be part of your child's career and future!"
+    pitch = "Thank you for choosing us to be part of your career."
+    password_display = context.get("login_password") or (
+        "(unchanged - use your current password)"
     )
     return (
         f"Verify your email address\n\n"
-        f"Hi {name},\n\n"
+        f"WELCOME TO SVI, {name}!\n\n"
         f"Your account was successfully created!\n{pitch}\n\n"
-        f"SIS LOGIN CREDENTIAL\n"
+        f"SVI LMS LOGIN CREDENTIAL\n"
         f"Email: {context.get('login_email') or ''}\n"
-        f"Password: {context.get('login_password') or ''}\n\n"
+        f"Password: {password_display}\n\n"
         f"Click this link within {hours} hours to verify your account:\n"
         f"{context.get('verify_url') or ''}\n\n"
         f"Thanks,\n{school}\n\n"
