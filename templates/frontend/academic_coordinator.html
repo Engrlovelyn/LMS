@@ -7,6 +7,15 @@
 <title>SVI LMS – Academic Coordinator Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/calendar.css' %}">
+<link rel="stylesheet" href="{% static 'css/empty_state.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+<!-- Defines window.TASS / TASS.empty.* . Must load before any inline script on
+     this page: the renderers below call TASS.empty.list/table/stats/chart, and
+     a bare "TASS.page = '...'" throws ReferenceError (TASS undefined), which
+     aborts the rest of that block and blanks the view. -->
+<script src="{% static 'js/empty_state.js' %}"></script>
+<script src="{% static 'js/demographics.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
@@ -74,7 +83,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
 .sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:10px 10px 5px; white-space:nowrap; opacity:0; transition:opacity 0.15s; }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label { opacity:1; transition-delay:0.07s; }
-.nav-item { display:flex; align-items:center; gap:0; padding:10px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
+.nav-item { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
 .nav-item-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; font-size:15.5px; flex-shrink:0; transition:color .18s; }
 .nav-item-label { opacity:0; transition:opacity 0.15s; padding-right:12px; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
@@ -396,6 +405,19 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .student-avatar-sm{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
 
 /* ── TLA IMPROVED ── */
+/* REPOSITORY ITEMS (Learning Material / Assessment repositories) */
+.repository-item{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--card-border);border-radius:9px;margin-bottom:8px;background:var(--card-bg)}
+.repository-item .repo-main{display:flex;gap:12px;align-items:center;flex:1;min-width:200px}
+.repository-item .repo-body{flex:1;min-width:0}
+.repository-item .repo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
+@media(max-width:600px){
+  .repository-item{gap:10px}
+  .repository-item .repo-main{min-width:100%}
+}
+.repo-detail-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--gray-100);font-size:12.5px}
+.repo-detail-row:last-child{border-bottom:none}
+.repo-detail-row .rd-key{flex:0 0 130px;color:var(--gray-600);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding-top:1px}
+.repo-detail-row .rd-val{flex:1;min-width:0;color:var(--navy);font-weight:600;word-break:break-word}
 .material-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:10px;background:var(--card-bg);border:1px solid var(--card-border);transition:all .18s}
 .material-item.clickable{cursor:pointer}
 .material-item.clickable:hover{border-color:var(--blue);background:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
@@ -682,6 +704,7 @@ body.sidebar-expanded .view-only-box, .sidebar:hover .view-only-box{ opacity: 1;
 .pill-green{ background: #dcfce7; color: #16a34a; }
 .pill-yellow{ background: #d6e8f7; color: #1e5faf; }
 .pill-red{ background: #fee2e2; color: #dc2626; }
+.pill-orange{ background: #ffedd5; color: #c2410c; }
 .pill-blue{ background: #dbeafe; color: #2563eb; }
 .pill-teal{ background: var(--light-blue); color: var(--blue); }
 .pill-gray{ background: var(--gray-100); color: var(--gray-400); }
@@ -815,8 +838,8 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="header-right">
       <button class="icon-btn" onclick="toggleNotif()"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
       <button class="profile-btn" onclick="toggleProfile()">
-        <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>MM</text></svg>'">
-        <div><div class="profile-name">Ms. Maria B.</div><div class="profile-role">Academic Coordinator</div></div>
+        <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+        <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label }}</div></div>
         <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i>
       </button>
     </div>
@@ -827,9 +850,9 @@ html,body{ width:100%; overflow-x:hidden; }
   </div>
   <div class="profile-panel" id="profilePanel">
     <div class="profile-panel-header">
-      <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>MM</text></svg>'">
-      <div class="profile-panel-name">Ms. Maria B.</div>
-      <div class="profile-panel-role">Academic Coordinator · Assistant Principal Access</div>
+      <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials }}</text></svg>" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+      <div class="profile-panel-name">{{ user_display_name }}</div>
+      <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
@@ -841,16 +864,33 @@ html,body{ width:100%; overflow-x:hidden; }
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
-    <div class="sidebar-section-label">Main Menu</div>
+    
+    <div class="sidebar-label">Main</div>
     <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
-    <button class="nav-item" onclick="showView('structure')"><div class="nav-item-icon"><i class="fa-solid fa-sitemap"></i></div><span class="nav-item-label">Academic Structure</span></button>
-    <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
-    <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Learning Materials</span></button>
-    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></button>
+    <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
+    
+    <div class="sidebar-label">Academic Directory</div>
+    {% if perms.academic_structure.view_academic_year or perms.academic_structure.view_section_custom or perms.academic_structure.view_subject_custom %}
+    <button class="nav-item" onclick="showView('schoolyear')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-day"></i></div><span class="nav-item-label">School Year</span></button>
+    {% endif %}
+    {% if perms.virtual_classrooms.view_virtual_classroom %}
+    <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+    {% endif %}
+    
+    <div class="sidebar-label">Teaching</div>
+    <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Material Repository</span></button>
+    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span></button>
+    
+    <div class="sidebar-label">Insights</div>
     <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></button>
     <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Student Performance</span></button>
     <button class="nav-item" onclick="showView('analytics')"><div class="nav-item-icon"><i class="fa-solid fa-chart-pie"></i></div><span class="nav-item-label">Analytics & Reports</span></button>
+    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-users-viewfinder"></i></div><span class="nav-item-label">Demographics</span></button>
+    
+    <div class="sidebar-label">Communication</div>
     <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
+    
+    <div class="sidebar-label">Settings</div>
     <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
     <div class="sidebar-spacer"></div>
     </div>
@@ -872,6 +912,14 @@ html,body{ width:100%; overflow-x:hidden; }
         </div>
       </div>
 
+      <!-- ═════════════════════════ SCHOOL CALENDAR ═════════════════════════════ -->
+      <div class="card" style="margin-bottom:22px;">
+        <div class="card-body">
+          <div id="calRoot"></div>
+        </div>
+      </div>
+
+
       <div class="dash-filter-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:18px;">
         <span style="font-size:12.5px;font-weight:700;color:var(--navy);display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-filter" style="color:var(--blue);"></i>Filters</span>
         <label style="font-size:12px;font-weight:600;color:var(--gray-500);">Academic Year</label>
@@ -888,8 +936,8 @@ html,body{ width:100%; overflow-x:hidden; }
       <!-- STATS ROW 1 -->
       <div class="stats-grid">
         <div class="stat-card" style="cursor:pointer;" onclick="showView('classrooms')"><div class="stat-icon si-teal"><i class="fa-solid fa-chalkboard"></i></div><div class="stat-val">—</div><div class="stat-label">Virtual Classrooms</div><div class="stat-trend trend-up"></div></div>
-        <div class="stat-card" style="cursor:pointer;" onclick="showView('structure')"><div class="stat-icon si-purple"><i class="fa-solid fa-layer-group"></i></div><div class="stat-val">—</div><div class="stat-label">Sections Managed</div><div class="stat-trend trend-up"></div></div>
-        <div class="stat-card" style="cursor:pointer;" onclick="showView('structure')"><div class="stat-icon si-blue"><i class="fa-solid fa-book"></i></div><div class="stat-val">—</div><div class="stat-label">Subjects Configured</div><div class="stat-trend trend-up"></div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="showView('schoolyear')"><div class="stat-icon si-purple"><i class="fa-solid fa-layer-group"></i></div><div class="stat-val">—</div><div class="stat-label">Sections Managed</div><div class="stat-trend trend-up"></div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="showView('schoolyear')"><div class="stat-icon si-blue"><i class="fa-solid fa-book"></i></div><div class="stat-val">—</div><div class="stat-label">Subjects Configured</div><div class="stat-trend trend-up"></div></div>
         <div class="stat-card"><div class="stat-icon si-green"><i class="fa-solid fa-chalkboard-user"></i></div><div class="stat-val">—</div><div class="stat-label">Teachers Assigned to VCs</div><div class="stat-trend trend-up"></div></div>
       </div>
 
@@ -932,16 +980,32 @@ html,body{ width:100%; overflow-x:hidden; }
       </div>
     </div>
     <!-- ══════════════ ACADEMIC STRUCTURE MANAGEMENT ══════════════ -->
-    <div class="view" id="view-structure">
+    <div class="view" id="view-schoolyear">
       <div class="page-header">
-        <div><div class="page-title">Academic Structure Management</div><div class="page-sub">Manage Academic Years, Sections, and Subjects that form the foundation of every Virtual Classroom</div></div>
+        <div><div class="page-title">School Year &amp; Academic Structure</div><div class="page-sub" id="schoolyearSub">Create the active school year and the sections and subjects that form it</div></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          {% if perms.academic_structure.add_section_custom %}
+          <button class="btn btn-ict" onclick="openAddSection()"><i class="fa-solid fa-layer-group"></i> Add Section</button>
+          {% endif %}
+          {% if perms.academic_structure.add_subject_custom %}
+          <button class="btn btn-outline" onclick="openAddSubject()"><i class="fa-solid fa-book"></i> Add Subject</button>
+          {% endif %}
+        </div>
       </div>
 
       <div class="struct-tabs">
+        {% if perms.academic_structure.view_academic_year %}
         <button class="struct-tab active" onclick="switchStruct('years',this)"><i class="fa-solid fa-calendar-day"></i> Academic Years</button>
+        {% endif %}
+        {% if perms.academic_structure.view_section_custom %}
         <button class="struct-tab" onclick="switchStruct('sections',this)"><i class="fa-solid fa-layer-group"></i> Sections</button>
+        {% endif %}
+        {% if perms.academic_structure.view_subject_custom %}
         <button class="struct-tab" onclick="switchStruct('subjects',this)"><i class="fa-solid fa-book"></i> Subjects</button>
+        {% endif %}
+        {% if perms.academic_structure.manage_academic_structure_template %}
         <button class="struct-tab" onclick="switchStruct('template',this)"><i class="fa-solid fa-drafting-compass"></i> Structure Template</button>
+        {% endif %}
       </div>
 
       <!-- ACADEMIC YEARS -->
@@ -967,8 +1031,10 @@ html,body{ width:100%; overflow-x:hidden; }
       <div id="struct-pane-sections" class="struct-pane">
         <div class="card" style="margin-bottom:20px;">
           <div class="card-header">
-            <div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);"></i> Sections — S.Y. 2025-2026</div>
-            <button class="btn btn-primary btn-sm" onclick="openModal('addSectionModal')"><i class="fa-solid fa-plus"></i> Add Section</button>
+            <div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);"></i> Sections — <span data-ay>S.Y. 2025-2026</span></div>
+            {% if perms.academic_structure.update_section_custom %}
+            <button class="btn btn-primary btn-sm" onclick="openAddSection()"><i class="fa-solid fa-plus"></i> Add Section</button>
+            {% endif %}
           </div>
           <div class="card-body" style="padding:0;">
             <table class="data-table">
@@ -983,8 +1049,10 @@ html,body{ width:100%; overflow-x:hidden; }
       <div id="struct-pane-subjects" class="struct-pane">
         <div class="card" style="margin-bottom:20px;">
           <div class="card-header">
-            <div class="card-title"><i class="fa-solid fa-book" style="color:var(--blue);"></i> Subjects — S.Y. 2025-2026</div>
-            <button class="btn btn-primary btn-sm" onclick="openModal('addSubjectModal')"><i class="fa-solid fa-plus"></i> Add Subject</button>
+            <div class="card-title"><i class="fa-solid fa-book" style="color:var(--blue);"></i> Subjects — <span data-ay>S.Y. 2025-2026</span></div>
+            {% if perms.academic_structure.update_subject_custom %}
+            <button class="btn btn-primary btn-sm" onclick="openAddSubject()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+            {% endif %}
           </div>
           <div class="card-body" style="padding:0;">
             <table class="data-table">
@@ -1000,7 +1068,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div id="struct-pane-template" class="struct-pane">
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="fa-solid fa-drafting-compass" style="color:var(--blue);"></i> Academic Structure Template — S.Y. 2025-2026</div>
+            <div class="card-title"><i class="fa-solid fa-drafting-compass" style="color:var(--blue);"></i> Academic Structure Template — <span data-ay>S.Y. 2025-2026</span></div>
             <button class="btn btn-outline btn-sm" onclick="tassEXTemplate()"><i class="fa-solid fa-pen"></i> Edit Template</button>
           </div>
           <div class="card-body">
@@ -1032,7 +1100,9 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="view" id="view-classrooms">
       <div class="page-header">
         <div><div class="page-title">Virtual Classroom Management</div><div class="page-sub">Create and configure Virtual Classrooms, assign teachers, enroll students, and set each subject's Topic Outline</div></div>
+        {% if perms.virtual_classrooms.create_virtual_classroom %}
         <button class="btn btn-primary" onclick="openModal('createVCModal')"><i class="fa-solid fa-plus"></i> Create Virtual Classroom</button>
+        {% endif %}
       </div>
 
       <div class="grid-3" style="margin-bottom:20px;">
@@ -1043,7 +1113,7 @@ html,body{ width:100%; overflow-x:hidden; }
 
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">
-          <div class="card-title"><i class="fa-solid fa-chalkboard" style="color:var(--blue);"></i> All Virtual Classrooms — S.Y. 2025-2026</div>
+          <div class="card-title"><i class="fa-solid fa-chalkboard" style="color:var(--blue);"></i> All Virtual Classrooms — <span data-ay>S.Y. 2025-2026</span></div>
           <select class="form-control" style="width:170px;" onchange="tassEXFiltered()"><option>All Grade Levels</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
         </div>
         <div class="card-body" style="padding:0;">
@@ -1124,7 +1194,7 @@ html,body{ width:100%; overflow-x:hidden; }
         </div>
         <div class="confirm-actions" style="justify-content:flex-end;margin-top:16px;">
           <button class="btn btn-outline" onclick="closeModal('addStudentsModal')">Cancel</button>
-          <button class="btn btn-primary" onclick="closeModal('addStudentsModal');showToast('Students added to class','success')">Add Selected</button>
+          <button class="btn btn-primary" onclick="closeModal('addStudentsModal');showToast('Open the classrooms view to enroll students','teal')">Add Students</button>
         </div>
       </div>
     </div>
@@ -1138,7 +1208,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div class="form-group"><label class="form-label">Status</label><select class="form-control"><option>Active</option><option>Archived</option></select></div>
         <div class="confirm-actions" style="justify-content:flex-end;margin-top:10px;">
           <button class="btn btn-outline" onclick="closeModal('editVCModal')">Cancel</button>
-          <button class="btn btn-primary" onclick="closeModal('editVCModal');showToast('Virtual Classroom updated','success')">Save Changes</button>
+          <button class="btn btn-primary" onclick="closeModal('editVCModal');showView('classrooms')">Manage Classrooms</button>
         </div>
       </div>
     </div>
@@ -1203,32 +1273,36 @@ html,body{ width:100%; overflow-x:hidden; }
         </div>
       </div>
     </div>
-    <!-- ══════════════ LEARNING MATERIALS ══════════════ -->
+    <!-- ══════════════ LEARNING MATERIAL REPOSITORY ══════════════ -->
     <div class="view" id="view-materials">
       <div class="page-header">
-        <div><div class="page-title">Learning Materials</div><div class="page-sub">All modules, videos, documents, and resources uploaded by teachers — view and download only</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <select class="form-control" style="width:140px;" onchange="filterMaterials(this.value)">
-            <option value="all">All Types</option><option value="pdf">PDF</option><option value="vid">Video</option><option value="doc">Word Doc</option><option value="img">Image</option><option value="aud">Audio</option>
-          </select>
-          <select class="form-control" style="width:170px;" onchange="tassEXFilterTeacher()">
-            <option>All Teachers</option>
-          </select>
+        <div><div class="page-title">Learning Material Repository</div><div class="page-sub">Every learning resource shared across the school — browse, preview and download. Teachers manage their own uploads.</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="vo-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> View Only</span>
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title"><i class="fa-solid fa-folder-open" style="color:var(--blue);"></i> All Uploaded Materials</div><span class="vo-tag"><i class="fa-solid fa-eye"></i> View Only — Teachers manage their own content</span></div>
-        <div class="card-body" id="allMaterialsList"></div>
+        <div class="card-body">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="repoSubjectPage" style="width:170px;max-width:100%;" onchange="renderMaterials()"><option value="">All Subjects</option></select>
+            <select class="form-control" id="repoTypePage" style="width:150px;max-width:100%;" onchange="renderMaterials()">
+              <option value="all">All Types</option><option value="pdf">PDF</option><option value="ppt">Presentation</option><option value="doc">Word Doc</option><option value="vid">Video</option><option value="img">Image</option><option value="aud">Audio</option><option value="lnk">Link</option>
+            </select>
+            <input class="form-control" id="repoSearchPage" placeholder="Search resource..." style="flex:1;min-width:220px" oninput="renderMaterials()">
+            <button class="btn btn-outline" onclick="downloadRepoResourceReport()"><i class="fa-solid fa-file-export"></i> Export List</button>
+          </div>
+          <div class="repository-grid" id="resourceLibraryGrid"></div>
+          <div id="resourceLibraryStatus" class="invite-status" style="display:none;margin-top:12px"></div>
+        </div>
       </div>
     </div>
 
-    <!-- ══════════════ ASSESSMENTS ══════════════ -->
+    <!-- ══════════════ ASSESSMENT REPOSITORY ══════════════ -->
     <div class="view" id="view-assessments">
       <div class="page-header">
-        <div><div class="page-title">Assessments</div><div class="page-sub">All quizzes, exams, and activities posted by teachers — view only</div></div>
-        <div style="display:flex;gap:8px;">
-          <select class="form-control" style="width:140px;"><option>All Types</option><option>Quiz</option><option>Exam</option><option>Activity</option></select>
-          <select class="form-control" style="width:130px;"><option>All Status</option><option>Open</option><option>Closed</option></select>
+        <div><div class="page-title">Assessment Repository</div><div class="page-sub">Every assessment released school-wide with its submission and score summary — browse and preview</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="vo-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> View Only</span>
         </div>
       </div>
 
@@ -1239,14 +1313,16 @@ html,body{ width:100%; overflow-x:hidden; }
       </div>
 
       <div class="card" style="margin-bottom:20px;">
-        <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--blue);"></i> All Assessments</div><span class="vo-tag"><i class="fa-solid fa-eye"></i> View Only</span></div>
-        <div class="card-body" style="padding:0;">
-          <table class="data-table">
-            <thead><tr><th>Title</th><th>Type</th><th>Teacher</th><th>Class</th><th>Deadline</th><th>Submissions</th><th>Avg. Score</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td colspan="8" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>
-            </tbody>
-          </table>
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--blue);"></i> Assessment Repository</div><span class="vo-tag"><i class="fa-solid fa-eye"></i> View Only</span></div>
+        <div class="card-body">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="assessRepoTypePage" style="width:170px;max-width:100%;" onchange="renderAssessmentsTable()"><option value="">All Types</option></select>
+            <select class="form-control" id="assessRepoStatusPage" style="width:140px;max-width:100%;" onchange="renderAssessmentsTable()"><option value="">All Status</option><option>Graded</option><option>Pending</option></select>
+            <input class="form-control" id="assessRepoSearchPage" placeholder="Search assessment..." style="flex:1;min-width:220px" oninput="renderAssessmentsTable()">
+            <button class="btn btn-outline" onclick="downloadRepoAssessmentReport()"><i class="fa-solid fa-file-export"></i> Export List</button>
+          </div>
+          <div class="repository-grid" id="assessmentLibraryGrid"></div>
+          <div id="assessmentLibraryStatus" class="invite-status" style="display:none;margin-top:12px"></div>
         </div>
       </div>
 
@@ -1301,7 +1377,7 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="view" id="view-performance">
       <div class="page-header">
         <div><div class="page-title">Student Performance Tracking</div><div class="page-sub">Consolidated grades, assessment completion, and attendance across all classes and grading periods</div></div>
-        <select class="form-control" style="width:180px;"><option>All Classes</option></select>
+        <select id="perfClassFilter" class="form-control" style="width:200px;" onchange="renderPerfTable()"><option value="">All Classes</option></select>
       </div>
 
       <div class="grid-2" style="margin-bottom:20px;">
@@ -1331,59 +1407,26 @@ html,body{ width:100%; overflow-x:hidden; }
     <!-- ══════════════ ANALYTICS & REPORTS ══════════════ -->
     <div class="view" id="view-analytics">
       <div class="page-header">
-        <div><div class="page-title">Analytics & Reports</div><div class="page-sub">School-wide and class-level analytics on enrollment, attendance, and performance</div></div>
+        <div><div class="page-title">Analytics &amp; Reports</div><div class="page-sub">School-wide performance and activity analytics — view only</div></div>
+        <span class="view-only-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> Exportable reports are generated by the Registrar/System Administrator</span>
       </div>
-
-      <div class="struct-tabs">
-        <button class="struct-tab active" onclick="switchAnalytics('schoolwide',this)"><i class="fa-solid fa-school"></i> School-Wide Analytics</button>
-        <button class="struct-tab" onclick="switchAnalytics('classlevel',this)"><i class="fa-solid fa-chalkboard"></i> Class-Level Analytics</button>
-      </div>
-
-      <!-- SCHOOL-WIDE -->
-      <div id="analytics-pane-schoolwide" class="struct-pane active">
-        <div class="page-header" style="margin-bottom:14px;">
-          <div style="font-size:13px;color:var(--gray-400);">Aggregated across all Virtual Classrooms, sections, and grade levels for S.Y. 2025-2026</div>
-          <select class="form-control" style="width:170px;" onchange="tassEXMetric()"><option>Enrollment</option><option>Attendance</option><option>Performance</option></select>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--blue);margin-right:8px;"></i>Assessment Performance by Class</div></div>
+          <div class="card-body"><div class="chart-wrap tall"><canvas id="reportAssessChart"></canvas></div></div>
         </div>
-        <div class="stats-grid">
-          <div class="stat-card"><div class="stat-icon si-teal"><i class="fa-solid fa-users"></i></div><div class="stat-val">—</div><div class="stat-label">Total Enrollment</div></div>
-          <div class="stat-card"><div class="stat-icon si-green"><i class="fa-solid fa-calendar-check"></i></div><div class="stat-val">—</div><div class="stat-label">School Avg. Attendance</div></div>
-          <div class="stat-card"><div class="stat-icon si-blue"><i class="fa-solid fa-star"></i></div><div class="stat-val">—</div><div class="stat-label">School Avg. Score</div></div>
-          <div class="stat-card"><div class="stat-icon si-purple"><i class="fa-solid fa-paper-plane"></i></div><div class="stat-val">—</div><div class="stat-label">Avg. Submission Rate</div></div>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--blue);"></i> Enrollment by Grade Level</div></div>
-            <div class="card-body"><div class="chart-wrap md"><canvas id="anEnrollChart"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--blue);"></i> School-Wide Attendance Trend</div></div>
-            <div class="card-body"><div class="chart-wrap md"><canvas id="anAttendTrendChart"></canvas></div></div>
-          </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-fire" style="color:var(--warning);margin-right:8px;"></i>Teacher Posting Frequency</div></div>
+          <div class="card-body"><div class="chart-wrap tall"><canvas id="reportPostingChart"></canvas></div></div>
         </div>
       </div>
-
-      <!-- CLASS-LEVEL -->
-      <div id="analytics-pane-classlevel" class="struct-pane">
-        <div class="page-header" style="margin-bottom:14px;">
-          <div style="font-size:13px;color:var(--gray-400);">Select a Virtual Classroom to view its attendance, assessment, and performance data</div>
-          <select class="form-control" style="width:220px;" onchange="tassEXClassroom()">
-            <option>— Select classroom —</option>
-          </select>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header"><div class="card-title"><i class="fa-solid fa-calendar-check" style="color:var(--blue);"></i> Attendance</div></div>
-            <div class="card-body"><div class="chart-wrap md"><canvas id="anClassAttendChart"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--blue);"></i> Assessment Completion</div></div>
-            <div class="card-body"><div class="chart-wrap md"><canvas id="anClassAssessChart"></canvas></div></div>
-          </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-star" style="color:var(--gold,#c9a84c);margin-right:8px;"></i>Student Performance Overview — School-wide</div><span class="view-only-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> View Only</span></div>
+        <div class="card-body" id="schoolPerfOverviewBody">
+          <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:10px;"><i class="fa-regular fa-circle-question"></i> Select a class in Student Performance for a per-student breakdown, grade trend, and attendance summary.</div>
         </div>
       </div>
-
-      <div class="restricted-note"><i class="fa-solid fa-circle-info"></i> Generating exportable analytics reports (Attendance Trend Analytics, Submission & Assessment Reports, SF Reports) is restricted to the Teacher, Registrar, and System Administrator. This dashboard provides on-screen viewing only.</div>
     </div>
 
     <!-- ══════════════ ANNOUNCEMENTS ══════════════ -->
@@ -1398,6 +1441,44 @@ html,body{ width:100%; overflow-x:hidden; }
         </div>
       </div>
       <div class="restricted-note"><i class="fa-solid fa-circle-info"></i> Posting class announcements is done by Teachers. Posting, updating, and archiving school-wide announcements is restricted to the Principal.</div>
+    </div>
+
+    <!-- DEMOGRAPHICS -->
+    <div class="view" id="view-demographics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Student Demographics</div>
+          <div class="page-sub">Age and sex distribution across the learners in scope</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-person"></i></div><div class="stat-val" id="dmMale">&#8212;</div><div class="stat-label">Male</div></div>
+        <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-person-dress"></i></div><div class="stat-val" id="dmFemale">&#8212;</div><div class="stat-label">Female</div></div>
+        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-cake-candles"></i></div><div class="stat-val" id="dmAvgAge">&#8212;</div><div class="stat-label">Average Age</div></div>
+        <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-users"></i></div><div class="stat-val" id="dmTotal">&#8212;</div><div class="stat-label">Learners</div></div>
+      </div>
+      <div class="analytics-row">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Age Distribution</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="dmAgeChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--warning)"></i> Sex Split</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="dmGenderChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-users-viewfinder" style="color:var(--blue)"></i> Learner List</div>
+          <input class="form-control" id="dmSearch" placeholder="Search learner, LRN..." style="width:220px;" oninput="TASS.demo.render({prefix:'dm'})">
+        </div>
+        <div class="card-body" style="padding:8px 16px 12px;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Learner</th><th>LRN</th><th style="text-align:center;">Age</th><th>Grade &amp; Section</th><th style="text-align:center;">Gender</th></tr></thead>
+            <tbody id="dmTable"><tr class="tass-empty-row"><td colspan="5" style="text-align:center;padding:24px 12px;color:var(--text-muted);">No data yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="view" id="view-settings">
@@ -1464,6 +1545,7 @@ html,body{ width:100%; overflow-x:hidden; }
 
 <script>
 // ── DATA ──
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 const sectionsData = [];
 
 const subjectsData = [];
@@ -1489,19 +1571,20 @@ function showView(id) {
   });
   closeAllPanels();
   if (id === 'dashboard') { initDashCharts(); renderDashVCList(); }
-  if (id === 'structure') { renderSectionsTable(); renderSubjectsTable(); }
+  if (id === 'schoolyear') { renderSectionsTable(); renderSubjectsTable(); }
   if (id === 'classrooms') { renderVCTable(); renderTopicOutline(document.getElementById('topicSubjectSelect').value); }
-  if (id === 'materials') renderMaterials('all');
+  if (id === 'materials') renderMaterials();
   if (id === 'assessments') initAssessCharts();
   if (id === 'attendance') initAttendCharts();
   if (id === 'performance') initPerfCharts();
-  if (id === 'analytics') initAnalyticsCharts();
+  if (id === 'analytics') initReportCharts();
   if (id === 'announcements') renderACAnnouncements();
+  if (id === 'demographics' && window.TASS && TASS.demo) TASS.demo.render({ prefix: 'dm' });
 }
 
 function switchStruct(id, btn) {
-  document.querySelectorAll('.struct-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('#view-structure .struct-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#view-schoolyear .struct-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#view-schoolyear .struct-pane').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('struct-pane-' + id).classList.add('active');
 }
@@ -1554,6 +1637,24 @@ function restoreACState(){
   }catch(e){ console.warn('Unable to restore Academic Coordinator demo state',e); }
 }
 let editingSectionIndex=-1, editingSubjectIndex=-1, archiveSectionIndex=-1, archiveVCIndex=-1;
+// Reset the modal into "Add" mode. Without this, closing an Edit dialog and
+// then clicking "Add Section" reopens it still bound to the previously edited
+// row, and saving overwrites that section instead of creating a new one.
+function openAddSection(){
+  editingSectionIndex=-1;
+  document.getElementById('sectionModalTitle').textContent='Add Section';
+  document.getElementById('sectionNameInput').value='';
+  document.getElementById('sectionAdviserInput').value='— None assigned —';
+  document.getElementById('sectionModalSaveBtn').setAttribute('onclick','saveSection()');
+  openModal('addSectionModal');
+}
+function openAddSubject(){
+  editingSubjectIndex=-1;
+  document.getElementById('subjectModalTitle').textContent='Add Subject';
+  document.getElementById('subjectNameInput').value='';
+  document.getElementById('subjectModalSaveBtn').setAttribute('onclick','saveSubject()');
+  openModal('addSubjectModal');
+}
 function saveSection(){
    if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('addSectionModal')))return;
    const name=document.getElementById('sectionNameInput').value.trim();
@@ -1640,6 +1741,13 @@ function editSubject(i) {
 // ── RENDER: VIRTUAL CLASSROOMS ──
 function renderVCTable() {
   const tbody = document.getElementById('vcTableBody');
+  const cards = document.querySelectorAll('#view-classrooms .grid-3 .stat-card .stat-val');
+  if (cards.length >= 3) {
+    const elective = vcData.filter(v => v.type === 'elective').length;
+    cards[0].textContent = String(vcData.length);
+    cards[1].textContent = String(vcData.length - elective);
+    cards[2].textContent = String(elective);
+  }
   if (!tbody) return;
   if (vcData.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>'; return; }
   tbody.innerHTML = vcData.map((v, i) => {
@@ -1746,25 +1854,134 @@ function addTopic() {
   showToast('Topic added to outline', 'success');
 }
 
-// ── RENDER: LEARNING MATERIALS ──
-const allMaterials = [];
+/* ── LEARNING MATERIAL REPOSITORY ────────────────────────────────────────
+   Same shared-repository endpoint the Teacher and System Administrator
+   dashboards read. The Coordinator supervises teaching and learning, so this is
+   oversight only: every row gets a read-only View action plus a download when a
+   file is attached. There is no builder to copy into. */
+const REPO_RESOURCES = [];
+let repoResourcesLoaded = false;
+
+function repoResourceSource() { return REPO_RESOURCES.length ? REPO_RESOURCES : []; }
+
+function loadRepoResources(silent) {
+  return fetch('/api/learning-resources/', { credentials: 'same-origin' })
+    .then(r => r.json())
+    .then(function (d) {
+      if (d && d.ok && Array.isArray(d.resources)) {
+        REPO_RESOURCES.length = 0;
+        d.resources.forEach(function (x) { REPO_RESOURCES.push(x); });
+      }
+      repoResourcesLoaded = true;
+      populateRepoSubjects();
+      if (!silent) renderMaterials();
+      return REPO_RESOURCES;
+    })
+    .catch(function () {
+      repoResourcesLoaded = true;
+      populateRepoSubjects();
+      renderMaterials();
+      return REPO_RESOURCES;
+    });
+}
+
+function populateRepoSubjects() {
+  const sel = document.getElementById('repoSubjectPage');
+  if (!sel) return;
+  const subs = [...new Set(repoResourceSource().map(r => r.subject).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Subjects</option>' + subs.map(s => '<option>' + escHtml(s) + '</option>').join('');
+  if (cur && subs.indexOf(cur) >= 0) sel.value = cur;
+}
+
+function repoDownloadBtn(r) {
+  const url = String((r && r.url) || '').trim();
+  if (url) return '<a class="btn btn-outline btn-sm" href="' + escHtml(url) + '" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download</a>';
+  return '<span class="status-pill" style="background:var(--gray-100);color:var(--gray-600)">No file</span>';
+}
 
 function renderMaterials(filter) {
-  const list = document.getElementById('allMaterialsList');
-  const filtered = filter === 'all' ? allMaterials : allMaterials.filter(m => m.type === filter);
-  if (filtered.length === 0) { list.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>'; return; }
-  list.innerHTML = filtered.map(m => `
-    <div class="material-item">
-      <div class="mat-icon ${m.type}"><i class="fa-solid ${m.icon}"></i></div>
-      <div style="flex:1;min-width:0;">
-        <div class="mat-name">${m.name}</div>
-        <div class="mat-meta">${m.meta} · <strong>${m.teacher}</strong> · ${m.cls} · Uploaded ${m.date}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <button class="icon-action" title="Download" onclick="showToast('Downloading ${m.name}...','teal')"><i class="fa-solid fa-download"></i></button>
-        <span class="vo-tag"><i class="fa-solid fa-eye"></i> View Only</span>
-      </div>
-    </div>`).join('');
+  if (filter !== undefined) {
+    const sel = document.getElementById('repoTypePage');
+    if (sel) sel.value = filter === 'all' ? 'all' : filter;
+  }
+  const grid = document.getElementById('resourceLibraryGrid');
+  if (!grid) return;
+
+  if (!repoResourcesLoaded && !REPO_RESOURCES.length) loadRepoResources(true);
+
+  const q = (document.getElementById('repoSearchPage')?.value || '').toLowerCase();
+  const subject = document.getElementById('repoSubjectPage')?.value || '';
+  const type = document.getElementById('repoTypePage')?.value || 'all';
+
+  const all = repoResourceSource();
+  if (!all.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block;opacity:.5"></i>No learning materials have been shared to the repository yet.</div>';
+    return;
+  }
+
+  const items = all.filter(r =>
+    (!subject || r.subject === subject) &&
+    (type === 'all' || !type || r.type === type) &&
+    (!q || [r.title, r.topic, r.subject, r.meta, r.uploaded_by].join(' ').toLowerCase().includes(q))
+  );
+
+  if (!items.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-magnifying-glass" style="font-size:30px;margin-bottom:10px;display:block;opacity:.5"></i>No resources match the selected filters.</div>';
+    return;
+  }
+
+  const heading = (subject || 'All Subjects') + ' — ' + items.length + ' Resource' + (items.length === 1 ? '' : 's');
+  grid.innerHTML = '<h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px"><i class="fa-solid fa-book-open" style="color:var(--blue)"></i> ' + escHtml(heading) + '</h4>' +
+    items.map(r =>
+      '<div class="repository-item">' +
+        '<div class="repo-main">' +
+          '<i class="' + escHtml(r.icon || 'fa-solid fa-file') + '" style="font-size:22px;color:' + escHtml(r.color || '#3a86d4') + '"></i>' +
+          '<div class="repo-body"><strong>' + escHtml(r.title) + '</strong>' +
+          '<div style="font-size:11px;color:var(--text-muted)">' + [escHtml(r.subject), escHtml(r.topic), escHtml(r.meta)].filter(Boolean).join(' · ') + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-user"></i> ' + escHtml(r.uploaded_by || 'Faculty') + ' · <i class="fa-solid fa-calendar"></i> ' + escHtml(r.created_at || '—') + '</div></div>' +
+        '</div>' +
+        '<div class="repo-actions">' +
+          '<button class="btn btn-outline btn-sm" onclick="viewRepoResource(' + escHtml(String(r.id)) + ')"><i class="fa-solid fa-eye"></i> View</button>' +
+          repoDownloadBtn(r) +
+        '</div>' +
+      '</div>'
+    ).join('');
+}
+
+/* Read-only resource detail — no destination picker, no POST. */
+function viewRepoResource(id) {
+  const r = repoResourceSource().find(x => String(x.id) === String(id));
+  if (!r) { showToast('This resource is no longer in the repository.', 'error'); return; }
+  const row = (k, v) => '<div class="repo-detail-row"><div class="rd-key">' + k + '</div><div class="rd-val">' + (v || '—') + '</div></div>';
+  const html =
+    '<div class="modal-overlay open" id="acRepoViewModal" onclick="if(event.target===this)document.getElementById(\'acRepoViewModal\').remove()"><div class="modal-box">' +
+      '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>Learning Material Details</div>' +
+      '<div class="modal-sub">Read-only preview of a resource shared to the school repository.</div>' +
+      '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin:14px 0 6px;">' +
+        '<i class="' + escHtml(r.icon || 'fa-solid fa-file') + '" style="font-size:22px;color:' + escHtml(r.color || '#3a86d4') + '"></i>' +
+        '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">' + escHtml(r.title) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);">' + escHtml(r.meta || '') + '</div></div>' +
+        '<span class="vo-tag" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Only</span>' +
+      '</div>' +
+      row('Subject', escHtml(r.subject)) +
+      row('Topic', escHtml(r.topic)) +
+      row('File Type', escHtml(r.meta)) +
+      row('Uploaded By', escHtml(r.uploaded_by)) +
+      row('Date Uploaded', escHtml(r.created_at)) +
+      row('Repository ID', escHtml(String(r.id))) +
+      '<div class="modal-footer">' +
+        (String(r.url || '').trim() ? '<a class="btn btn-outline" href="' + escHtml(r.url) + '" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download</a>' : '') +
+        '<button class="btn btn-primary" onclick="document.getElementById(\'acRepoViewModal\').remove()">Close</button>' +
+      '</div>' +
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function downloadRepoResourceReport() {
+  const rows = [['Resource', 'Subject', 'Topic', 'Type', 'Uploaded By', 'Date Uploaded']];
+  repoResourceSource().forEach(r => rows.push([r.title, r.subject, r.topic, r.meta, r.uploaded_by, r.created_at]));
+  downloadRepoCsv(rows, 'learning_material_repository.csv');
 }
 
 function filterMaterials(type) { renderMaterials(type); }
@@ -1777,143 +1994,348 @@ function safeChart(id, config) {
   chartInst[id] = new Chart(el, config);
 }
 
+/* Every chart series below used to be a hardcoded array. They are now fed from
+   this one object, which the backend bridge fills from
+   apps/dashboards/context.py. A series with no data renders an explicit empty
+   state instead of invented numbers.
+
+   Required database fields, per key:
+     dashScore        { labels:[className], values:[avgScorePct] }
+     dashAttendTrend  { labels:[period], values:[attendancePct] }
+     assessPassFail   { labels:[assessmentTitle], passed:[n], failed:[n] }
+     assessType       { labels:[assessmentType], values:[count] }
+     perfByClass      { labels:[className], values:[avgScorePct] }
+     perfTrend        { labels:[quarter], values:[avgScorePct] }
+     attendByClass    { labels:[className], values:[attendancePct] }
+     attendTrend      { labels:[period], values:[attendancePct] }
+     enrollByGrade    { labels:[gradeLevel], values:[enrolledCount] }
+     attendBreakdown  { labels:['Present','Absent','Late','Excused'], values:[n,n,n,n] }
+     completion       { labels:[quarter], values:[completionPct] }
+   Run TASS.empty.report() in the console for the live checklist. */
+ const acCharts = {
+   dashScore:{labels:[],values:[]}, dashAttendTrend:{labels:[],values:[]},
+   assessPassFail:{labels:[],passed:[],failed:[]}, assessType:{labels:[],values:[]},
+   perfByClass:{labels:[],values:[]}, perfTrend:{labels:[],values:[]},
+   attendByClass:{labels:[],values:[]}, attendTrend:{labels:[],values:[]},
+   enrollByGrade:{labels:[],values:[]}, attendBreakdown:{labels:[],values:[]},
+   completion:{labels:[],values:[]},
+   assessByGrade:{labels:[],values:[]}, byTeacher:{labels:[],values:[]}
+ };
+window.acCharts = acCharts;
+
+const AC_PALETTE = ['#1e5faf','#3a86d4','#16a34a','#e99b2a','#7c3aed','#dc2626','#0e7490','#db2777'];
+const acHas = (key, field) => {
+  const s = acCharts[key];
+  return !!(s && s[field || 'values'] && s[field || 'values'].length);
+};
+
 function initDashCharts() {
   if (chartsInit.dash) return; chartsInit.dash = true;
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.color = '#4a637f';
 
-  safeChart('dashScoreChart', {
-    type: 'bar',
-    data: { labels: ['G7-A','G8-B','G9-C','G10-D','G11-STEM','G12-ABM'],
-      datasets: [{ label: 'Avg Score %', data: [84,80,88,72,87,89], backgroundColor: ['#1e5faf','#1e5faf','#3a86d4','#1e5faf','#16a34a','#1e5faf'], borderRadius: 8 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
+  if (acHas('dashScore')) {
+    safeChart('dashScoreChart', {
+      type: 'bar',
+      data: { labels: acCharts.dashScore.labels,
+        datasets: [{ label: 'Avg Score %', data: acCharts.dashScore.values, backgroundColor: acCharts.dashScore.values.map((_,i)=>AC_PALETTE[i%AC_PALETTE.length]), borderRadius: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('dashScoreChart', { source: 'grades.average_by_class' });
+  }
 
-  safeChart('dashAttendTrendChart', {
-    type: 'line',
-    data: { labels: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
-      datasets: [{ label: 'School Avg', data: [93,94,92,91,94,93,95], borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .4, fill: true }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 75, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
+  if (acHas('dashAttendTrend')) {
+    safeChart('dashAttendTrendChart', {
+      type: 'line',
+      data: { labels: acCharts.dashAttendTrend.labels,
+        datasets: [{ label: 'School Avg', data: acCharts.dashAttendTrend.values, borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .4, fill: true }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('dashAttendTrendChart', { source: 'attendance.rate_by_period' });
+  }
 }
 
 function initAssessCharts() {
   if (chartsInit.assess) return; chartsInit.assess = true;
-  safeChart('assessPassFailChart', {
-    type: 'bar',
-    data: { labels: ['Midterm Exam','Quiz 1','Essay – Literary','PT – Dance','Final Exam','Research Paper'],
-      datasets: [
-        { label: 'Passed', data: [32,35,28,26,24,23], backgroundColor: '#3a86d4', borderRadius: 5 },
-        { label: 'Failed', data: [3,5,4,2,6,2], backgroundColor: '#d94f4f', borderRadius: 5 }
-      ] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
-  });
-  safeChart('assessTypeChart', {
-    type: 'doughnut',
-    data: { labels: ['Exam','Quiz','Essay','PT','Project'],
-      datasets: [{ data: [2,1,1,1,1], backgroundColor: ['#1e5faf','#dc2626','#3a86d4','#7c3aed','#16a34a'], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '60%' }
-  });
+  // Stacked pass/fail series. The backend fills `passed`/`failed`, not `values`,
+  // so acHas() needs the field named explicitly.
+  if (acHas('assessPassFail', 'passed')) {
+    safeChart('assessPassFailChart', {
+      type: 'bar',
+      data: { labels: acCharts.assessPassFail.labels,
+        datasets: [
+          { label: 'Passed', data: acCharts.assessPassFail.passed, backgroundColor: '#3a86d4', borderRadius: 5 },
+          { label: 'Failed', data: acCharts.assessPassFail.failed, backgroundColor: '#d94f4f', borderRadius: 5 }
+        ] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+    });
+  } else {
+    TASS.empty.chart('assessPassFailChart', { source: 'assessments.pass_fail_counts' });
+  }
+  if (acHas('assessType')) {
+    safeChart('assessTypeChart', {
+      type: 'doughnut',
+      data: { labels: acCharts.assessType.labels,
+        datasets: [{ data: acCharts.assessType.values, backgroundColor: acCharts.assessType.values.map((_,i)=>AC_PALETTE[i%AC_PALETTE.length]), borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '60%' }
+    });
+  } else {
+    TASS.empty.chart('assessTypeChart', { source: 'assessments.count_by_type' });
+  }
   renderAssessmentsTable();
 }
 
-const assessSeedData = [
-  {title:'Midterm Exam',type:'Exam',teacher:'L. Malanot',cls:'G7-A',deadline:'Mar 15',subs:35,avg:84,status:'Graded'},
-  {title:'Quiz 1 – Equations',type:'Quiz',teacher:'J. Ramirez',cls:'G8-B',deadline:'Mar 18',subs:40,avg:79,status:'Graded'},
-  {title:'Essay – Literary Analysis',type:'Essay',teacher:'G. Aguilar',cls:'G9-C',deadline:'Mar 20',subs:32,avg:88,status:'Graded'},
-  {title:'Performance Task – Dance',type:'PT',teacher:'B. Castillo',cls:'G11-A',deadline:'Mar 22',subs:28,avg:91,status:'Graded'},
-  {title:'Final Exam',type:'Exam',teacher:'N. Villanueva',cls:'G10-D',deadline:'Mar 25',subs:30,avg:72,status:'Graded'},
-  {title:'Research Paper',type:'Project',teacher:'E. Santiago',cls:'G12-A',deadline:'Mar 28',subs:25,avg:89,status:'Graded'}
-];
+/* Assessment rows come from the backend only. This used to be six invented
+   assessments with invented teachers, classes, deadlines and averages, and it
+   wrote literal values (6 / 4 / 84%) into the stat cards above the table. */
+const assessRows = [];
+window.acAssessRows = assessRows;
+
+/* ── ASSESSMENT REPOSITORY ───────────────────────────────────────────────
+   Same read-only treatment as the resource repository: the stat cards above
+   stay (they summarise real counts), but the list itself is the teacher-style
+   repository grid with a View action instead of "Copy to Builder". */
+const REPO_ASSESS_TYPE_ICONS = {
+  'Quiz':'fa-clipboard-question','Seatwork':'fa-pen-to-square','Assignment':'fa-file-signature',
+  'Project':'fa-folder-tree','Examination':'fa-file-circle-question','Performance Task':'fa-clipboard-list'
+};
+function repoAssessIcon(t) { return REPO_ASSESS_TYPE_ICONS[t] || 'fa-clipboard-list'; }
+function repoAssessColor(t) {
+  const m = { 'Quiz':'#1e5faf','Seatwork':'#16a34a','Assignment':'#f59e0b','Project':'#7c3aed','Examination':'#e11d48' };
+  return m[t] || 'var(--blue)';
+}
+
+function populateAssessRepoTypes() {
+  const sel = document.getElementById('assessRepoTypePage');
+  if (!sel || sel.dataset.filled === '1') return;
+  const rows = Array.isArray(window.acAssessRows) ? window.acAssessRows : [];
+  const types = [...new Set(rows.map(a => a.type).filter(Boolean))].sort();
+  if (!types.length) return;
+  sel.innerHTML = '<option value="">All Types</option>' + types.map(t => '<option>' + escHtml(t) + '</option>').join('');
+  sel.dataset.filled = '1';
+}
 
 function renderAssessmentsTable(){
-  const el = document.querySelector('#view-assessments .data-table tbody');
-  if(!el) return;
+  const grid = document.getElementById('assessmentLibraryGrid');
+  if(!grid) return;
+  const rows = Array.isArray(window.acAssessRows) ? window.acAssessRows : [];
+  populateAssessRepoTypes();
+
   const els = document.querySelectorAll('#view-assessments .stat-val');
-  if(els.length>=3){els[0].textContent='6';els[1].textContent='4';els[2].textContent='84%';}
-  el.innerHTML = assessSeedData.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+r.title+'</td><td>'+r.type+'</td><td>'+r.teacher+'</td><td>'+r.cls+'</td><td>'+r.deadline+'</td><td>'+r.subs+'</td><td>'+r.avg+'%</td><td><span class="pill pill-green">'+r.status+'</span></td></tr>').join('');
+  if(!rows.length){
+    TASS.empty.stats('#view-assessments .stat-val', { source: 'assessments.summary_counts' });
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-file-circle-question" style="font-size:34px;margin-bottom:10px;display:block;opacity:.5"></i>No assessments have been released yet.</div>';
+    return;
+  }
+  if(els.length>=3){
+    els[0].textContent = String(rows.length);
+    els[1].textContent = String(rows.filter(r=>r.status && r.status!=='Graded').length);
+    els[2].textContent = acPctOrDash(mean(rows.map(r=>Number(r.avg)).filter(n=>!isNaN(n))));
+  }
+
+  const q = (document.getElementById('assessRepoSearchPage')?.value || '').toLowerCase();
+  const type = document.getElementById('assessRepoTypePage')?.value || '';
+  const status = document.getElementById('assessRepoStatusPage')?.value || '';
+
+  const items = rows.filter(r =>
+    (!type || r.type === type) &&
+    (!status || r.status === status) &&
+    (!q || [r.title, r.type, r.teacher, r.cls].join(' ').toLowerCase().includes(q))
+  );
+
+  if(!items.length){
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-magnifying-glass" style="font-size:30px;margin-bottom:10px;display:block;opacity:.5"></i>No assessments match the selected filters.</div>';
+    return;
+  }
+
+  grid.innerHTML = items.map((r) => {
+    const idx = rows.indexOf(r);
+    return '<div class="repository-item">' +
+      '<div class="repo-main">' +
+        '<i class="fa-solid ' + repoAssessIcon(r.type) + '" style="font-size:22px;color:' + repoAssessColor(r.type) + '"></i>' +
+        '<div class="repo-body"><strong>' + escHtml(r.title) + '</strong>' +
+        '<div style="font-size:11px;color:var(--text-muted)">' + escHtml(r.type) + ' · ' + escHtml(r.cls) + ' · Due ' + escHtml(r.deadline || '—') + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-user"></i> ' + escHtml(r.teacher) + ' · <i class="fa-solid fa-paper-plane"></i> ' + escHtml(String(r.subs)) + ' submitted · <i class="fa-solid fa-star"></i> ' + escHtml(acPctOrDash(r.avg)) + '</div></div>' +
+      '</div>' +
+      '<div class="repo-actions">' +
+        '<span class="status-pill" style="background:' + (r.status === 'Graded' ? '#dcfce7' : '#fef3c7') + ';color:' + (r.status === 'Graded' ? '#16a34a' : '#b45309') + '">' + escHtml(r.status) + '</span>' +
+        '<button class="btn btn-outline btn-sm" onclick="viewRepoAssessment(' + idx + ')"><i class="fa-solid fa-eye"></i> View</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function viewRepoAssessment(idx) {
+  const rows = Array.isArray(window.acAssessRows) ? window.acAssessRows : [];
+  const a = rows[idx];
+  if (!a) { showToast('This assessment is no longer available.', 'error'); return; }
+  const row = (k, v) => '<div class="repo-detail-row"><div class="rd-key">' + k + '</div><div class="rd-val">' + (v || '—') + '</div></div>';
+  const html =
+    '<div class="modal-overlay open" id="acAssessViewModal" onclick="if(event.target===this)document.getElementById(\'acAssessViewModal\').remove()"><div class="modal-box">' +
+      '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>Assessment Details</div>' +
+      '<div class="modal-sub">Read-only preview of an assessment released school-wide.</div>' +
+      '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin:14px 0 6px;">' +
+        '<i class="fa-solid ' + repoAssessIcon(a.type) + '" style="font-size:22px;color:' + repoAssessColor(a.type) + '"></i>' +
+        '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">' + escHtml(a.title) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);">' + escHtml(a.type) + ' · ' + escHtml(a.cls) + '</div></div>' +
+        '<span class="vo-tag" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Only</span>' +
+      '</div>' +
+      row('Assessment Type', escHtml(a.type)) +
+      row('Teacher', escHtml(a.teacher)) +
+      row('Class', escHtml(a.cls)) +
+      row('Deadline', escHtml(a.deadline)) +
+      row('Submissions', escHtml(String(a.subs))) +
+      row('Average Score', escHtml(acPctOrDash(a.avg))) +
+      row('Status', escHtml(a.status)) +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-primary" onclick="document.getElementById(\'acAssessViewModal\').remove()">Close</button>' +
+      '</div>' +
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function downloadRepoAssessmentReport() {
+  const rows = Array.isArray(window.acAssessRows) ? window.acAssessRows : [];
+  const out = [['Assessment', 'Type', 'Teacher', 'Class', 'Deadline', 'Submissions', 'Avg Score', 'Status']];
+  rows.forEach(a => out.push([a.title, a.type, a.teacher, a.cls, a.deadline, a.subs, a.avg, a.status]));
+  downloadRepoCsv(out, 'assessment_repository.csv');
+}
+
+/* Shared CSV writer for both repository exports — the BOM keeps Excel from
+   mangling accented names. */
+function downloadRepoCsv(rows, filename) {
+  if (!rows.length) { showToast('Nothing to export.', 'error'); return; }
+  const csv = '\uFEFF' + rows.map(r => r.map(c => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Exported ' + filename, 'success');
+}
+function acPctOrDash(v){
+  return (typeof v==='number'&&!isNaN(v))?(Math.round(v*10)/10)+'%':'—';
+}
+function mean(nums){
+  return nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null;
 }
 
 function initPerfCharts() {
   if (chartsInit.perf) return; chartsInit.perf = true;
-  safeChart('perfClassChart', {
-    type: 'bar',
-    data: { labels: ['G7-A','G8-B','G9-C','G10-D','G11-A','G12-A'],
-      datasets: [{ label: 'Avg Score %', data: [84,80,88,72,87,89], backgroundColor: ['#1e5faf','#1e5faf','#3a86d4','#1e5faf','#16a34a','#d94f4f'], borderRadius: 8 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 40, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
-  safeChart('perfTrendChart', {
-    type: 'line',
-    data: { labels: ['Q1','Q2','Q3','Q4'],
-      datasets: [
-        { label: 'Avg Score %', data: [81,84,83,86], borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .3, fill: true }
-      ] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 40, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
+  if (acHas('perfByClass')) {
+    safeChart('perfClassChart', {
+      type: 'bar',
+      data: { labels: acCharts.perfByClass.labels,
+        datasets: [{ label: 'Avg Score %', data: acCharts.perfByClass.values, backgroundColor: acCharts.perfByClass.values.map((_,i)=>AC_PALETTE[i%AC_PALETTE.length]), borderRadius: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('perfClassChart', { source: 'performance.average_by_class' });
+  }
+  if (acHas('perfTrend')) {
+    safeChart('perfTrendChart', {
+      type: 'line',
+      data: { labels: acCharts.perfTrend.labels,
+        datasets: [{ label: 'Avg Score %', data: acCharts.perfTrend.values, borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .3, fill: true }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('perfTrendChart', { source: 'performance.average_by_quarter' });
+  }
   renderPerfTable();
 }
 
-const perfSeedData = [
-  {student:'Sofia Villanueva',cls:'G7-A',teacher:'L. Malanot',avg:88,att:95,sub:92},
-  {student:'Marco Reyes',cls:'G8-B',teacher:'J. Ramirez',avg:80,att:92,sub:85},
-  {student:'Ana Cruz',cls:'G9-C',teacher:'G. Aguilar',avg:92,att:97,sub:94},
-  {student:'Juan Lim',cls:'G10-D',teacher:'N. Villanueva',avg:72,att:88,sub:76},
-  {student:'Bea Santos',cls:'G11-A',teacher:'B. Castillo',avg:87,att:94,sub:90},
-  {student:'Luis Garcia',cls:'G12-A',teacher:'E. Santiago',avg:89,att:91,sub:92}
-];
+const perfSeedData = [];
+window.acPerfRows = perfSeedData;
+
+function populatePerfClassFilter(){
+  const sel=document.getElementById('perfClassFilter');
+  if(!sel)return;
+  const cur=sel.value;
+  const all=Array.isArray(window.acPerfRows)?window.acPerfRows:[];
+  const classes=new Set();
+  all.forEach(r=>{ if(r && r.cls) classes.add(String(r.cls)); });
+  (Array.isArray(vcData)?vcData:[]).forEach(v=>{
+    const n=String(v.grade||'').replace(/\D+/g,'');
+    if(n && v.section) classes.add('G'+n+'-'+v.section);
+  });
+  const list=[...classes].filter(Boolean).sort();
+  sel.innerHTML='<option value="">All Classes</option>'+list.map(c=>'<option value="'+escHtml(c)+'">'+escHtml(c)+'</option>').join('');
+  if(cur && list.indexOf(cur)>=0) sel.value=cur;
+}
 
 function renderPerfTable(){
   const el=document.querySelector('#view-performance .data-table tbody');
   if(!el)return;
-  el.innerHTML=perfSeedData.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+r.student+'</td><td>'+r.cls+'</td><td>'+r.teacher+'</td><td>'+r.avg+'%</td><td>'+r.att+'%</td><td>'+r.sub+'%</td><td><span class="pill '+(r.avg>=75?'pill-green':'pill-red')+'">'+(r.avg>=75?'On Track':'At Risk')+'</span></td></tr>').join('');
+  populatePerfClassFilter();
+  const all=Array.isArray(window.acPerfRows)?window.acPerfRows:[];
+  const sel=document.getElementById('perfClassFilter');
+  const cls=sel?sel.value:'';
+  const rows=cls?all.filter(r=>r && r.cls===cls):all;
+  if(!rows.length){TASS.empty.table(el,7,{source:'performance.student_rows'});return;}
+  el.innerHTML=rows.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+escHtml(r.student)+'</td><td>'+escHtml(r.cls)+'</td><td>'+escHtml(r.teacher)+'</td><td>'+acPctOrDash(r.avg)+'</td><td>'+acPctOrDash(r.att)+'</td><td>'+acPctOrDash(r.sub)+'</td><td><span class="pill '+(typeof r.avg!=='number'?'pill-gray':(r.avg>=75?'pill-green':'pill-red'))+'">'+(typeof r.avg!=='number'?'Ungraded':(r.avg>=75?'On Track':'At Risk'))+'</span></td></tr>').join('');
 }
 
 function initAttendCharts() {
   if (chartsInit.attend) return; chartsInit.attend = true;
-  safeChart('attendClassChart', {
-    type: 'bar',
-    data: { labels: ['G7-A','G8-B','G9-C','G10-D','G11-A','G12-A'],
-      datasets: [{ label: 'Attendance %', data: [95,92,96,88,94,91], backgroundColor: ['#3a86d4','#3a86d4','#3a86d4','#d94f4f','#3a86d4','#3a86d4'], borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 50, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
-  safeChart('attendTrendChart', {
-    type: 'line',
-    data: { labels: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
-      datasets: [{ label: 'School Avg', data: [93,94,92,91,94,93,95], borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .4, fill: true }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 75, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
+  if (acHas('attendByClass')) {
+    safeChart('attendClassChart', {
+      type: 'bar',
+      data: { labels: acCharts.attendByClass.labels,
+        datasets: [{ label: 'Attendance %', data: acCharts.attendByClass.values, backgroundColor: acCharts.attendByClass.values.map(v=>v<90?'#d94f4f':'#3a86d4'), borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('attendClassChart', { source: 'attendance.rate_by_class' });
+  }
+  if (acHas('attendTrend')) {
+    safeChart('attendTrendChart', {
+      type: 'line',
+      data: { labels: acCharts.attendTrend.labels,
+        datasets: [{ label: 'School Avg', data: acCharts.attendTrend.values, borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .4, fill: true }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('attendTrendChart', { source: 'attendance.rate_by_period' });
+  }
   renderAttendTable();
 }
 
-const attendSeedData = [
-  {cls:'G7-A',teacher:'L. Malanot',students:35,avg:95,last:'Apr 10',status:'On Track'},
-  {cls:'G8-B',teacher:'J. Ramirez',students:38,avg:92,last:'Apr 10',status:'On Track'},
-  {cls:'G9-C',teacher:'G. Aguilar',students:32,avg:96,last:'Apr 10',status:'On Track'},
-  {cls:'G10-D',teacher:'N. Villanueva',students:30,avg:88,last:'Apr 10',status:'At Risk'},
-  {cls:'G11-A',teacher:'B. Castillo',students:28,avg:94,last:'Apr 10',status:'On Track'},
-  {cls:'G12-A',teacher:'E. Santiago',students:25,avg:91,last:'Apr 10',status:'On Track'}
-];
+const attendSeedData = [];
+window.acAttendRows = attendSeedData;
 
 function renderAttendTable(){
-  const els = document.querySelectorAll('#view-attendance .stat-val');
-  if(els.length>=4){els[0].textContent='94%';els[1].textContent='96%';els[2].textContent='88%';els[3].textContent='12';}
   const el = document.querySelector('#view-attendance .data-table tbody');
   if(!el)return;
-  el.innerHTML=attendSeedData.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+r.cls+'</td><td>'+r.teacher+'</td><td>'+r.students+'</td><td>'+r.avg+'%</td><td>'+r.last+'</td><td><span class="pill '+(r.status==='At Risk'?'pill-orange':'pill-green')+'">'+r.status+'</span></td></tr>').join('');
+  const rows=Array.isArray(window.acAttendRows)?window.acAttendRows:[];
+  if(!rows.length){
+    TASS.empty.table(el,6,{source:'attendance.class_rows'});
+    // Previously wrote 94% / 96% / 88% / 12 straight into these four cards.
+    TASS.empty.stats('#view-attendance .stat-val',{source:'attendance.summary'});
+    return;
+  }
+  const els = document.querySelectorAll('#view-attendance .stat-val');
+  if(els.length>=4){
+    els[0].textContent=acPctOrDash(mean(rows.map(r=>Number(r.avg)).filter(n=>!isNaN(n))));
+    els[1].textContent=String(rows.filter(r=>r.students).length);
+    els[2].textContent=String(rows.filter(r=>r.status==='At Risk').length);
+    els[3].textContent=String(rows.reduce((a,r)=>a+(Number(r.students)||0),0));
+  }
+  el.innerHTML=rows.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+escHtml(r.cls)+'</td><td>'+escHtml(r.teacher)+'</td><td>'+escHtml(r.students)+'</td><td>'+acPctOrDash(r.avg)+'</td><td>'+escHtml(r.last||'—')+'</td><td><span class="pill '+(r.status==='At Risk'?'pill-orange':'pill-green')+'">'+escHtml(r.status)+'</span></td></tr>').join('');
 }
 
 // ── RENDER: ANNOUNCEMENTS (view only — FR 8.1/9.7) ──
-const acAnnouncements = [
-  {title:'School Intramurals Week 2026',content:'The annual San Vicente Institute Intramurals will be held from April 21–25, 2026. All students are encouraged to participate.',date:'Apr 1, 2026'},
-  {title:'Parent-Teacher Conference',content:'Scheduled conference for parents of all grade levels on April 28, 2026 at the school gymnasium.',date:'Apr 3, 2026'},
-  {title:'Recognition Day',content:'Recognition day for outstanding students will be held on May 15, 2026.',date:'Apr 6, 2026'},
-  {title:'Midterm Grade Submission Deadline',content:'All teachers are reminded to submit midterm grades to the Registrar by April 15, 2026.',date:'Apr 8, 2026'}
-];
+const acAnnouncements = [];
+window.acAnnouncements = acAnnouncements;
 
 function renderACAnnouncements(){
   const el = document.getElementById('acAnnouncementsList');
   if(!el) return;
-  el.innerHTML = acAnnouncements.map(a=>'<div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--gray-100);"><div class="notif-dot-icon" style="background:#dbeafe;color:#2563eb;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullhorn"></i></div><div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+a.title+'</div><div style="font-size:12px;color:var(--gray-600);margin-top:3px;line-height:1.4;">'+a.content+'</div><div style="font-size:11px;color:var(--gray-400);margin-top:4px;"><i class="fa-regular fa-clock"></i> Posted '+a.date+'</div></div></div>').join('');
+  const list=Array.isArray(window.acAnnouncements)?window.acAnnouncements:[];
+  if(!list.length){TASS.empty.list(el,{source:'announcements.list'});return;}
+  el.innerHTML = list.map(a=>'<div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--gray-100);"><div class="notif-dot-icon" style="background:#dbeafe;color:#2563eb;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullhorn"></i></div><div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+escHtml(a.title)+'</div><div style="font-size:12px;color:var(--gray-600);margin-top:3px;line-height:1.4;">'+escHtml(a.content)+'</div><div style="font-size:11px;color:var(--gray-400);margin-top:4px;"><i class="fa-regular fa-clock"></i> Posted '+escHtml(a.date)+'</div></div></div>').join('');
 }
 
 function renderAnnouncementsView(){renderACAnnouncements();}
@@ -1921,53 +2343,109 @@ function renderAnnouncementsView(){renderACAnnouncements();}
 // ── RENDER: NOTIFICATIONS ──
 function refreshACNotifications(){
   var el=document.getElementById('notifList');if(!el)return;
-  var items=[
-    {icon:'fa-file-pen',bg:'#dcfce7',c:'#16a34a',t:'Assessment graded',d:'J. Ramirez graded Quiz 1 – 40/40 submissions graded',time:'30 min ago',unread:true},
-    {icon:'fa-chalkboard',bg:'#dbeafe',c:'#2563eb',t:'Virtual Classroom updated',d:'B. Castillo updated MAPEH 11 topic outline',time:'2 hrs ago',unread:true},
-    {icon:'fa-bullhorn',bg:'#fef9c3',c:'#a16207',t:'New school-wide announcement',d:'Parent-Teacher Conference scheduled for April 28',time:'Yesterday',unread:false},
-    {icon:'fa-calendar-check',bg:'#ede9fe',c:'#7c3aed',t:'Attendance submitted',d:'G. Aguilar submitted G9-C attendance — 31/32 present',time:'Yesterday',unread:false}
-  ];
-  el.innerHTML=items.map(function(n){return '<div class="notif-item'+(n.unread?' notif-unread':'')+'"><div class="notif-dot-icon" style="background:'+n.bg+';color:'+n.c+';"><i class="fa-solid '+n.icon+'"></i></div><div><div class="notif-text">'+n.t+'</div><div class="notif-time">'+n.time+'</div></div></div>';}).join('');
+  // Derived from the real ActivityLog stream instead of four invented items.
+  var activity=(typeof acActivity!=='undefined'&&Array.isArray(acActivity))?acActivity:[];
+  if(!activity.length){TASS.empty.list(el,{message:'No new notifications.',hint:'Assessment, section and classroom activity will appear here.'});return;}
+  el.innerHTML=activity.map(function(a){
+    return '<div class="notif-item"><div class="notif-dot-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fa-solid fa-clock-rotate-left"></i></div><div><div class="notif-text">'+escHtml(a.action||'')+'</div><div class="notif-time">'+escHtml(a.time||'')+'</div><div style="font-size:11px;color:var(--gray-400);line-height:1.4;margin-top:2px;">'+escHtml(a.detail||'')+'</div></div></div>';
+  }).join('');
 }
 
 function initAnalyticsCharts() {
   if (chartsInit.analytics) return; chartsInit.analytics = true;
-  safeChart('anEnrollChart', {
-    type: 'bar',
-    data: { labels: ['G7','G8','G9','G10','G11','G12'],
-      datasets: [{ label: 'Students', data: [35,38,32,30,28,25], backgroundColor: '#1e5faf', borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
-  safeChart('anAttendTrendChart', {
-    type: 'line',
-    data: { labels: ['Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
-      datasets: [{ label: 'School Avg', data: [93,94,92,91,94,93,95], borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .4, fill: true }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 75, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
-  safeChart('anClassAttendChart', {
-    type: 'doughnut',
-    data: { labels: ['Present','Absent','Late'], datasets: [{ data: [89,6,5], backgroundColor: ['#3a86d4','#d94f4f','#e99b2a'], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '60%' }
-  });
-  safeChart('anClassAssessChart', {
-    type: 'bar',
-    data: { labels: ['Q1','Q2','Q3','Q4'],
-      datasets: [{ label: 'Completion %', data: [92,88,94,90], backgroundColor: '#1e5faf', borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
-  });
+  if (acHas('enrollByGrade')) {
+    safeChart('anEnrollChart', {
+      type: 'bar',
+      data: { labels: acCharts.enrollByGrade.labels,
+        datasets: [{ label: 'Students', data: acCharts.enrollByGrade.values, backgroundColor: '#1e5faf', borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  } else {
+    TASS.empty.chart('anEnrollChart', { source: 'enrollment.count_by_grade' });
+  }
+  if (acHas('attendTrend')) {
+    safeChart('anAttendTrendChart', {
+      type: 'line',
+      data: { labels: acCharts.attendTrend.labels,
+        datasets: [{ label: 'School Avg', data: acCharts.attendTrend.values, borderColor: '#1e5faf', backgroundColor: 'rgba(30,95,175,0.10)', tension: .4, fill: true }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('anAttendTrendChart', { source: 'attendance.rate_by_period' });
+  }
+  if (acHas('attendBreakdown')) {
+    safeChart('anClassAttendChart', {
+      type: 'doughnut',
+      data: { labels: acCharts.attendBreakdown.labels,
+        datasets: [{ data: acCharts.attendBreakdown.values, backgroundColor: ['#3a86d4','#d94f4f','#e99b2a','#7c3aed'], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '60%' }
+    });
+  } else {
+    TASS.empty.chart('anClassAttendChart', { source: 'attendance.status_breakdown' });
+  }
+  if (acHas('completion')) {
+    safeChart('anClassAssessChart', {
+      type: 'bar',
+      data: { labels: acCharts.completion.labels,
+        datasets: [{ label: 'Completion %', data: acCharts.completion.values, backgroundColor: '#1e5faf', borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+  } else {
+    TASS.empty.chart('anClassAssessChart', { source: 'assessments.completion_by_quarter' });
+  }
   renderAnalyticsStats();
   populateAnalyticsClassSelect();
 }
 
+window.acReportRows = [];
+
+function renderReportsOverview(){
+  const el=document.getElementById('schoolPerfOverviewBody');if(!el)return;
+  const rows=Array.isArray(window.acReportRows)?window.acReportRows:[];
+  if(!rows.length){
+    el.innerHTML='<div class="tass-empty-block"><i class="fa-solid fa-chart-simple"></i><span class="tass-empty-msg">No data yet.</span><span class="tass-empty-hint">Class-level averages appear once grades and attendance are recorded.</span></div>';
+    return;
+  }
+  el.innerHTML='<table class="attend-table"><thead><tr><th style="text-align:left;">Class</th><th>Avg Score</th><th>Attendance</th><th>Submission Rate</th><th>Status</th></tr></thead><tbody>'+rows.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+escHtml(r.cls||r.className||'—')+'</td><td>'+acPctOrDash(r.avg)+'</td><td>'+acPctOrDash(r.att)+'</td><td>'+acPctOrDash(r.sub)+'</td><td><span class="pill '+(r.avg>=75?'pill-green':'pill-red')+'">'+(r.avg>=75?'ON TRACK':'AT RISK')+'</span></td></tr>').join('')+'</tbody></table><div style="font-size:11px;color:var(--gray-400);margin-top:10px;"><i class="fa-regular fa-circle-question"></i> Exportable reports are generated by the Registrar/System Administrator.</div>';
+}
+
+function initReportCharts(){
+  if (acHas('assessByGrade')) {
+    safeChart('reportAssessChart', {
+      type:'bar',
+      data:{labels:acCharts.assessByGrade.labels,datasets:[{label:'Avg Score %',data:acCharts.assessByGrade.values,backgroundColor:acCharts.assessByGrade.values.map((_,i)=>AC_PALETTE[i%AC_PALETTE.length]),borderRadius:8}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+    });
+  } else {
+    TASS.empty.chart('reportAssessChart', { source: 'grades.average_by_grade' });
+  }
+  if (acHas('byTeacher')) {
+    safeChart('reportPostingChart', {
+      type:'bar',
+      data:{labels:acCharts.byTeacher.labels,datasets:[{label:'Posts This Month',data:acCharts.byTeacher.values,backgroundColor:acCharts.byTeacher.values.map((_,i)=>AC_PALETTE[i%AC_PALETTE.length]),borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+    });
+  } else {
+    TASS.empty.chart('reportPostingChart', { source: 'content.posts_by_teacher' });
+  }
+  renderReportsOverview();
+}
+
 function renderAnalyticsStats(){
+  // Previously wrote a literal 188 / 94% / 84% / 89% regardless of the data.
   const els = document.querySelectorAll('#analytics-pane-schoolwide .stat-val');
-  if(els.length>=4){els[0].textContent='188';els[1].textContent='94%';els[2].textContent='84%';els[3].textContent='89%';}
+  if(!els.length) return;
+  TASS.empty.stats(els, { source: 'analytics.schoolwide_summary' });
 }
 
 function populateAnalyticsClassSelect(){
   const sel = document.querySelector('#analytics-pane-classlevel select');
-  if(!sel||sel.options.length>1)return;
-  vcData.forEach(v=>{
+  if(!sel) return;
+  if(sel.options.length>1) return;
+  const vcs=(typeof vcData!=='undefined'&&Array.isArray(vcData))?vcData:[];
+  if(!vcs.length){TASS.empty.select(sel,'No virtual classrooms yet',{source:'analytics.class_options'});return;}
+  sel.disabled=false;
+  vcs.forEach(v=>{
     const o=document.createElement('option');
     o.value=v.name;o.textContent=v.name+' · '+v.section;sel.appendChild(o);
   });
@@ -2051,16 +2529,6 @@ restoreACState();
       {name:'Stats & Probability 12',subject:'Statistics and Probability',grade:'Grade 12',section:'ABM-A',teacher:'Ms. Elena Santiago',type:'core',students:25,status:'active',track:'ABM'}
     );
   }
-  if(allMaterials.length===0){
-    allMaterials.push(
-      {type:'pdf',icon:'fa-solid fa-file-pdf',name:'Cell Structure Lesson Plan',meta:'PDF · 2.4 MB',teacher:'L. Malanot',cls:'G7-A',date:'Apr 8'},
-      {type:'ppt',icon:'fa-solid fa-file-powerpoint',name:'Photosynthesis Slides',meta:'PPTX · 8.1 MB',teacher:'L. Malanot',cls:'G9-C',date:'Apr 9'},
-      {type:'doc',icon:'fa-solid fa-file-word',name:'Quadratic Equations Worksheet',meta:'DOCX · 180 KB',teacher:'J. Ramirez',cls:'G8-B',date:'Apr 9'},
-      {type:'vid',icon:'fa-solid fa-video',name:'Literary Devices Explained',meta:'MP4 · 45 MB',teacher:'G. Aguilar',cls:'G9-C',date:'Apr 10'},
-      {type:'pdf',icon:'fa-solid fa-file-pdf',name:'Research Paper Guide',meta:'PDF · 1.1 MB',teacher:'E. Santiago',cls:'G12-A',date:'Apr 11'},
-      {type:'img',icon:'fa-solid fa-file-image',name:'Rhythm Notation Chart',meta:'PNG · 920 KB',teacher:'B. Castillo',cls:'G11-A',date:'Apr 12'}
-    );
-  }
   if(topicOutlines.science10.length===0 && topicOutlines.math9.length===0 && topicOutlines.genbio1.length===0){
     topicOutlines.science10=['Unit 1: Earth & Space','Unit 2: Force, Motion & Energy','Unit 3: Living Things & Their Environment','Unit 4: Matter'];
     topicOutlines.math9=['Quadratic Equations','Quadratic Functions','Variation','Exponents & Radicals'];
@@ -2083,7 +2551,6 @@ renderSectionsTable();
 renderSubjectsTable();
 renderVCTable();
 renderTopicOutline(document.getElementById('topicSubjectSelect')?.value||'science10');
-renderMaterials('all');
 refreshACNotifications();
 </script>
 <script>
@@ -2568,12 +3035,23 @@ window.tassEXClassroom=function(){if(window.renderVCTable)window.renderVCTable()
 // ── My Profile (avatar + contact info, per-dashboard storage) ──
 const PROFILE_KEY='tass_profile_ac';
 const PROFILE_MODAL_ID='profileModal';
-const PROFILE_DEFAULTS={name:'Ms. Maria B.',email:'academic.coordinator@sanvicente.edu.ph',role:'Academic Coordinator',dept:'Office of the Academic Coordinator',contact:'0917 555 0101',avatar:''};
+const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Academic Coordinator" }}',dept:'',contact:'',avatar:'{{ user_avatar_url|default:"" }}'};
 let profileAvatarData=""
 function profil_initials(n){return (n||"").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"..";}
-function getProfile(){try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(p)return p;}catch(e){}return JSON.parse(JSON.stringify(PROFILE_DEFAULTS));}
+function initialsAvatar(sz,fs){const ini=('{{ user_initials }}'||'..');return "data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 "+sz+" "+sz+"%22><circle cx=%22"+(sz/2)+"%22 cy=%22"+(sz/2)+"%22 r=%22"+(sz/2)+"%22 fill=%22%233a86d4%22/><text x=%22"+(sz/2)+"%22 y=%22"+Math.round(sz*0.675)+"%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%22"+fs+"%22>"+ini+"</text></svg>";}
+function getProfile(){
+  // Identity belongs to the server account, so a stale local edit can never
+  // rename the signed-in user. Only the optional extras persist locally.
+  const d=JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
+  const srv=window.__TASS_PROFILE__;
+  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
+    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar)d.avatar=p.avatar;}
+  }catch(e){}
+  return d;
+}
 function profileSet(id,v){const el=document.getElementById(id);if(el)el.value=(v==null?"":String(v));}
-function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
+function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src=initialsAvatar(40,16);}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src=initialsAvatar(80,30);}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
 function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
 function closeProfile(){if(typeof closeModal==="function")closeModal(PROFILE_MODAL_ID);}
 function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
@@ -2586,7 +3064,9 @@ if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
 // ── Notifications (functional, per-dashboard storage) ──
 const NOTIFS_STORAGE_KEY='tass_notifs_ac';
 const NOTIFS_CONTAINER='notifList';
-const NOTIFS_DEFAULT_ITEMS=[{icon:'fa-book-open',title:'Curriculum Review',msg:'Draft of Grade 10 Science syllabus is ready for review.',unread:true,mins:18},{icon:'fa-user-check',title:'Teacher Submission',msg:'Ms. Malanot submitted the monthly class reports.',unread:true,mins:55},{icon:'fa-chart-line',title:'Section Performance',msg:'Grade 9 — Section C performance report has been generated.',unread:true,mins:300},{icon:'fa-calendar-day',title:'Midterm Week',msg:'Midterm examination window opens next Monday.',unread:false,mins:1500}];
+// No seeded notifications. The list starts empty and is filled from the real
+// ActivityLog stream by the bridge above.
+const NOTIFS_DEFAULT_ITEMS=[];
 function notifEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';});}
 function notifTimeAgo(m){if(m==null||m<1)return'Just now';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';var d=Math.floor(h/24);return d+' d ago';}
 function loadNotifs(){try{var a=JSON.parse(localStorage.getItem(NOTIFS_STORAGE_KEY)||'null');if(Array.isArray(a))return a;}catch(e){}return NOTIFS_DEFAULT_ITEMS.map(function(n){return Object.assign({},n);});}
@@ -2760,7 +3240,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
   var ORIG = window.showView;
   if (typeof ORIG !== 'function') return;
-  var NAV = {'analytics':1,'announcements':1,'assessments':1,'attendance':1,'classrooms':1,'dashboard':1,'materials':1,'performance':1,'settings':1,'structure':1};
+  var NAV = {'analytics':1,'announcements':1,'assessments':1,'attendance':1,'classrooms':1,'dashboard':1,'materials':1,'performance':1,'settings':1,'schoolyear':1,'demographics':1};
   function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
   function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
   function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
@@ -2777,16 +3257,83 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script>
 /* Academic Coordinator real-data bridge — loads backend records into the simulator. */
 (function(){
+  TASS.page = 'academic_coordinator';
   if (!window.__TASS_REAL__) return;
   var el = document.getElementById('academic-backend-data');
   if (!el) return;
   var data = null; try { data = JSON.parse(el.textContent); } catch (e) {}
+
+  // Age/Sex panel across the learners in this Coordinator's scope.
+  if (window.TASS && TASS.demo && data && data.demographics) {
+    TASS.demo.setRows(data.demographics.rows);
+  }
+
+  // The signed-in user's own record, straight from the server.
+  window.__TASS_PROFILE__ = (data && data.profile) || null;  // Notifications are orthogonal to the rest of the payload, so they load before
+  // the guard below. Expected shape: {icon, title, msg, unread, mins}.
+  // With no notifs key the panel keeps its empty state rather than inventing events.
+  if (data && Array.isArray(data.notifs) && data.notifs.length) {
+    try { persistNotifs(data.notifs); renderNotifs(); } catch (e) {}
+  }
   if (!data || !data.vcList) return;
   var fill = function(arr, items){ arr.length = 0; (items || []).forEach(function(x){ arr.push(x); }); };
 
   fill(sectionsData, data.sections);
   fill(subjectsData, data.subjects);
   fill(vcData, data.vcList);
+
+  // Notifications read the real ActivityLog stream.
+  window.acActivity = Array.isArray(data.activity) ? data.activity : [];
+
+  // Chart series. Each key stays empty until academic_coordinator_context()
+  // supplies it; the chart helpers then render an empty state instead of a
+  // placeholder. Shapes are documented above `const acCharts`.
+  var S = window.acCharts || {};
+  var setSeries = function(key, labels, values){
+    var s = S[key]; if (!s) return;
+    s.labels = labels || []; s.values = values || [];
+  };
+  if (data.charts) {
+    setSeries('dashScore',       data.charts.scoreByClass && data.charts.scoreByClass.labels,       data.charts.scoreByClass && data.charts.scoreByClass.values);
+    setSeries('dashAttendTrend', data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.labels, data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.values);
+    setSeries('attendByClass',   data.charts.attendanceByClass && data.charts.attendanceByClass.labels,   data.charts.attendanceByClass && data.charts.attendanceByClass.values);
+    setSeries('attendTrend',     data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.labels, data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.values);
+    setSeries('enrollByGrade',   data.charts.enrollmentByGrade && data.charts.enrollmentByGrade.labels,   data.charts.enrollmentByGrade && data.charts.enrollmentByGrade.values);
+    setSeries('completion',      data.charts.completionByQuarter && data.charts.completionByQuarter.labels, data.charts.completionByQuarter && data.charts.completionByQuarter.values);
+    setSeries('assessType',      data.charts.assessmentByType && data.charts.assessmentByType.labels,      data.charts.assessmentByType && data.charts.assessmentByType.values);
+    setSeries('perfByClass',     data.charts.scoreByClass && data.charts.scoreByClass.labels,             data.charts.scoreByClass && data.charts.scoreByClass.values);
+    setSeries('perfTrend',       data.charts.performanceByQuarter && data.charts.performanceByQuarter.labels, data.charts.performanceByQuarter && data.charts.performanceByQuarter.values);
+    setSeries('assessByGrade',   data.charts.averageByGrade && data.charts.averageByGrade.labels,         data.charts.averageByGrade && data.charts.averageByGrade.values);
+    setSeries('byTeacher',       data.charts.postsByTeacher && data.charts.postsByTeacher.labels,         data.charts.postsByTeacher && data.charts.postsByTeacher.values);
+    setSeries('dashScore',       data.charts.scoreByClass && data.charts.scoreByClass.labels,             data.charts.scoreByClass && data.charts.scoreByClass.values);
+    if (data.charts.attendanceBreakdown) {
+      S.attendBreakdown.labels = data.charts.attendanceBreakdown.labels || [];
+      S.attendBreakdown.values = data.charts.attendanceBreakdown.values || [];
+    }
+    if (data.charts.passFail) {
+      S.assessPassFail.labels = data.charts.passFail.labels || [];
+      S.assessPassFail.passed = data.charts.passFail.passed || [];
+      S.assessPassFail.failed = data.charts.passFail.failed || [];
+    }
+  }
+  // Enrollment by grade is derivable from the section roster the backend
+  // already sends, so it does not have to wait on a new field.
+  if (!acHas('enrollByGrade') && Array.isArray(data.sections) && data.sections.length) {
+    var byGrade = {};
+    data.sections.forEach(function(s){
+      var g = s.grade || ''; if (!g) return;
+      byGrade[g] = (byGrade[g] || 0) + (Number(s.students) || 0);
+    });
+    var keys = Object.keys(byGrade).sort(function(a,b){ return parseInt(a.replace(/\D+/g,''),10) - parseInt(b.replace(/\D+/g,''),10); });
+    if (keys.length) setSeries('enrollByGrade', keys, keys.map(function(k){ return byGrade[k]; }));
+  }
+
+  // Table rows. All empty unless the backend starts supplying them.
+  window.acAssessRows    = Array.isArray(data.assessments) ? data.assessments : [];
+  window.acPerfRows      = Array.isArray(data.performance) ? data.performance : [];
+  window.acReportRows    = Array.isArray(data.reportsPerformance) ? data.reportsPerformance : [];
+  window.acAttendRows    = Array.isArray(data.attendanceRows) ? data.attendanceRows : [];
+  window.acAnnouncements = Array.isArray(data.announcements) ? data.announcements : [];
 
   var setStat = function(idx, val){ var el = document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child(' + idx + ') .stat-val'); if (el) el.textContent = val; };
   var st = data.stats;
@@ -2800,7 +3347,15 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   setStat(8, data.yearLabel || '—');
 
   var ay = data.yearLabel;
-  if (ay) document.querySelectorAll('[data-ay]').forEach(function(el2){ el2.textContent = ay; });
+  if (ay) {
+    document.querySelectorAll('[data-ay]').forEach(function(el2){ el2.textContent = ay; });
+    var aySel = document.getElementById('ayFilterSel');
+    if (aySel) {
+      var hasOpt = [].slice.call(aySel.options).some(function(o){ return o.value === ay; });
+      if (!hasOpt) aySel.insertAdjacentHTML('beforeend', '<option value="'+ay+'">'+ay+'</option>');
+      aySel.value = ay;
+    }
+  }
 
   if (window.persistACState) persistACState();
   if (typeof renderSectionsTable === 'function') renderSectionsTable();
@@ -2808,6 +3363,13 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   if (typeof renderVCTable === 'function') renderVCTable();
   if (typeof renderDashVCList === 'function') renderDashVCList();
   if (typeof refreshACNotifications === 'function') refreshACNotifications();
+  if (typeof renderAssessmentsTable === 'function') renderAssessmentsTable();
+  if (typeof renderPerfTable === 'function') renderPerfTable();
+  if (typeof renderAttendTable === 'function') renderAttendTable();
+  if (typeof renderACAnnouncements === 'function') renderACAnnouncements();
+  if (typeof renderAnalyticsStats === 'function') renderAnalyticsStats();
+  if (typeof populateAnalyticsClassSelect === 'function') populateAnalyticsClassSelect();
+  if (typeof initReportCharts === 'function') initReportCharts();
 })();
 </script>
 
@@ -2821,5 +3383,35 @@ window.__TASS_BRIDGE__={interval:4000,watch:[
  {key:'tass_ac_topics',endpoint:'academic-structure/',guard:function(v){return !!v&&Object.keys(v).length>0;},map:function(v){var out={},keymap={science10:'Science',math9:'Mathematics',genbio1:'General Biology 1'};Object.keys(v).forEach(function(k){out[keymap[k]||k]=v[k];});return {topics:out};}}
 ]};
 </script>
+<script>
+/* The shared calendar (and the backup runner) post JSON, which Django
+   rejects without a CSRF token in the header. This template is standalone,
+   so base.html does not set it. */
+window.csrfToken = (function () {
+  var el = document.querySelector('#logoutForm input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+})();
+</script>
+<script src="{% static 'js/calendar.js' %}"></script>
+<script>
+/* Activity calendar — the payload arrives inside the same json_script blob the
+   rest of this dashboard reads, so the first month paints with no request.
+   Controls are rendered only when the backend says canEdit (System
+   Administrator / Principal). */
+(function () {
+  if (!window.TASS || !TASS.calendar) return;
+  var el = document.getElementById('academic-backend-data');
+  if (!el) return;
+  var payload;
+  try { payload = JSON.parse(el.textContent); } catch (e) { return; }
+  var cal = payload && payload.calendar;
+  if (!cal) return;
+  TASS.calendar.mount('calRoot', { data: cal });
+})();
+</script>
+
+<script src="/static/js/profile_bridge.js"></script>
+<script src="{% static 'js/tass_live.js' %}"></script>
+<script src="/static/js/pilot_guard.js"></script>
 </body>
 </html>
