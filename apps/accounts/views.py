@@ -67,7 +67,13 @@ def login_page(request):
 @csrf_exempt
 @require_http_methods(["POST", "GET"])
 def logout_view(request):
+    from . import session_guard
+
+    # Capture the key before logout() flushes the session, then release the
+    # device so the account is immediately free to sign in elsewhere.
+    session_key = request.session.session_key
     logout(request)
+    session_guard.release_session(session_key)
     return redirect("accounts:login_page")
 
 
@@ -200,22 +206,76 @@ def login_view(request):
 
     role_assignment = min(role_assignments, key=_role_priority)
 
-    # Handle remember me
-    remember_me = payload.get("remember_me", False) if 'payload' in locals() else False
-    if remember_me:
-        request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
-    else:
-        request.session.set_expiry(0)  # browser session expires
+    # ------------------------------------------------------------------
+    # One active device per account (non-functional requirement).
+    #
+    # The whole check-and-create runs inside a row lock on the user so two
+    # simultaneous sign-ins cannot both observe "no active session" and then
+    # both create one. On backends without SELECT ... FOR UPDATE (SQLite in
+    # tests) the atomic block still keeps the writes consistent; PostgreSQL
+    # is the one that gets true serialization.
+    # ------------------------------------------------------------------
+    from django.db import connection, transaction
 
-    django_login(request, authenticated_user)
+    from . import session_guard
 
-    device_info = request.META.get("HTTP_USER_AGENT", "")[:255]
-    login_session = LoginSession.objects.create(
-        user=authenticated_user,
-        device_info=device_info,
-        ip_address=request.META.get("REMOTE_ADDR"),
-        session_key=request.session.session_key,
-    )
+    current_session_key = request.session.session_key
+
+    with transaction.atomic():
+        locked_users = User.objects.all()
+        if connection.features.has_select_for_update:
+            locked_users = locked_users.select_for_update()
+        locked_user = locked_users.get(pk=authenticated_user.pk)
+
+        existing = session_guard.active_session_for(locked_user)
+        # Re-authenticating inside the browser that already holds the session
+        # (or as the same user) must never lock the person out of their own
+        # account; only a *different* device is rejected.
+        same_client = existing is not None and (
+            (current_session_key and existing.session_key == current_session_key)
+            or (
+                request.user.is_authenticated
+                and request.user.pk == authenticated_user.pk
+            )
+        )
+        if existing is not None and not same_client:
+            ActivityLog.objects.create(
+                user=locked_user,
+                action="login_blocked_active_session",
+                related_entity_type="User",
+                related_entity_id=locked_user.pk,
+            )
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "reason": "active_session",
+                    "message": session_guard.ACTIVE_SESSION_MESSAGE,
+                },
+                status=409,
+            )
+
+        # This device now owns the account: drop every *other* device row but
+        # keep the one this request is carrying, so Django can still save the
+        # session on the way out.
+        session_guard.release_other_sessions(
+            locked_user, keep_session_key=current_session_key
+        )
+
+        remember_me = bool(payload.get("remember_me"))
+        if remember_me:
+            request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
+        else:
+            request.session.set_expiry(0)  # browser session expires
+
+        django_login(request, authenticated_user)
+
+        device_info = request.META.get("HTTP_USER_AGENT", "")[:255]
+        login_session = session_guard.record_login_session(
+            authenticated_user,
+            request.session.session_key,
+            device_info=device_info,
+            ip_address=request.META.get("REMOTE_ADDR"),
+        )
 
     if device_info:
         seen_before = LoginSession.objects.filter(
@@ -364,6 +424,11 @@ def reset_password_confirm(request, token):
         _record_password_history(user)
         record.used_at = timezone.now()
         record.save(update_fields=["used_at"])
+        # A password reset must end every existing device: whoever held the old
+        # password should not keep an authenticated session.
+        from . import session_guard
+
+        session_guard.release_all_sessions(user)
         return JsonResponse({"ok": True, "redirect_url": reverse("accounts:login_page")})
 
     return render(request, "accounts/password_reset_confirm.html", {"token": token, "invalid": False})

@@ -53,14 +53,26 @@
             {{ employee.user.get_status_display }}
           </span></td>
           <td class="actions">
+            {% if employee.user.status == 'locked' and perms.accounts.unlock_account %}
+            <form method="post" action="{% url 'accounts:account_unlock' employee.user.pk %}" class="inline-form"
+              onsubmit="return confirm('Unlock this account? The failed sign-in counter is cleared.')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-lock-open"></i> Unlock
+              </button>
+            </form>
+            {% endif %}
             {% if perms.accounts.update_employee_account %}
             <a class="btn btn-outline btn-sm" href="{% url 'accounts:employee_account_update' employee.pk %}">
               <i class="fa-solid fa-pen"></i> Update
             </a>
             {% endif %}
             {% if perms.accounts.reset_account_password %}
-            <a class="btn btn-outline btn-sm" href="{% url 'accounts:admin_reset_password' employee.pk %}">
-              <i class="fa-solid fa-key"></i> Reset Password
+            {# employee.user.pk, not employee.pk -- the view looks up a User, and the
+               two ids drift apart as soon as any account is created outside this list. #}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:admin_reset_password' employee.user.pk %}"
+              title="Set a password this user can sign in with, for when the forgot-password email cannot reach them">
+              <i class="fa-solid fa-key"></i> Issue Password
             </a>
             {% endif %}
             {% if perms.accounts.archive_account and employee.user.status != 'archived' %}

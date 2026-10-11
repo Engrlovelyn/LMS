@@ -1,6 +1,7 @@
 ﻿from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponseForbidden
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 
@@ -15,6 +16,8 @@ def hub(request):
 
 
 def _require_role(user, role_code):
+    if user.is_authenticated and user.is_superuser:
+        return True
     return user.groups.filter(name=role_code).exists()
 
 
@@ -52,7 +55,18 @@ def teacher(request, route=None):
 @never_cache
 @login_required
 def principal(request, route=None):
-    if not _require_role(request.user, "principal"):
+    """The Principal dashboard, shared by both campuses.
+
+    The High School Principal (``principal``) and the Elementary Principal
+    (``elementary_principal``) reach this same view and the same template. The
+    campus is not a different screen, it is a different set of rows: which
+    grade bands, sections, classrooms and announcements get loaded is decided
+    per-request in ``principal_context`` from the caller's campus scope.
+    """
+    if not (
+        _require_role(request.user, "principal")
+        or _require_role(request.user, "elementary_principal")
+    ):
         return HttpResponseForbidden("You do not have access to this dashboard.")
     ctx = dashboards_context.principal_context(request.user)
     return render(request, "frontend/principal.html", ctx)
@@ -82,10 +96,16 @@ def student(request, route=None):
 @never_cache
 @login_required
 def tass_administrator(request, route=None):
-    if not _require_role(request.user, "tass_administrator"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
-    ctx = dashboards_context.tass_administrator_context(request.user)
-    return render(request, "frontend/system_admin.html", ctx)
+    """Permanent redirect to the Quality Assurance dashboard.
+
+    The TASS Administrator (SVI Administrator) role was a duplicate of Quality
+    Assurance, so the route is kept only so existing bookmarks and deep links
+    keep working instead of 404ing.
+    """
+    target = reverse("dashboards:quality_audit")
+    if route:
+        target = reverse("dashboards:quality_audit_route", kwargs={"route": route})
+    return redirect(target)
 
 
 @ensure_csrf_cookie
@@ -94,5 +114,5 @@ def tass_administrator(request, route=None):
 def quality_audit(request, route=None):
     if not _require_role(request.user, "quality_audit"):
         return HttpResponseForbidden("You do not have access to this dashboard.")
-    ctx = dashboards_context.quality_audit_context(request.user)
-    return render(request, "frontend/quality_audit.html", ctx)
+    ctx = dashboards_context.principal_context(request.user)
+    return render(request, "frontend/principal.html", ctx)

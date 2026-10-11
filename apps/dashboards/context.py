@@ -14,6 +14,7 @@ from django.db.utils import DatabaseError, ProgrammingError
 from django.urls import reverse
 
 from apps.accounts import campus
+from apps.accounts.ordering import order_students
 from apps.accounts.account_admin import (
     locked_accounts_queryset,
     serialize_locked_account,
@@ -670,10 +671,10 @@ def _student_demo_rows():
     and section come from the current enrolled section (``section_display``).
     """
     rows = []
-    profiles = (
-        StudentProfile.objects.select_related("user")
-        .prefetch_related("enrollments__section")
-        .order_by("last_name", "first_name")
+    profiles = order_students(
+        StudentProfile.objects.select_related("user").prefetch_related(
+            "enrollments__section"
+        )
     )
     for prof in profiles:
         grade = ""
@@ -1155,17 +1156,16 @@ def system_admin_context(user):
     # registrar sectioned them for that year. This is separate from the flat
     # dashboard students list, which powers the active-year Assign action.
     students_by_year = {}
-    for se in (
+    for se in order_students(
         StudentEnrollment.objects.filter(academic_year__label__in=section_years)
         .select_related("student__user", "section", "academic_year")
-        .exclude(status__in=["archived", "dropped"])
-        .order_by(
+        .exclude(status__in=["archived", "dropped"]),
+        prefix="student__",
+        leading_order=(
             "academic_year__start_date",
             "section__grade_level",
             "section__name",
-            "student__last_name",
-            "student__first_name",
-        )
+        ),
     ):
         sp = se.student
         yr = (se.academic_year.label if se.academic_year_id else "—")
@@ -1296,7 +1296,7 @@ def system_admin_context(user):
 
     students_json = []
     for i, sp in enumerate(
-        StudentProfile.objects.select_related("user").order_by("last_name", "first_name")
+        order_students(StudentProfile.objects.select_related("user"))
     ):
         se = active_enroll.get(sp.pk)
         section = se.section if se and se.section_id else None
@@ -1651,7 +1651,11 @@ def registrar_context(user):
             )
 
     students_json = []
-    for prof in StudentProfile.objects.select_related("user").prefetch_related("enrollments__section").order_by("last_name"):
+    for prof in order_students(
+        StudentProfile.objects.select_related("user").prefetch_related(
+            "enrollments__section"
+        )
+    ):
         sec_disp = prof.section_display
         grade = ""
         section = ""
@@ -3263,13 +3267,12 @@ def teacher_context(user):
     seen_roster = set()
     for item in class_items:
         vc = item["vc"]
-        enrolls = (
+        enrolls = order_students(
             vc.enrollments.filter(
                 status=VirtualClassroomEnrollment.STATUS_ACTIVE,
                 student__user__status=User.Status.ACTIVE,
-            )
-            .select_related("student", "student__user")
-            .order_by("student__last_name", "student__first_name")
+            ).select_related("student", "student__user"),
+            prefix="student__",
         )
         for e in enrolls:
             prof = e.student
@@ -3547,17 +3550,16 @@ def _roster_directory(active_year_obj):
     # filter can show how they were sectioned back then. The flat list below
     # stays scoped to the active year and backs the view when none is selected.
     students_by_year = {}
-    for se in (
+    for se in order_students(
         StudentEnrollment.objects.filter(academic_year__label__in=years)
         .select_related("student__user", "section", "academic_year")
-        .exclude(status__in=["archived", "dropped"])
-        .order_by(
+        .exclude(status__in=["archived", "dropped"]),
+        prefix="student__",
+        leading_order=(
             "academic_year__start_date",
             "section__grade_level",
             "section__name",
-            "student__last_name",
-            "student__first_name",
-        )
+        ),
     ):
         sp = se.student
         label = se.academic_year.label if se.academic_year_id else "—"
@@ -3590,7 +3592,7 @@ def _roster_directory(active_year_obj):
 
     students = []
     for i, sp in enumerate(
-        StudentProfile.objects.select_related("user").order_by("last_name", "first_name")
+        order_students(StudentProfile.objects.select_related("user"))
     ):
         se = active_enroll.get(sp.pk)
         section = se.section if se and se.section_id else None
@@ -4268,9 +4270,12 @@ def assistant_principal_context(user):
 
     # One Age/Sex row per learner across the Coordinator's virtual classrooms.
     demo_rows, demo_seen = [], set()
-    for enr in enrolled.select_related(
-        "student", "student__user", "virtual_classroom__section"
-    ).order_by("student__last_name", "student__first_name"):
+    for enr in order_students(
+        enrolled.select_related(
+            "student", "student__user", "virtual_classroom__section"
+        ),
+        prefix="student__",
+    ):
         if enr.student_id in demo_seen:
             continue
         demo_seen.add(enr.student_id)

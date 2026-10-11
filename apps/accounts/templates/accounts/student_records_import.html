@@ -71,9 +71,17 @@
         <tr><th>Created</th><td>{{ report.created }}</td></tr>
         <tr><th>Skipped (duplicates / not found)</th><td>{{ report.skipped }}</td></tr>
         <tr><th>Errors</th><td>{{ report.errors|length }}</td></tr>
+        {% if report.email_failed %}
+        <tr><th>Email send failures</th><td>{{ report.email_failed }}</td></tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
+  {% if report.email_failed %}
+  <div class="card-body">
+    <div class="message warning"><i class="fa-solid fa-triangle-exclamation"></i> {{ report.email_failed }} account(s) were created but their verification email failed to send. Check server logs and email settings, then resend.</div>
+  </div>
+  {% endif %}
   {% if report.errors %}
   <div class="card-body">
     <ul>

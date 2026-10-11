@@ -7,9 +7,27 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.campus import (
+    WHOLE_SCHOOL,
+    assessments_for_campus,
+    campus_scopes_for,
+    scoped_classrooms,
+    user_can_read_grade,
+)
 from apps.accounts.decorators import has_permission, perm_required
 from apps.attendance.models import AttendanceRecord
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
+
+def _notify(vc_ids, actor, kinds):
+    """Tell each classroom's students their assessments/scores changed."""
+    from apps.communication.realtime import notify_enrolled_students
+
+    for vc_id in [i for i in (vc_ids or []) if i]:
+        try:
+            notify_enrolled_students(vc_id, kind=list(kinds), actor=actor, exclude=actor)
+        except Exception:  # realtime must never block a save
+            pass
+
 
 from .forms import (
     AssessmentAssignForm,
@@ -32,13 +50,25 @@ from .models import (
 from .services import trigger_missed_notifications
 
 
-ADMIN_ROLES = ("registrar", "assistant_principal", "system_admin", "principal", "tass_administrator")
+ADMIN_ROLES = (
+    "registrar",
+    "assistant_principal",
+    "system_admin",
+    "principal",
+    "elementary_principal",
+    "quality_audit",
+)
 
 
 def _assessments_for_user(user):
     qs = Assessment.objects.select_related("subject", "created_by", "academic_year")
     if user.is_superuser or user.groups.filter(name__in=ADMIN_ROLES).exists():
-        return qs
+        # Campus-bound principals only read their own grade bands; the rest of
+        # ADMIN_ROLES (registrar, QA, system admin) reads the whole school.
+        scopes = campus_scopes_for(user)
+        if WHOLE_SCHOOL in scopes:
+            return qs
+        return assessments_for_campus(qs, scopes)
     if user.groups.filter(name="teacher").exists():
         return qs.filter(created_by=user)
     if user.groups.filter(name="student").exists() and hasattr(user, "student_profile"):
@@ -55,6 +85,11 @@ def _assessments_for_user(user):
 
 def _can_edit_assessment(user, assessment):
     if user.is_superuser or user.groups.filter(name__in=ADMIN_ROLES).exists():
+        if campus_scopes_for(user) != {WHOLE_SCHOOL}:
+            # An edit gate, not just a read gate: the Elementary Principal may
+            # not rewrite a Grade 10 quiz merely because they hold a principal
+            # role in the tuple.
+            return assessment.subject.grade_level in _own_grade_levels(user)
         return True
     return assessment.created_by_id == user.id
 
@@ -306,6 +341,7 @@ def assessment_assign(request, pk):
             messages.success(
                 request, f"Assessment assigned to {created_count} classroom(s)."
             )
+            _notify([vc.pk for vc in selected_vcs], request.user, ["assessments"])
         else:
             messages.info(request, "No new assignments were created.")
         return redirect(
@@ -464,6 +500,9 @@ def grade_submission(request, pk, submission_pk):
             submission.teacher_remarks = form.cleaned_data.get("teacher_remarks", "")
             submission.save(update_fields=["graded_at", "teacher_remarks"])
             messages.success(request, "Submission graded successfully.")
+            vc_id = getattr(submission.assessment_assignment, "virtual_classroom_id", None)
+            if vc_id:
+                _notify([vc_id], request.user, ["scores", "assessments"])
             return redirect(
                 reverse("assessments:submissions_monitor", args=[assessment.pk])
             )
@@ -592,6 +631,8 @@ def grade_book(request, vc_pk):
         VirtualClassroom.objects.select_related("academic_year", "subject", "section"),
         pk=vc_pk,
     )
+    if not user_can_read_grade(request.user, vc.section.grade_level):
+        return HttpResponseForbidden("You cannot view this classroom's grade book.")
     formula = getattr(vc, "grading_formula", None)
     enrollments = VirtualClassroomEnrollment.objects.filter(
         virtual_classroom=vc,
@@ -639,7 +680,7 @@ def _classrooms_for_performance(user):
         "section", "subject", "teacher"
     ).filter(status=VirtualClassroom.STATUS_ACTIVE)
     if user.is_superuser or user.groups.filter(name__in=ADMIN_ROLES).exists():
-        return qs
+        return scoped_classrooms(qs, user)
     if user.groups.filter(name="teacher").exists():
         return qs.filter(teacher=user)
     if user.groups.filter(name="student").exists() and hasattr(user, "student_profile"):

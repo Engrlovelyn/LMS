@@ -1,13 +1,19 @@
 from django.contrib import messages
-from django.contrib.auth.hashers import make_password
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.academic_structure.models import AcademicYear, StudentEnrollment
-from apps.system_settings.models import PasswordPolicy
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
+from .account_admin import (
+    AccountActionError,
+    generate_temporary_password,
+    issue_temporary_password,
+    unlock_user_account,
+)
 from .decorators import perm_required
+from .ordering import order_students
 from .forms import (
     EmployeeAccountForm,
     EmployeeAccountUpdateForm,
@@ -38,25 +44,45 @@ def _deactivate_login_access(user):
     user.groups.clear()
 
 
+def _ensure_role_assignment(user, role_code):
+    """Give a newly created account its base role so it can sign in after verifying."""
+    year = AcademicYear.objects.filter(status=AcademicYear.STATUS_ACTIVE).first()
+    role = Role.objects.filter(code=role_code).first()
+    if year is None or role is None:
+        return None
+    assignment, _ = RoleAssignment.objects.get_or_create(
+        user=user, role=role, academic_year=year
+    )
+    return assignment
+
+
 def _make_student(email, password, profile_fields, section, academic_year, request=None):
-    """Create (or update) a student User + StudentProfile and enroll it."""
+    """Create (or update) a student User + StudentProfile and enroll it.
+
+    Returns (student, email_status) where email_status is the result dict from
+    _send_verification_email ({"ok": True} if no mail was attempted or it was
+    sent, {"ok": False, "message": ...} if the send failed).
+    """
     email = (email or "").strip().lower()
     lrn = profile_fields.pop("lrn")
     if not email:
         email = f"{lrn}@student.sanvicente.edu.ph"
 
+    email_status = {"ok": True}
     student = StudentProfile.objects.filter(lrn=lrn).first()
     if student is None:
         user = User(email=email, status=User.Status.PENDING_VERIFICATION)
-        user.set_password(password or generate_password())
+        raw_password = password or generate_password()
+        user.set_password(raw_password)
         user.password_changed_at = timezone.now()
         user.save()
         PasswordHistory.objects.create(user=user, hashed_password=user.password)
-        if request is not None:
-            from .views import _send_verification_email
-            _send_verification_email(user, request, password=password or "")
         student = StudentProfile(user=user, lrn=lrn, **profile_fields)
         student.save()
+        _ensure_role_assignment(user, "student")
+        if request is not None:
+            from .views import _send_verification_email
+            email_status = _send_verification_email(user, request, password=raw_password)
         ActivityLog.objects.create(
             user=request.user if request else None,
             action="student_account_created",
@@ -76,7 +102,7 @@ def _make_student(email, password, profile_fields, section, academic_year, reque
             academic_year=academic_year,
             defaults={"section": section, "status": StudentEnrollment.STATUS_ENROLLED},
         )
-    return student
+    return student, email_status
 
 
 @perm_required("view_employee_account")
@@ -99,6 +125,7 @@ def employee_account_add(request):
     form = EmployeeAccountForm(request.POST or None)
     generated_password = None
     created_email = ""
+    email_error = None
     if request.method == "POST":
         form = EmployeeAccountForm(request.POST)
         if form.is_valid():
@@ -113,18 +140,24 @@ def employee_account_add(request):
                 user.is_staff = form.cleaned_data.get("grant_staff_access", False)
                 user.save()
                 PasswordHistory.objects.create(user=user, hashed_password=user.password)
-                from .views import _send_verification_email
-                _send_verification_email(user, request, password=initial_password)
                 profile = form.save(commit=False)
                 profile.user = user
                 profile.save()
+                role = form.cleaned_data.get("role")
+                _ensure_role_assignment(user, role.code if role else "teacher")
+                from .views import _send_verification_email
+                result = _send_verification_email(user, request, password=initial_password)
+                email_error = None if result.get("ok") else result.get("message")
                 ActivityLog.objects.create(
                     user=request.user, action="employee_account_created",
                     related_entity_type="User", related_entity_id=user.pk,
                 )
                 generated_password = initial_password
                 created_email = email
-                messages.success(request, f"Employee account created for {email}.")
+                if email_error:
+                    messages.warning(request, f"Account created, but the verification email was NOT sent: {email_error}")
+                else:
+                    messages.success(request, f"Employee account created for {email}.")
                 form = EmployeeAccountForm()
 
     context = {
@@ -132,6 +165,7 @@ def employee_account_add(request):
         "title": "Add Employee Account",
         "generated_password": generated_password,
         "created_email": created_email,
+        "email_error": email_error,
     }
     return render(request, "accounts/employee_account_form.html", context)
 
@@ -190,9 +224,11 @@ def employee_account_archive(request, pk):
 
 @perm_required("view_student_record")
 def student_record_list(request):
-    students = StudentProfile.objects.select_related("user").prefetch_related(
-        "enrollments__section"
-    ).order_by("last_name", "first_name")
+    students = order_students(
+        StudentProfile.objects.select_related("user").prefetch_related(
+            "enrollments__section"
+        )
+    )
 
     def current_section(student):
         enrollment = student.enrollments.filter(
@@ -226,15 +262,19 @@ def student_record_add(request):
                 "middle_initial": data.get("middle_initial", ""),
                 "suffix": data.get("suffix", ""),
                 "birthdate": data["birthdate"],
+                "sex": data.get("sex", ""),
+                "contact_number": data.get("contact_number", ""),
+                "address": data.get("address", ""),
                 "guardian_name": data.get("guardian_name", ""),
                 "guardian_email": data.get("guardian_email", ""),
+                "guardian_contact_number": data.get("guardian_contact_number", ""),
             }
             email = data.get("email")
             if data["initial_password"]:
                 generated_password = data["initial_password"]
             else:
                 generated_password = generate_password()
-            student = _make_student(
+            student, email_status = _make_student(
                 email,
                 generated_password,
                 profile_fields,
@@ -242,8 +282,12 @@ def student_record_add(request):
                 AcademicYear.objects.filter(status=AcademicYear.STATUS_ACTIVE).first(),
                 request=request,
             )
-            messages.success(request, f"Student account created for {student.user.email}.")
             created_email = student.user.email
+            email_error = None if email_status.get("ok") else email_status.get("message")
+            if email_error:
+                messages.warning(request, f"Student account created, but the verification email was NOT sent: {email_error}")
+            else:
+                messages.success(request, f"Student account created for {created_email}.")
             form = StudentAccountForm()
             return render(
                 request,
@@ -253,6 +297,7 @@ def student_record_add(request):
                     "title": "Add Student Account",
                     "generated_password": generated_password,
                     "created_email": created_email,
+                    "email_error": email_error,
                 },
             )
 
@@ -261,6 +306,7 @@ def student_record_add(request):
         "title": "Add Student Account",
         "generated_password": generated_password,
         "created_email": "",
+        "email_error": None,
     }
     return render(request, "accounts/student_account_form.html", context)
 
@@ -280,12 +326,16 @@ def student_record_generate(request):
                 "middle_initial": data.get("middle_initial", ""),
                 "suffix": data.get("suffix", ""),
                 "birthdate": data["birthdate"],
+                "sex": data.get("sex", ""),
+                "contact_number": data.get("contact_number", ""),
+                "address": data.get("address", ""),
                 "guardian_name": data.get("guardian_name", ""),
                 "guardian_email": data.get("guardian_email", ""),
+                "guardian_contact_number": data.get("guardian_contact_number", ""),
             }
             email = data.get("email")
             generated_password = data["initial_password"] or generate_password()
-            student = _make_student(
+            student, email_status = _make_student(
                 email,
                 generated_password,
                 profile_fields,
@@ -293,8 +343,12 @@ def student_record_generate(request):
                 AcademicYear.objects.filter(status=AcademicYear.STATUS_ACTIVE).first(),
                 request=request,
             )
-            messages.success(request, f"Generated student account for {student.user.email}.")
             created_email = student.user.email
+            email_error = None if email_status.get("ok") else email_status.get("message")
+            if email_error:
+                messages.warning(request, f"Generated student account, but the verification email was NOT sent: {email_error}")
+            else:
+                messages.success(request, f"Generated student account for {created_email}.")
             form = StudentAccountForm()
             return render(
                 request,
@@ -304,6 +358,7 @@ def student_record_generate(request):
                     "title": "Generate Student Account",
                     "generated_password": generated_password,
                     "created_email": created_email,
+                    "email_error": email_error,
                 },
             )
 
@@ -315,6 +370,7 @@ def student_record_generate(request):
             "title": "Generate Student Account",
             "generated_password": generated_password,
             "created_email": "",
+            "email_error": None,
         },
     )
 
@@ -339,8 +395,17 @@ def student_record_update(request, pk):
             if conflict:
                 form.add_error("email", "A user with this email already exists.")
             else:
+                previous_status = student.user.status
+                new_status = form.cleaned_data["status"]
                 student.user.email = new_email
-                student.user.status = form.cleaned_data["status"]
+                student.user.status = new_status
+                # Flipping the dropdown back to "Active" is how a registrar used
+                # to clear a lockout. Without zeroing the counter and the lock
+                # timestamp the account looked recovered but still carried the
+                # state the lock was recorded with.
+                if new_status == User.Status.ACTIVE and previous_status == User.Status.LOCKED:
+                    student.user.failed_login_attempts = 0
+                    student.user.locked_at = None
                 student.user.save()
                 form.save()
                 if form.cleaned_data["status"] == User.Status.ARCHIVED:
@@ -401,6 +466,7 @@ def student_records_import(request):
                 academic_year = form.cleaned_data["academic_year"]
                 section = form.cleaned_data["section"]
                 created, skipped, errors = 0, 0, []
+                email_failed = 0
                 for idx, row in enumerate(rows, start=2):
                     lrn = (row.get("lrn") or "").strip()
                     first = (row.get("first_name") or "").strip()
@@ -432,13 +498,18 @@ def student_records_import(request):
                         if email and User.objects.filter(email=email.lower()).exists():
                             skipped += 1
                             continue
-                        _make_student(email, None, profile_fields, section, academic_year, request=request)
+                        _, email_status = _make_student(email, None, profile_fields, section, academic_year, request=request)
                         created += 1
+                        if not email_status.get("ok"):
+                            email_failed += 1
                     except Exception as exc:
                         errors.append(f"Row {idx}: {exc}")
-                report = {"created": created, "skipped": skipped, "errors": errors}
+                report = {"created": created, "skipped": skipped, "errors": errors, "email_failed": email_failed}
                 if created:
-                    messages.success(request, f"Imported {created} student record(s).")
+                    if email_failed:
+                        messages.warning(request, f"Imported {created} student record(s), but the verification email failed to send for {email_failed} of them.")
+                    else:
+                        messages.success(request, f"Imported {created} student record(s).")
                 elif not errors:
                     messages.warning(request, "No new student records were imported.")
     context = {"form": form, "report": report}
@@ -493,58 +564,96 @@ def vc_students_import(request, vc_pk):
         {"form": form, "vc": vc, "report": report},
     )
 
-def _password_reuse_allowed(user, new_value):
-    from django.contrib.auth.hashers import check_password
-    limit = max(PasswordPolicy.get_solo().reuse_limit or 0, 1)
-    history = PasswordHistory.objects.filter(user=user).order_by("-created_at")[:limit]
-    return not any(check_password(new_value, h.hashed_password) for h in history)
+@perm_required("unlock_account")
+def account_unlock(request, pk):
+    """Clear a lockout without changing the password.
+
+    Reached from the System Admin "Locked Accounts" card and from the student
+    record list. POST-only, because a GET that changes account state can be
+    triggered by a prefetch or a link preview.
+    """
+    user = get_object_or_404(User, pk=pk)
+
+    if request.method != "POST":
+        return redirect("accounts:employee_account_list")
+
+    try:
+        cleared = unlock_user_account(user, actor=request.user)
+    except AccountActionError as exc:
+        messages.error(request, str(exc))
+        return redirect(_account_recovery_return_url(user))
+
+    verb = "Unlocked {} ({} failed attempt(s) cleared).".format(
+        user.email, cleared
+    ) if cleared else "Unlocked {}.".format(user.email)
+    messages.success(request, verb)
+    return redirect(_account_recovery_return_url(user))
 
 
-def _apply_admin_password_reset(user, new_password):
-    user.password = make_password(new_password)
-    user.password_changed_at = timezone.now()
-    user.failed_login_attempts = 0
-    if user.status == User.Status.LOCKED:
-        user.status = User.Status.ACTIVE
-    user.save(update_fields=["password", "password_changed_at", "failed_login_attempts", "status"])
-    PasswordHistory.objects.create(user=user, hashed_password=user.password)
-    ActivityLog.objects.create(
-        user=None,
-        action="admin_password_reset",
-        related_entity_type="User",
-        related_entity_id=user.pk,
-    )
+def _account_recovery_return_url(user):
+    """Send the administrator back to whichever list holds this account."""
+    if hasattr(user, "student_profile"):
+        return "accounts:student_record_list"
+    return "accounts:employee_account_list"
 
 
 @perm_required("reset_account_password")
 def admin_reset_password(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    form = AdminResetPasswordForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        new_password = form.cleaned_data["new_password"]
-        policy = PasswordPolicy.get_solo()
-        problems = []
-        if len(new_password) < policy.minimum_length:
-            problems.append(f"at least {policy.minimum_length} characters")
-        if policy.require_uppercase and not any(c.isupper() for c in new_password):
-            problems.append("an uppercase letter")
-        if policy.require_lowercase and not any(c.islower() for c in new_password):
-            problems.append("a lowercase letter")
-        if policy.require_number and not any(c.isdigit() for c in new_password):
-            problems.append("a number")
-        if policy.require_symbol and not any(not c.isalnum() for c in new_password):
-            problems.append("a symbol")
-        if problems:
-            form.add_error("new_password", "Password must include " + ", ".join(problems) + ".")
-        elif not _password_reuse_allowed(user, new_password):
-            form.add_error("new_password", "This password was used recently. Choose a different password.")
-        else:
-            _apply_admin_password_reset(user, new_password)
-            messages.success(request, f"Password reset for {user.email}.")
-            return redirect("accounts:employee_account_list")
+    """Issue a temporary password to a user who cannot use the emailed reset.
 
-    context = {"form": form, "target_user": user}
+    The forgot-password link on the login page needs a working mailbox. This is
+    the fallback for when it does not: the administrator sets a password here,
+    reads it out or writes it on a slip, and the user is forced to choose their
+    own at next sign-in.
+    """
+    user = get_object_or_404(User, pk=pk)
+    initial = {}
+    if request.method != "POST":
+        initial["new_password"] = generate_temporary_password()
+    else:
+        initial["new_password"] = (request.POST.get("new_password") or "").strip()
+
+    form = AdminResetPasswordForm(request.POST or None, initial=initial)
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            result = issue_temporary_password(
+                user,
+                new_password=form.cleaned_data["new_password"],
+                actor=request.user,
+            )
+        except AccountActionError as exc:
+            form.add_error("new_password", str(exc))
+        else:
+            messages.success(
+                request,
+                "Temporary password issued for {}. The account is unlocked and "
+                "{} must set their own password at next sign-in.".format(
+                    user.email, user.get_full_name() or "the user"
+                ),
+            )
+            if result["was_locked"]:
+                messages.info(
+                    request,
+                    "{} had been locked; the lock has been cleared.".format(user.email),
+                )
+            for warning in result["warnings"]:
+                messages.warning(request, warning)
+            return redirect(_account_recovery_return_url(user))
+
+    context = {
+        "form": form,
+        "target_user": user,
+        "is_student": hasattr(user, "student_profile"),
+        "return_url": _account_recovery_return_url(user),
+    }
     return render(request, "accounts/admin_reset_password.html", context)
+
+
+@perm_required("reset_account_password")
+def admin_reset_password_generate(request):
+    """Hand the reset form a fresh compliant password without saving anything."""
+    return JsonResponse({"ok": True, "password": generate_temporary_password()})
 
 
 @perm_required("accounts.role_based_access_control")

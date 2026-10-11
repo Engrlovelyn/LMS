@@ -4,8 +4,31 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+def _notify_enrollment(classroom, actor, student_ids=None, removed=False):
+    """Tell the classroom its roster changed.
+
+    Each affected student is notified directly as well as via the classroom
+    room: a student who has not reloaded since this page load has not joined
+    ``class-<id>`` yet, so the room broadcast alone would miss them.
+    """
+    from apps.communication.realtime import notify_classroom, notify_user
+
+    kind = ["enrollment"]
+    try:
+        notify_classroom(classroom.pk, kind=kind, actor=actor)
+    except Exception:  # realtime must never block the save
+        pass
+    for sid in student_ids or []:
+        try:
+            notify_user(sid, kind=kind, actor=actor,
+                        extra={"removed": True} if removed else None)
+        except Exception:
+            pass
+
+
 from apps.accounts.decorators import perm_required
 from apps.accounts.models import StudentProfile
+from apps.accounts.ordering import order_students
 from apps.virtual_classrooms.forms import VirtualClassroomEnrollForm
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
@@ -53,10 +76,11 @@ def classroom_enrollment_detail(request, pk):
     )
     if classroom.status != VirtualClassroom.STATUS_ACTIVE:
         messages.warning(request, "This classroom is archived and cannot accept new enrollments.")
-    active_enrollments = (
-        classroom.enrollments.select_related("student")
-        .filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE)
-        .order_by("student__last_name", "student__first_name")
+    active_enrollments = order_students(
+        classroom.enrollments.select_related("student").filter(
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE
+        ),
+        prefix="student__",
     )
     context = {
         "classroom": classroom,
@@ -77,8 +101,8 @@ def enroll_students(request, pk):
         status=VirtualClassroomEnrollment.STATUS_ACTIVE
     ).values_list("student_id", flat=True)
     form = VirtualClassroomEnrollForm(request.POST or None)
-    candidate_pool = StudentProfile.objects.order_by("last_name", "first_name").exclude(
-        id__in=active_ids
+    candidate_pool = order_students(
+        StudentProfile.objects.exclude(id__in=active_ids)
     )
     form.fields["students"].queryset = candidate_pool
 
@@ -96,6 +120,11 @@ def enroll_students(request, pk):
                 continue
         if created:
             messages.success(request, f"Enrolled {created} student(s) into {classroom}.")
+            _notify_enrollment(
+                classroom,
+                request.user,
+                student_ids=[st.user_id for st in selected if st.user_id],
+            )
         else:
             messages.info(request, "No new students were enrolled (some may already be enrolled).")
         return redirect(reverse("enrollment:classroom_enrollment_detail", args=[classroom.pk]))
@@ -121,4 +150,10 @@ def remove_student(request, pk, enrollment_pk):
         enrollment.removed_at = timezone.now()
         enrollment.save()
         messages.success(request, "Student removed from the classroom.")
+        _notify_enrollment(
+            classroom,
+            request.user,
+            student_ids=[enrollment.student.user_id] if enrollment.student else [],
+            removed=True,
+        )
     return redirect(reverse("enrollment:classroom_enrollment_detail", args=[pk]))

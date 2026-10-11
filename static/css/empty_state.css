@@ -1,0 +1,57 @@
+/* ── Empty states ────────────────────────────────────────────────────────────
+   Every dashboard widget must show either real data or an explicit "no data"
+   state — never a placeholder number. The markup (canvas / table / stat card)
+   is kept so layout and styling are unchanged; only the contents are replaced.
+   Rendered by static/js/empty_state.js (TASS.empty.*).
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Chart slot: the canvas stays in the DOM at full height so the card does not
+   collapse; it is hidden and an overlay message is shown in its place. */
+.chart-wrap > canvas.tass-empty-canvas { visibility: hidden; }
+
+.chart-wrap > .tass-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.chart-wrap > .tass-empty > i { font-size: 24px; opacity: .4; line-height: 1; }
+.chart-wrap > .tass-empty > .tass-empty-msg { font-size: 13px; font-weight: 600; }
+.chart-wrap > .tass-empty > .tass-empty-hint { font-size: 11px; opacity: .75; max-width: 36ch; line-height: 1.45; }
+
+/* Table body / list placeholder */
+.tass-empty-row > td,
+.tass-empty-row > th {
+  text-align: center;
+  padding: 28px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.tass-empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 26px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.tass-empty-block > i { font-size: 24px; opacity: .4; line-height: 1; }
+.tass-empty-block > .tass-empty-msg { font-size: 13px; font-weight: 600; }
+.tass-empty-block > .tass-empty-hint { font-size: 11px; opacity: .75; max-width: 40ch; line-height: 1.45; }
+
+/* Stat cards with no backing record show a dash rather than a fake 0, so an
+   empty metric is never mistaken for a measured zero. */
+.stat-val.tass-empty-val,
+.analytics-stat .val.tass-empty-val { color: var(--text-muted); }

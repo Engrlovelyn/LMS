@@ -8,7 +8,11 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v={% now 'U' %}">
+<link rel="stylesheet" href="{% static 'css/empty_state.css' %}?v={% now 'U' %}">
+<link rel="stylesheet" href="{% static 'css/calendar.css' %}?v={% now 'U' %}">
 <script src="{% static 'js/app.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'js/empty_state.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'js/calendar.js' %}?v={% now 'U' %}"></script>
 {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -163,7 +167,7 @@
         <div class="footer-copy">&copy; {% now 'Y' %} San Vicente Institute &middot; SVI LMS v1.0</div>
         <div class="footer-badges">
           <span class="footer-badge sy">SVI LMS</span>
-          <span class="footer-badge">S.Y. {{ current_academic_year_label|default:"2025–2026" }}</span>
+          <span class="footer-badge">S.Y. {{ current_academic_year_label|default:"" }}</span>
         </div>
       </div>
       <div class="footer-bottom-right">
@@ -188,6 +192,17 @@
 {% endblock %}
 
 <form method="post" action="{% url 'accounts:logout' %}" id="logoutForm" style="display:none;">{% csrf_token %}</form>
+
+<!-- Every JSON POST/PUT/PATCH/DELETE (api_bridge.js, the backup runner, the
+     activity calendar) needs the CSRF token in a header. It used to be read
+     from window.csrfToken, which nothing ever defined, so those writes failed
+     with 403. Read it once from the logout form instead. -->
+<script>
+window.csrfToken = (function () {
+  var el = document.querySelector('#logoutForm input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+})();
+</script>
 
 {% block extra_js %}{% endblock %}
 </body>

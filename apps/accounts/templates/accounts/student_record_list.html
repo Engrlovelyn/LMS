@@ -65,6 +65,21 @@
             {{ student.user.get_status_display }}
           </span></td>
           <td class="actions">
+            {% if student.user.status == 'locked' and perms.accounts.unlock_account %}
+            <form method="post" action="{% url 'accounts:account_unlock' student.user.pk %}" class="inline-form"
+              onsubmit="return confirm('Unlock this account? The failed sign-in counter is cleared.')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-lock-open"></i> Unlock
+              </button>
+            </form>
+            {% endif %}
+            {% if perms.accounts.reset_account_password %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:admin_reset_password' student.user.pk %}"
+              title="Set a password this user can sign in with, for when the forgot-password email cannot reach them">
+              <i class="fa-solid fa-key"></i> Issue Password
+            </a>
+            {% endif %}
             {% if perms.accounts.update_student_record %}
             <a class="btn btn-outline btn-sm" href="{% url 'accounts:student_record_update' student.pk %}">
               <i class="fa-solid fa-pen"></i> Update

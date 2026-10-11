@@ -15,11 +15,17 @@ urlpatterns = [
     path("sessions/", views.my_sessions, name="my_sessions"),
     path("sessions/<int:pk>/revoke/", views.revoke_session, name="revoke_session"),
     path("sessions/logout-others/", views.logout_other_sessions, name="logout_other_sessions"),
+    path("avatar/<path:name>/", views.avatar_redirect, name="avatar"),
     path("employees/", management_views.employee_account_list, name="employee_account_list"),
     path("employees/add/", management_views.employee_account_add, name="employee_account_add"),
     path("employees/<int:pk>/update/", management_views.employee_account_update, name="employee_account_update"),
     path("employees/<int:pk>/archive/", management_views.employee_account_archive, name="employee_account_archive"),
     path("employees/<int:pk>/reset-password/", management_views.admin_reset_password, name="admin_reset_password"),
+    # Account recovery is keyed on User pk rather than on the employee list so
+    # it works for a student account too -- a student who cannot receive the
+    # emailed reset link needs the same fallback an employee does.
+    path("reset-password/generate/", management_views.admin_reset_password_generate, name="admin_reset_password_generate"),
+    path("accounts/<int:pk>/unlock/", management_views.account_unlock, name="account_unlock"),
     path("students/", management_views.student_record_list, name="student_record_list"),
     path("students/add/", management_views.student_record_add, name="student_record_add"),
     path("students/generate/", management_views.student_record_generate, name="student_record_generate"),

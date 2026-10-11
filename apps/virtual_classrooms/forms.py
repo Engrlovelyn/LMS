@@ -4,6 +4,7 @@ from apps.accounts.models import StudentProfile
 from apps.academic_structure.models import AcademicYear, Section, Subject
 
 from .models import VirtualClassroom
+from .services import teacher_conflict_in_section
 
 
 class VirtualClassroomForm(forms.ModelForm):
@@ -36,6 +37,7 @@ class VirtualClassroomForm(forms.ModelForm):
         academic_year = cleaned.get("academic_year")
         section = cleaned.get("section")
         subject = cleaned.get("subject")
+        teacher = cleaned.get("teacher")
         if section and subject:
             if section.grade_level != subject.grade_level:
                 self.add_error(
@@ -49,6 +51,23 @@ class VirtualClassroomForm(forms.ModelForm):
                 self.add_error(
                     "academic_year",
                     "The section and subject must belong to the selected academic year.",
+                )
+        # One teacher per virtual classroom: a student must not see the same
+        # teacher twice in their list, so no teacher may hold two classrooms in
+        # the same section.
+        if section and teacher:
+            clash = teacher_conflict_in_section(
+                section, teacher, exclude_classroom=self.instance
+            )
+            if clash is not None:
+                self.add_error(
+                    "teacher",
+                    "{} already teaches {} in {}. Pick a different teacher so "
+                    "each classroom has its own.".format(
+                        teacher.get_full_name() or teacher.email,
+                        clash.subject,
+                        section,
+                    ),
                 )
         return cleaned
 

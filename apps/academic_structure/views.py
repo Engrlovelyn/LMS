@@ -7,15 +7,20 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.accounts.decorators import perm_required
+from apps.accounts.decorators import has_permission, perm_required
+from apps.accounts.models import StudentProfile
+from apps.accounts.ordering import order_students
 
 from .forms import (
     AcademicYearForm,
     PromoteForm,
     RolloverForm,
     SectionForm,
+    SectionStudentAssignForm,
+    SectionStudentMoveForm,
     StructureFinalizeForm,
     SubjectForm,
+    assignable_students,
 )
 from .models import (
     AcademicStructureVersion,
@@ -25,6 +30,8 @@ from .models import (
     Subject,
 )
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
+
+from .services import rollover_year
 
 
 @perm_required("academic_structure.view_academic_year")
@@ -188,81 +195,22 @@ def year_rollover(request, pk):
     source_year = get_object_or_404(AcademicYear, pk=pk)
     form = RolloverForm(request.POST or None, source_year=source_year)
     if request.method == "POST" and form.is_valid():
-        if source_year.status == AcademicYear.STATUS_ARCHIVED:
-            messages.error(request, "Archived academic years cannot be rolled over.")
+        target_year = form.cleaned_data["target_academic_year"]
+        try:
+            report = rollover_year(source_year, target_year)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
             return render(
                 request,
                 "academic_structure/year_rollover.html",
                 {"form": form, "source_year": source_year},
             )
-        target_year = form.cleaned_data["target_academic_year"]
-        copied_sections = 0
-        copied_subjects = 0
-        copied_classes = 0
-        section_map = {}
-        subject_map = {}
-        with transaction.atomic():
-            for section in Section.objects.filter(
-                academic_year=source_year,
-                status=Section.STATUS_ACTIVE,
-            ):
-                try:
-                    created = Section.objects.create(
-                        academic_year=target_year,
-                        name=section.name,
-                        grade_level=section.grade_level,
-                        status=Section.STATUS_ACTIVE,
-                    )
-                    section_map[section.pk] = created
-                    copied_sections += 1
-                except (IntegrityError, ValidationError):
-                    continue
-            for subject in Subject.objects.filter(
-                academic_year=source_year,
-                status=Subject.STATUS_ACTIVE,
-            ):
-                try:
-                    created = Subject.objects.create(
-                        academic_year=target_year,
-                        name=subject.name,
-                        grade_level=subject.grade_level,
-                        subject_type=subject.subject_type,
-                        grading_period=subject.grading_period,
-                        status=Subject.STATUS_ACTIVE,
-                    )
-                    subject_map[subject.pk] = created
-                    copied_subjects += 1
-                except (IntegrityError, ValidationError):
-                    continue
-            for vc in VirtualClassroom.objects.filter(
-                academic_year=source_year,
-                status=VirtualClassroom.STATUS_ACTIVE,
-            ):
-                target_section = section_map.get(vc.section_id)
-                target_subject = subject_map.get(vc.subject_id)
-                if not target_section or not target_subject:
-                    continue
-                try:
-                    created_vc = VirtualClassroom.objects.create(
-                        academic_year=target_year,
-                        section=target_section,
-                        subject=target_subject,
-                        teacher=vc.teacher,
-                        grading_period=vc.grading_period,
-                        status=VirtualClassroom.STATUS_ACTIVE,
-                    )
-                    from apps.virtual_classrooms.services import (
-                        populate_classroom_defaults,
-                    )
-
-                    populate_classroom_defaults(created_vc)
-                    copied_classes += 1
-                except (IntegrityError, ValidationError):
-                    continue
         messages.success(
             request,
-            f"Rolled over {copied_sections} sections, {copied_subjects} subjects and {copied_classes} classes from {source_year.label} to {target_year.label}.",
+            f"Rolled over from {source_year.label} to {target_year.label}. {report.summary()}",
         )
+        for entry in report.skipped:
+            messages.warning(request, entry)
         return redirect(reverse("academic:academic_year_list"))
     return render(
         request,
@@ -274,8 +222,14 @@ def year_rollover(request, pk):
 @perm_required("academic_structure.view_section_custom")
 def section_list(request):
     sections = Section.objects.select_related("academic_year", "adviser").all()
+    counts = dict(
+        StudentEnrollment.objects.filter(status=StudentEnrollment.STATUS_ENROLLED)
+        .values_list("section_id")
+        .annotate(count=Count("student_id", distinct=True))
+    )
     context = {
         "sections": sections,
+        "enrolled_counts": counts,
         "total_sections": sections.filter(status=Section.STATUS_ACTIVE).count(),
         "archived_sections": sections.filter(status=Section.STATUS_ARCHIVED).count(),
     }
@@ -287,7 +241,7 @@ def section_add(request):
     form = SectionForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            form.save()
+            section = form.save()
         except IntegrityError:
             messages.error(request, "A section with this name already exists for the selected grade and academic year.")
             return render(
@@ -296,6 +250,12 @@ def section_add(request):
                 {"form": form, "title": "Add Section"},
             )
         messages.success(request, "Section created successfully.")
+        # A saved section is empty, so send the registrar straight to the roster
+        # page where the students can be added. "next" skips it.
+        if request.POST.get("save_and_add_students") and has_permission(
+            request.user, "create_student_enrollment_inline"
+        ):
+            return redirect(reverse("academic:section_students", args=[section.pk]))
         return redirect(reverse("academic:section_list"))
     return render(
         request,
@@ -325,6 +285,145 @@ def section_update(request, pk):
         "academic_structure/section_form.html",
         {"form": form, "section": section, "title": "Update Section"},
     )
+
+
+def _enrol_students(section, students):
+    """Attach ``students`` to ``section``, moving any that sit elsewhere.
+
+    A learner holds only one active enrollment per academic year, so a student
+    who is already placed *this* year has that row archived and a fresh one
+    created here. A student arriving from an earlier year has no active row for
+    this year, so this is simply their first enrollment -- their previous year's
+    record stays on file either way. Returns the number actually enrolled.
+    """
+    enrolled = 0
+    for student in students:
+        StudentEnrollment.objects.filter(
+            student=student,
+            academic_year=section.academic_year,
+            status=StudentEnrollment.STATUS_ENROLLED,
+        ).update(status=StudentEnrollment.STATUS_ARCHIVED, archived_at=timezone.now())
+        try:
+            StudentEnrollment.objects.create(
+                student=student,
+                academic_year=section.academic_year,
+                section=section,
+                status=StudentEnrollment.STATUS_ENROLLED,
+            )
+            enrolled += 1
+        except IntegrityError:
+            # Another request enrolled them first; leave that row alone.
+            continue
+    return enrolled
+
+
+@perm_required("create_student_enrollment_inline")
+def section_students(request, pk):
+    """The roster of one section: add learners, bulk-copy, or remove one.
+
+    Creating a Section leaves it empty, so this is where a registrar puts
+    learners in it -- one checkbox at a time, or in bulk by copying the roster
+    of another section (last year's section of the same name, or a sister
+    section this year).
+    """
+    section = get_object_or_404(
+        Section.objects.select_related("academic_year", "adviser"), pk=pk
+    )
+
+    if request.method == "POST":
+        if "copy_from_section" in request.POST:
+            move_form = SectionStudentMoveForm(request.POST, section=section)
+            if move_form.is_valid():
+                source = move_form.cleaned_data["source_section"]
+                # The roster is read from the source's *own* year, so copying
+                # last year's section promotes that cohort into this year rather
+                # than pulling in whoever happens to sit in a same-named section
+                # now.
+                source_students = order_students(
+                    StudentProfile.objects.filter(
+                        enrollments__academic_year=source.academic_year,
+                        enrollments__section=source,
+                        enrollments__status=StudentEnrollment.STATUS_ENROLLED,
+                    ).distinct()
+                )
+                with transaction.atomic():
+                    copied = _enrol_students(section, source_students)
+                if copied:
+                    messages.success(
+                        request,
+                        "Copied {} student(s) from {} into {}.".format(
+                            copied, source, section
+                        ),
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "{} has no enrolled students to copy.".format(source),
+                    )
+                return redirect(reverse("academic:section_students", args=[section.pk]))
+        else:
+            assign_form = SectionStudentAssignForm(request.POST, section=section)
+            if assign_form.is_valid():
+                with transaction.atomic():
+                    added = _enrol_students(section, assign_form.cleaned_data["students"])
+                if added:
+                    messages.success(
+                        request, "Enrolled {} student(s) into {}.".format(added, section)
+                    )
+                else:
+                    messages.info(request, "No students were enrolled.")
+                return redirect(reverse("academic:section_students", args=[section.pk]))
+            return render(
+                request,
+                "academic_structure/section_students.html",
+                _section_students_context(section, assign_form=assign_form),
+            )
+
+    context = _section_students_context(
+        section,
+        assign_form=SectionStudentAssignForm(section=section),
+        move_form=SectionStudentMoveForm(section=section),
+    )
+    return render(request, "academic_structure/section_students.html", context)
+
+
+def _section_students_context(section, assign_form=None, move_form=None):
+    enrolled = order_students(
+        StudentEnrollment.objects.filter(
+            section=section, status=StudentEnrollment.STATUS_ENROLLED
+        ).select_related("student__user"),
+        prefix="student__",
+    )
+    candidates = assignable_students(section)
+    return {
+        "section": section,
+        "enrollments": enrolled,
+        "enrolled_count": enrolled.count(),
+        "assign_form": assign_form,
+        "move_form": move_form,
+        "candidates": candidates,
+        "candidate_count": candidates.count(),
+    }
+
+
+@require_POST
+@perm_required("archive_student_enrollment_inline")
+def section_student_remove(request, pk, enrollment_pk):
+    """Take one learner off the roster, leaving the learner record intact."""
+    section = get_object_or_404(Section, pk=pk)
+    enrollment = get_object_or_404(
+        StudentEnrollment.objects.select_related("student"),
+        pk=enrollment_pk,
+        section=section,
+    )
+    if enrollment.status == StudentEnrollment.STATUS_ENROLLED:
+        enrollment.status = StudentEnrollment.STATUS_ARCHIVED
+        enrollment.archived_at = timezone.now()
+        enrollment.save(update_fields=["status", "archived_at"])
+        messages.success(
+            request, "{} was removed from {}.".format(enrollment.student, section)
+        )
+    return redirect(reverse("academic:section_students", args=[section.pk]))
 
 
 @require_POST

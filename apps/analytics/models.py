@@ -5,10 +5,12 @@ class GeneratedReport(models.Model):
     TYPE_SUBMISSION_REPORT = "submission_report"
     TYPE_SF1 = "sf1"
     TYPE_SF2 = "sf2"
+    TYPE_SF3 = "sf3"
     REPORT_TYPE_CHOICES = [
         (TYPE_SUBMISSION_REPORT, "Submission and Assessment Report"),
         (TYPE_SF1, "School Form 1 (SF1)"),
         (TYPE_SF2, "School Form 2 (SF2)"),
+        (TYPE_SF3, "School Form 3 (SF3)"),
     ]
 
     report_type = models.CharField(max_length=30, choices=REPORT_TYPE_CHOICES)
@@ -41,6 +43,7 @@ def __str__(self):
 class SFReportTemplate(models.Model):
     FORM_SF1 = "sf1"
     FORM_SF2 = "sf2"
+    FORM_SF3 = "sf3"
     FORM_SF4 = "sf4"
     FORM_SF5 = "sf5"
     FORM_SF9 = "sf9"
@@ -48,6 +51,7 @@ class SFReportTemplate(models.Model):
     FORM_TYPE_CHOICES = [
         (FORM_SF1, "School Form 1 (SF1) - Learner Roster"),
         (FORM_SF2, "School Form 2 (SF2) - Daily Attendance"),
+        (FORM_SF3, "School Form 3 (SF3) - Summary of Attendance"),
         (FORM_SF4, "School Form 4 (SF4) - Monthly Report"),
         (FORM_SF5, "School Form 5 (SF5) - Report on Promotion"),
         (FORM_SF9, "School Form 9 (SF9) - Learner Progress Report Card"),

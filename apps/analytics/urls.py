@@ -11,6 +11,7 @@ urlpatterns = [
     path("attendance/", views.attendance_trends, name="attendance_trends"),
     path("reports/", views.submission_reports, name="submission_reports"),
     path("sf/", views.sf_report_home, name="sf_report_home"),
+    path("sf/templates/upload/", views.sf_template_upload, name="sf_template_upload"),
     path("sf/templates/<int:pk>/download/", views.sf_template_download, name="sf_template_download"),
     path("sf/templates/<int:pk>/delete/", views.sf_template_delete, name="sf_template_delete"),
     path("reports/<int:pk>/download/", views.report_download, name="report_download"),

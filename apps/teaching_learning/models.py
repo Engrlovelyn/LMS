@@ -82,6 +82,11 @@ class LearningResource(models.Model):
     available_from = models.DateField(null=True, blank=True)
     available_until = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    share_to_repository = models.BooleanField(
+        default=False,
+        help_text="When True, this resource appears in the subject-level Learning Repository. "
+        "Resources stay within the Virtual Classroom they were placed in unless shared here.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

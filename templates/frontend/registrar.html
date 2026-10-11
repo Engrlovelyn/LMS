@@ -14,6 +14,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/calendar.css' %}">
+<link rel="stylesheet" href="{% static 'css/empty_state.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+<!-- Defines window.TASS / TASS.empty.* . Must load before any inline script on
+     this page: the renderers below call TASS.empty.list/table/stats/chart, and
+     a bare "TASS.page = '...'" throws ReferenceError (TASS undefined), which
+     aborts the rest of that block and blanks the view. -->
+<script src="{% static 'js/empty_state.js' %}"></script>
+<script src="{% static 'js/demographics.js' %}"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
@@ -72,10 +81,10 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 /* SIDEBAR */
 .sidebar { position:fixed; top:var(--header-h); left:0; bottom:0; width:var(--sidebar-collapsed); background:var(--sidebar-bg); z-index:150; display:flex; flex-direction:column; overflow:hidden; transition:width var(--transition),box-shadow var(--transition),background var(--transition); border-right:1px solid rgba(255,255,255,0.06); }
 .sidebar:hover, body.sidebar-expanded .sidebar { width:var(--sidebar-w); box-shadow:4px 0 32px rgba(7,24,50,0.4); }
-.sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
+.sidebar-inner { flex:1; padding:8px 8px; display:flex; flex-direction:column; gap:1px; overflow-y:auto; overflow-x:hidden; }
 .sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:10px 10px 5px; white-space:nowrap; opacity:0; transition:opacity 0.15s; }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label { opacity:1; transition-delay:0.07s; }
-.nav-item { display:flex; align-items:center; gap:0; padding:10px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
+.nav-item { display:flex; align-items:center; gap:0; padding:6px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
 .nav-item-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; font-size:15.5px; flex-shrink:0; transition:color .18s; }
 .nav-item-label { opacity:0; transition:opacity 0.15s; padding-right:12px; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
@@ -715,8 +724,8 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="header-right"> 
       <button class="icon-btn" onclick="toggleNotif()"><i class="fa-solid fa-bell"></i><span class="badge"></span></button> 
       <button class="profile-btn" onclick="toggleProfile()"> 
-        <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>CB</text></svg>'"> 
-        <div><div class="profile-name">Mr. Carlo B. Fernandez</div><div class="profile-role">Registrar</div></div> 
+<img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials|default:"U" }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+        <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label }}</div></div>
         <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i> 
       </button> 
     </div> 
@@ -727,9 +736,9 @@ html,body{ width:100%; overflow-x:hidden; }
   </div> 
   <div class="profile-panel" id="profilePanel"> 
     <div class="profile-panel-header"> 
-      <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>CB</text></svg>'"> 
-      <div class="profile-panel-name">Mr. Carlo B. Fernandez</div> 
-      <div class="profile-panel-role">Registrar · Records Office</div> 
+<img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials|default:"U" }}</text></svg>" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+      <div class="profile-panel-name">{{ user_display_name }}</div>
+      <div class="profile-panel-role">{{ user_role_label }}</div>
     </div> 
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button> 
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button> 
@@ -740,22 +749,38 @@ html,body{ width:100%; overflow-x:hidden; }
 <div class="layout"> 
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner"> 
-    <div class="sidebar-section-label">Main Menu</div> 
-    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button> 
-    <div class="sidebar-label">Student Records</div> 
-    <button class="nav-item" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student List</span></button> 
-    <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Enrollment</span></button> 
-    <button class="nav-item" onclick="showView('sectioning')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sectioning</span></button> 
-        <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button> 
+    
+    <div class="sidebar-label">Main</div>
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+    <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
+    <div class="sidebar-label">Student Records</div>
+    <button class="nav-item" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student List</span></button>
+    <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Enrollment</span></button>
+    <button class="nav-item" onclick="showView('promotion')"><div class="nav-item-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></div><span class="nav-item-label">Promotion / Rollover</span></button>
+    <div class="sidebar-label">Academic Structure</div>
+    {% if perms.academic_structure.view_section_custom %}
+    <button class="nav-item" onclick="showView('sectioning')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sectioning</span></button>
+    {% endif %}
+    {% if perms.virtual_classrooms.view_virtual_classroom %}
+    <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+    {% endif %}
+    {% if perms.academic_structure.view_subject_custom %}
+    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button>
+    {% endif %}
+    {% if perms.academic_structure.validate_section_subject_coverage %}
     <button class="nav-item" onclick="showView('coverage')"><div class="nav-item-icon"><i class="fa-solid fa-check-double"></i></div><span class="nav-item-label">Subject Coverage</span></button>
-    <button class="nav-item" onclick="showView('promotion')"><div class="nav-item-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></div><span class="nav-item-label">Promotion / Rollover</span></button> 
-    <div class="sidebar-label">Academic Structure & Classes</div> 
-    <button class="nav-item" onclick="showView('acadyears')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-days"></i></div><span class="nav-item-label">Academic Years</span></button> 
-    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button> 
-    <div class="sidebar-label">Monitoring</div> 
-    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button> 
-    <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Reports</span></button> 
-    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button> 
+    {% endif %}
+    <div class="sidebar-label">Terms</div>
+    {% if perms.academic_structure.view_academic_year %}
+    <button class="nav-item" onclick="showView('acadyears')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-days"></i></div><span class="nav-item-label">Academic Years</span></button>
+    {% endif %}
+    <div class="sidebar-label">Monitoring</div>
+    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button>
+    <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Reports</span></button>
+    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-users-viewfinder"></i></div><span class="nav-item-label">Student Demographics</span></button>
+    <button class="nav-item" onclick="showView('staffdemographics')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Staff Demographics</span></button>
+    <div class="sidebar-label">Settings</div>
+    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
     <div class="sidebar-spacer"></div>
     </div> 
   </aside> 
@@ -774,7 +799,15 @@ html,body{ width:100%; overflow-x:hidden; }
           <div class="welcome-stat"><div class="val" id="wsSections">—</div><div class="lbl">Sections</div></div> 
           <div class="welcome-stat"><div class="val" id="wsTeachers">—</div><div class="lbl">Teachers</div></div> 
         </div> 
-      </div> 
+      </div>
+
+      <!-- ═════════════════════════ SCHOOL CALENDAR ═════════════════════════════ -->
+      <div class="card" style="margin-bottom:22px;">
+        <div class="card-body">
+          <div id="calRoot"></div>
+        </div>
+      </div>
+ 
 
       <div class="dash-filter-bar">
         <span style="font-size:12.5px;font-weight:700;color:var(--navy);display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-filter" style="color:var(--blue);"></i>Filters</span>
@@ -926,7 +959,9 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="view" id="view-sectioning"> 
       <div class="page-header"> 
         <div><div class="page-title">Sectioning</div><div class="page-sub">Manage class sections and teacher assignments</div></div> 
+        {% if perms.academic_structure.update_section_custom %}
         <button class="btn btn-reg" onclick="openSectionModal()"><i class="fa-solid fa-plus"></i> Add Section</button> 
+        {% endif %} 
       </div> 
       <div class="card"> 
         <div class="card-header"><div class="card-title">Class Sections</div></div> 
@@ -941,6 +976,82 @@ html,body{ width:100%; overflow-x:hidden; }
       </div> 
     </div> 
  
+    <!-- DEMOGRAPHICS -->
+    <div class="view" id="view-demographics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Student Demographics</div>
+          <div class="page-sub">Age and sex distribution across every learner record on file</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-person"></i></div><div class="stat-val" id="dmMale">&#8212;</div><div class="stat-label">Male</div></div>
+        <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-person-dress"></i></div><div class="stat-val" id="dmFemale">&#8212;</div><div class="stat-label">Female</div></div>
+        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-cake-candles"></i></div><div class="stat-val" id="dmAvgAge">&#8212;</div><div class="stat-label">Average Age</div></div>
+        <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-users"></i></div><div class="stat-val" id="dmTotal">&#8212;</div><div class="stat-label">Total Records</div></div>
+      </div>
+      <div class="analytics-row">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Age Distribution</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="dmAgeChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--warning)"></i> Sex Split</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="dmGenderChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-users-viewfinder" style="color:var(--blue)"></i> Learner List</div>
+          <input class="form-control" id="dmSearch" placeholder="Search learner, LRN..." style="width:220px;" oninput="TASS.demo.render({prefix:'dm', rows: window.__regStudentDemo || []})">
+        </div>
+        <div class="card-body" style="padding:8px 16px 12px;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Learner</th><th>LRN</th><th style="text-align:center;">Age</th><th>Grade &amp; Section</th><th style="text-align:center;">Gender</th></tr></thead>
+            <tbody id="dmTable"><tr class="tass-empty-row"><td colspan="5" style="text-align:center;padding:24px 12px;color:var(--text-muted);">No data yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ STAFF DEMOGRAPHICS ══════════ -->
+    <div class="view" id="view-staffdemographics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Staff Demographics</div>
+          <div class="page-sub">Age and sex distribution across every employee account on file</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-person"></i></div><div class="stat-val" id="sdmMale">&#8212;</div><div class="stat-label">Male</div></div>
+        <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-person-dress"></i></div><div class="stat-val" id="sdmFemale">&#8212;</div><div class="stat-label">Female</div></div>
+        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-cake-candles"></i></div><div class="stat-val" id="sdmAvgAge">&#8212;</div><div class="stat-label">Average Age</div></div>
+        <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-users"></i></div><div class="stat-val" id="sdmTotal">&#8212;</div><div class="stat-label">Staff</div></div>
+      </div>
+      <div class="analytics-row">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Age Distribution</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="sdmAgeChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--warning)"></i> Sex Split</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="sdmGenderChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-users-viewfinder" style="color:var(--blue)"></i> Staff List</div>
+          <input class="form-control" id="sdmSearch" placeholder="Search name, employee no..." style="width:220px;" oninput="TASS.demo.render({prefix:'sdm', rows: window.__regStaffDemo || []})">
+        </div>
+        <div class="card-body" style="padding:8px 16px 12px;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Name</th><th>Employee No.</th><th style="text-align:center;">Age</th><th>Role</th><th style="text-align:center;">Gender</th></tr></thead>
+            <tbody id="sdmTable"><tr class="tass-empty-row"><td colspan="5" style="text-align:center;padding:24px 12px;color:var(--text-muted);">No data yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ══════════ ACADEMIC STRUCTURE VALIDATION ══════════ -->
     <div class="view" id="view-coverage">
       <div class="page-header">
@@ -981,7 +1092,6 @@ html,body{ width:100%; overflow-x:hidden; }
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn btn-outline" onclick="generatePromotionPreview()"><i class="fa-solid fa-eye"></i> Generate Preview</button>
             <button class="btn btn-reg" onclick="confirmPromotion()"><i class="fa-solid fa-check"></i> Confirm Promotion</button>
-            <button class="btn btn-outline" onclick="loadPromotionDemo()"><i class="fa-solid fa-flask"></i> Load Demo Data</button>
             <button class="btn btn-outline" onclick="autoEnrollVC()"><i class="fa-solid fa-layer-group"></i> Auto-Enroll Virtual Classrooms</button>
           </div>
         </div>
@@ -991,15 +1101,18 @@ html,body{ width:100%; overflow-x:hidden; }
     <!-- ══════════ ACADEMIC YEARS ══════════ -->
     <div class="view" id="view-acadyears">
       <div class="page-header">
-        <div><div class="page-title">Academic Years</div><div class="page-sub">Add, update, and archive Academic Years — each year keeps its own versioned academic structure</div></div>
-        <button class="btn btn-reg" onclick="openAcadYearModal()"><i class="fa-solid fa-plus"></i> Add Academic Year</button>
+        <div><div class="page-title">Academic Years</div><div class="page-sub" id="acadYearsSub">Create the active school year and the sections and subjects that form it</div></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-reg" onclick="openCreateSchoolYear()"><i class="fa-solid fa-plus"></i> New School Year</button>
+          <button class="btn btn-outline" onclick="openRegRolloverModal()" title="Copy a previous year's sections, subjects and virtual classrooms into the active school year"><i class="fa-solid fa-copy"></i> Rollover / Carry Over</button>
+        </div>
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title"><i class="fa-solid fa-calendar-days" style="color:var(--reg);margin-right:8px;"></i>Academic Year List</div></div>
-        <div class="card-body" style="padding:0;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-calendar-days" style="color:var(--reg);margin-right:8px;"></i>Academic Years</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
           <table class="data-table">
-            <thead><tr><th>Academic Year</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="acadYearsBody"><tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr></tbody>
+            <thead><tr><th>School Year</th><th>Grading Structure</th><th>Starts</th><th>Ends</th><th>Sections</th><th>Subjects</th><th>Enrolled</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="regSchoolYearsBody"><tr><td colspan="9" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">Loading school years…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1009,7 +1122,9 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="view" id="view-subjects">
       <div class="page-header">
         <div><div class="page-title">Subjects</div><div class="page-sub">Define the subject set per grade level for the active Academic Structure (Applied / Elective)</div></div>
+        {% if perms.academic_structure.update_subject_custom %}
         <button class="btn btn-reg" onclick="openSubjectModal()"><i class="fa-solid fa-plus"></i> Add Subject</button>
+        {% endif %}
       </div>
       <div class="search-bar">
         <select class="form-select" id="subjFilterAY" style="width:auto;min-width:150px;" onchange="renderSubjects()"></select>
@@ -1031,7 +1146,9 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="view" id="view-classrooms">
       <div class="page-header">
         <div><div class="page-title">Virtual Classrooms</div><div class="page-sub">Create and manage Virtual Classrooms — assign teachers and enroll students</div></div>
+        {% if perms.virtual_classrooms.create_virtual_classroom %}
         <button class="btn btn-reg" onclick="openCreateVCModal()"><i class="fa-solid fa-plus"></i> Create Virtual Classroom</button>
+        {% endif %}
       </div>
 
       <div class="stats-grid" style="margin-bottom:20px;">
@@ -1175,7 +1292,7 @@ html,body{ width:100%; overflow-x:hidden; }
   
       <div class="stats-grid" style="margin-bottom:20px;"> 
         <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-val" id="attAvgRate">—</div><div class="stat-label">Avg. Attendance Rate</div></div> 
-        <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-calendar"></i></div><div class="stat-val" id="attSchoolDays">—</div><div class="stat-label">School Days</div></div> 
+        <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-calendar"></i></div><div class="stat-val" id="attSchoolDays">—</div><div class="stat-label">Student-Days Recorded</div></div> 
         <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-user-xmark"></i></div><div class="stat-val" id="attAtRisk">—</div><div class="stat-label">Students At-Risk (&lt;80%)</div></div> 
         <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><div class="stat-val" id="attAbsences">—</div><div class="stat-label">Total Absences</div></div> 
       </div> 
@@ -1314,21 +1431,42 @@ html,body{ width:100%; overflow-x:hidden; }
   </main> 
 </div>
  
-<!-- ACADEMIC YEAR MODAL --> 
-<div class="modal-overlay" id="acadYearModal"> 
-  <div class="modal-box"> 
-    <div class="modal-title" id="acadYearModalTitle">Add Academic Year</div> 
-    <div class="modal-sub">Create a new Academic Year record</div> 
-    <div class="form-group"><label class="form-label">Academic Year Label</label><input class="form-control" id="ayLabel" placeholder="e.g. S.Y. 2027–2028" data-required data-minlen="4" data-maxlength="60"></div> 
-    <div class="form-grid"> 
-      <div class="form-group"><label class="form-label">Start Date</label><input class="form-control" type="date" id="ayStart" data-required></div> 
-      <div class="form-group"><label class="form-label">End Date</label><input class="form-control" type="date" id="ayEnd" data-required></div> 
-    </div> 
-    <div class="modal-footer"> 
-      <button class="btn btn-outline" onclick="closeModal('acadYearModal')">Cancel</button> 
-      <button class="btn btn-reg" onclick="saveAcadYear()"><i class="fa-solid fa-check"></i> Save Academic Year</button> 
-    </div> 
-  </div> 
+<!-- NEW SCHOOL YEAR MODAL -->
+<div class="modal-overlay" id="createSchoolYearModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="fa-solid fa-calendar-day" style="color:var(--reg);margin-right:8px;"></i> New School Year</div>
+    <div class="modal-sub">The new year is created as the active school year. The previous active year is automatically archived, since the institution runs one academic year at a time. Choose the grading structure — it governs how assessments and grades are computed for the whole year.</div>
+    <div class="form-group" style="margin-top:12px;"><label class="form-label">Academic Year Label *</label><input id="syLabel" class="form-control" placeholder="e.g. 2026-2027" data-required data-maxlength="9"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Start Date *</label><input id="syStart" class="form-control" type="date" data-required></div>
+      <div class="form-group"><label class="form-label">End Date *</label><input id="syEnd" class="form-control" type="date" data-required></div>
+    </div>
+    <div class="form-group"><label class="form-label">Grading Structure *</label><select id="syGrading" class="form-select">
+      <option value="QUARTER">Quarter — 4 grading periods</option>
+      <option value="SEMESTER">Semester — 2 grading periods</option>
+      <option value="TRIMESTER">Trimester — 3 grading periods</option>
+    </select></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('createSchoolYearModal')">Cancel</button>
+      <button class="btn btn-reg" onclick="saveCreateSchoolYear()"><i class="fa-solid fa-plus"></i> Create School Year</button>
+    </div>
+  </div>
+</div>
+<!-- ROLLOVER MODAL -->
+<div class="modal-overlay" id="regRolloverModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="fa-solid fa-copy" style="color:var(--reg);margin-right:8px;"></i> Carry Over Data From a Previous Year</div>
+    <div class="modal-sub">Copies the sections, subjects and virtual classrooms of the source year into the active school year. Section advisers and classroom teachers are kept. Anything that already exists in the target year is skipped, and students are <strong>not</strong> carried over &mdash; enrol them separately afterwards.</div>
+    <div class="form-group" id="regRoSourceGroup" style="margin-top:12px;"><label class="form-label">Copy From *</label><select id="regRoSource" class="form-select" onchange="previewRegRollover()"></select></div>
+    <div class="form-group"><label class="form-label">Copy Into</label><input id="regRoTarget" class="form-control" readonly></div>
+    <div id="regRoPreview" style="font-size:12.5px;color:var(--text-muted);line-height:1.7;margin-top:6px;"></div>
+    <div id="regRoResult" style="display:none;margin-top:12px;font-size:12.5px;line-height:1.7;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('regRolloverModal')">Cancel</button>
+      <button class="btn btn-outline" id="regRoRefreshBtn" style="display:none;" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> Refresh &amp; Close</button>
+      <button class="btn btn-reg" id="regRoRunBtn" onclick="runRegRollover()"><i class="fa-solid fa-copy"></i> Carry Over</button>
+    </div>
+  </div>
 </div> 
 
 <!-- SUBJECT MODAL --> 
@@ -1561,9 +1699,21 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="modal-title" id="sectionModalTitle">Add Section</div>
     <div class="modal-sub" id="sectionModalSub">Create a new class section for the current school year</div>
     <div class="form-group"><label class="form-label">Academic Year</label><select class="form-select" id="sectionAY"></select></div>
-    <div class="form-group"><label class="form-label">Grade Level</label><select class="form-select" id="sectionGrade"><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select></div>
+    <div class="form-group"><label class="form-label">Grade Level</label><select class="form-select" id="sectionGrade" onchange="renderSectionStudentPicker()"><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select></div>
     <div class="form-group"><label class="form-label">Section Name</label><input id="sectionName" class="form-control" placeholder="e.g. Section A, Section B..." data-required data-minlen="1" data-maxlength="80"></div>
     <div class="form-group"><label class="form-label">Adviser / Class Teacher</label><select class="form-select" id="sectionAdviser"><option value="">Select adviser</option></select></div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Students</label>
+      <div class="form-help" style="margin-bottom:8px;color:var(--gray-400);">Add students one by one, or bulk import them from a CSV / text file of LRNs or names. Existing student accounts are enrolled — no new accounts are created.</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input class="form-control" id="sectionStudentSearch" placeholder="Search existing students by LRN or name…" oninput="filterSectionStudentSearch()">
+        <button class="btn btn-outline" style="white-space:nowrap;" onclick="openSectionImport()"><i class="fa-solid fa-file-import"></i> Bulk Import</button>
+      </div>
+      <div id="sectionStudentCandidates" style="max-height:170px;overflow:auto;border:1px solid var(--gray-100);border-radius:8px;background:var(--gray-50);"></div>
+      <div id="sectionStudentList" style="margin-top:8px;"></div>
+      <div id="sectionImportStatus"></div>
+      <input type="file" id="sectionImportFile" style="display:none;" accept=".csv,.txt,.xls,.xlsx" onchange="handleSectionImportFile(event)">
+    </div>
     <div id="sectionValidation" class="form-help" style="display:none;margin-top:8px;"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('sectionModal')">Cancel</button>
@@ -1600,6 +1750,8 @@ function showView(id) {
   closeAllPanels(); 
   if (id === 'dashboard') setTimeout(initCharts, 100); 
   if (id === 'import') goImportStep(1); 
+  if (id === 'demographics' && window.TASS && TASS.demo) TASS.demo.render({ prefix: 'dm', rows: window.__regStudentDemo || [] });
+  if (id === 'staffdemographics' && window.TASS && TASS.demo) TASS.demo.render({ prefix: 'sdm', rows: window.__regStaffDemo || [] });
 } 
  
 // ── IMPORT STEPS ── 
@@ -1720,14 +1872,17 @@ function completeImport() {
 function openEnrollModal() { if(window.populateSectionAY)window.populateSectionAY(); openModal('enrollModal'); } 
 var editingSectionIdx=-1; 
 function openSectionModal() { 
-  editingSectionIdx=-1; 
-  const g=document.getElementById('sectionGrade'),n=document.getElementById('sectionName'),a=document.getElementById('sectionAdviser'),ay=document.getElementById('sectionAY'); 
-  populateSectionAY();
-  if(ay&&ay.options.length)ay.value=(window.getCurrentAY?window.getCurrentAY():ay.options[ay.options.length-1].value); if(g)g.value='Grade 7'; if(n)n.value=''; if(a)a.value=''; 
-  const t=document.getElementById('sectionModalTitle'),s=document.getElementById('sectionModalSub'); 
-  if(t)t.textContent='Add Section'; if(s)s.textContent='Create a new class section for the current school year'; 
-  populateAdvisers(); openModal('sectionModal'); 
-} 
+   editingSectionIdx=-1; 
+   window.__sectionStudents=window.__sectionStudents||[];
+   window.__sectionStudents.length=0;
+   const g=document.getElementById('sectionGrade'),n=document.getElementById('sectionName'),a=document.getElementById('sectionAdviser'),ay=document.getElementById('sectionAY'); 
+   populateSectionAY();
+   if(ay&&ay.options.length)ay.value=(window.getCurrentAY?window.getCurrentAY():ay.options[ay.options.length-1].value); if(g)g.value='Grade 7'; if(n)n.value=''; if(a)a.value=''; 
+   const t=document.getElementById('sectionModalTitle'),s=document.getElementById('sectionModalSub'); 
+   if(t)t.textContent='Add Section'; if(s)s.textContent='Create a new class section for the current school year'; 
+   populateAdvisers(); var sr=document.getElementById('sectionStudentSearch'); if(sr)sr.value=''; var sc=document.getElementById('sectionStudentCandidates'); if(sc)sc.innerHTML=''; var sl=document.getElementById('sectionStudentList'); if(sl)sl.innerHTML=''; var si=document.getElementById('sectionImportStatus'); if(si)si.innerHTML=''; 
+   openModal('sectionModal'); renderSectionStudentPicker();
+ }
 var currentStudentLRN=null; 
 function openStudentModal(name, lrn, grade, section) { 
   currentStudentLRN=lrn; 
@@ -1837,7 +1992,7 @@ function saveMissingEmails(){
 function openProfileModal(){ 
   const rows=document.getElementById('profileModalRows'); 
   if(rows){ 
-    rows.innerHTML=det('Full Name','Mr. Carlo B. Fernandez')+det('Role','Registrar · Records Office')+det('Employee ID','SVI-REC-0042')+det('Email','carlo.fernandez@sanvicente.edu.ph')+det('Contact','0917 555 0042')+det('Account Status','Active · Verified'); 
+    rows.innerHTML=det('Full Name','{{ user_display_name|default:"" }}')+det('Role','{{ user_role_label|default:"" }}')+det('Email','{{ user_email|default:"" }}')+det('Contact','')+det('Account Status','Active'); 
   } 
   openModal('profileModal'); 
 } 
@@ -1911,25 +2066,52 @@ function applyAYFilter(){
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); } 
  
 // ── CHARTS ── 
+// Enrollment by grade level and sex, counted from the real student records.
+// The series used to be six hardcoded zeros, so the chart never drew anything
+// even with a full roster loaded. Grade levels and sexes come from the data
+// itself, so no label is hardcoded either.
+// A record with no recorded sex is counted under 'Not recorded' rather than
+// dropped: the roster import leaves sex blank when the source omits it, and
+// silently omitting those learners made the bars sum to far fewer students
+// than the school actually has.
 let enrollChart; 
+const UNSPECIFIED_SEX='Not recorded'; 
+function enrollmentSeries(){
+  const st=(typeof window.getRegState==='function')?window.getRegState():null;
+  const students=(st&&Array.isArray(st.students))?st.students:[];
+  const active=students.filter(s=>s.status!=='Archived'&&s.status!=='Alumni');
+  const levels=[...new Set(active.map(s=>s&&s.grade).filter(Boolean))].sort();
+  if(!levels.length)return null;
+  const sexes=[...new Set(active.map(s=>s&&s.gender).filter(Boolean))].sort();
+  if(!sexes.includes(UNSPECIFIED_SEX)) sexes.push(UNSPECIFIED_SEX);
+  const datasets=sexes.map((sex,i)=>({
+    label:sex,
+    data:levels.map(g=>active.filter(s=>s.grade===g&&(s.gender||UNSPECIFIED_SEX)===sex).length),
+    backgroundColor:sex===UNSPECIFIED_SEX?'#9aa8b8':['#3a86d4','#1e5faf','#e99b2a','#7c3aed','#16a34a'][i%5],
+    borderRadius:6,
+    barThickness:18
+  }));
+  return {labels:levels,datasets:datasets};
+}
 function initCharts() { 
   if (enrollChart) enrollChart.destroy(); 
   const ctx = document.getElementById('enrollChart'); 
   if (!ctx) return; 
   if (typeof Chart === 'undefined') return; 
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif"; 
+  const series=enrollmentSeries();
+  if(!series){
+    TASS.empty.chart('enrollChart',{source:'enrollment.by_grade_and_sex'});
+    return;
+  }
+  TASS.empty.fillChart('enrollChart');
   enrollChart = new Chart(ctx, { 
     type:'bar', 
-    data:{ 
-      labels:['Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'], 
-      datasets:[ 
-        {label:'Male',data:[0,0,0,0,0,0],backgroundColor:'#3a86d4',borderRadius:6,barThickness:18}, 
-        {label:'Female',data:[0,0,0,0,0,0],backgroundColor:'#1e5faf',borderRadius:6,barThickness:18} 
-      ] 
-    }, 
+    data:{labels:series.labels,datasets:series.datasets}, 
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}},scales:{x:{stacked:false},y:{ticks:{stepSize:10}}}} 
   }); 
-    } 
+} 
+window.refreshEnrollChart=initCharts;
  
 // ── CLICK OUTSIDE ── 
 document.addEventListener('click', function(e) { 
@@ -2003,8 +2185,15 @@ initCharts();
   const PASSING_GRADE=75;
   const SHS_TRACKS=['Academic','Technical-Vocational-Livelihood','Aesthetic, Wellness, and Human Care','Agri-Fishery Business and Food Innovation','Artisanry and Creative Enterprise','Automotive and Small Engine Technologies','Construction and Building Technologies','Creative Arts and Design Technologies','Hospitality and Tourism','ICT Support and Computer Programming Technologies','Industrial Technologies','Maritime Transport'];
   const ELEM_SUBJECTS=['Mother Tongue','Filipino','English','Mathematics','Science','Araling Panlipunan','MAPEH','ESP'];
-  const STORE='tass_registrar_demo_v2';
+  const STORE='tass_registrar_state_v1';
+  // The old store key was literally named 'tass_registrar_demo_v2' and held a
+  // fabricated roster. api_bridge.js watches that key and POSTs it to
+  // students/, so any browser still holding it would have written demo records
+  // into PostgreSQL. Drop it before the bridge ever reads a store key.
+  try{ if(localStorage.getItem('tass_registrar_demo_v2')) localStorage.removeItem('tass_registrar_demo_v2'); }catch(e){}
   window.GRADES=GRADES;
+  /* No placeholder roster. Every collection starts empty and is filled only by
+     the backend bridge from apps/dashboards/context.py. */
   const DEFAULTS={
     students:[
       {last:'Santos',first:'Maria',middle:'Dela Cruz',lrn:'136100100001',gender:'Female',birth:'2012-05-14',contact:'09171234501',grade:'Grade 7',section:'Section A',guardian:'R. Santos',email:'maria.santos@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:'maria.santos@sanvicente.edu.ph',tempPass:'SVI0101',accountVerified:false},
@@ -2076,53 +2265,266 @@ initCharts();
   const state=JSON.parse(localStorage.getItem(STORE)||'null')||JSON.parse(JSON.stringify(DEFAULTS));
   state.students=state.students||[];state.sections=state.sections||[];state.logs=state.logs||[];
   state.academicYears=state.academicYears||[];state.subjects=state.subjects||[];state.virtualClassrooms=state.virtualClassrooms||[];
-  state.subjectApplications=state.subjectApplications||[];
+  state.subjectApplications=state.subjectApplications||[];state.attendance=state.attendance||[];
   state.attendanceThreshold=state.attendanceThreshold==null?80:state.attendanceThreshold;
   state.academicYear=state.academicYear||DEFAULTS.academicYear;
   state.gradingPeriod=state.gradingPeriod||DEFAULTS.gradingPeriod;
   state.vcCount=state.vcCount||0;
   function save(){localStorage.setItem(STORE,JSON.stringify(state));}
   function log(action,detail){state.logs.unshift({action,detail,time:new Date().toLocaleString()});if(state.logs.length>120)state.logs.length=120;save();}
-  window.__regSave=save; window.__regLog=log;
-  window.getRegState=function(){return state;};
-  window.getCurrentAY=function(){return state.academicYear;};
-  window.getStudentByLRN=function(lrn){return state.students.find(function(s){return s.lrn===lrn;})||null;};
-  function gradeNum(g){return parseInt(String(g||'').replace(/\D/g,''),10)||0;}
-  function requiredSubjects(grade){
-    const map={'Grade 1':ELEM_SUBJECTS,'Grade 2':ELEM_SUBJECTS,'Grade 3':ELEM_SUBJECTS,'Grade 4':ELEM_SUBJECTS,'Grade 5':ELEM_SUBJECTS,'Grade 6':ELEM_SUBJECTS,'Grade 7':['English','Mathematics','Science','Filipino','Araling Panlipunan','MAPEH','ESP'],'Grade 8':['English','Mathematics','Science','Filipino','Araling Panlipunan','MAPEH','ESP'],'Grade 9':['English','Mathematics','Science','Filipino','Araling Panlipunan','MAPEH','ESP'],'Grade 10':['English','Mathematics','Science','Filipino','Araling Panlipunan','MAPEH','ESP'],'Grade 11':['Oral Communication','General Mathematics','Earth Science','21st Century Literature'],'Grade 12':['English for Academic Purposes','Statistics and Probability','Personal Development','Work Immersion']};
-    return map[grade]||[];
-  }
   window.markAllRead=function(){document.querySelectorAll('.notif-unread').forEach(x=>x.classList.remove('notif-unread'));const b=document.querySelector('.icon-btn .badge');if(b)b.style.display='none';showToast('All notifications marked as read.','success');};
   window.initTheme();
   window.toggleSidebar=function(){const sb=document.getElementById('sidebar'),layout=document.querySelector('.layout');if(!sb)return;if(window.innerWidth<=900){sb.classList.toggle('mobile-open');}else{sb.classList.toggle('collapsed');layout&&layout.classList.toggle('sidebar-collapsed');}};
-  const originalShowView=window.showView;window.showView=function(id){const el=document.getElementById('view-'+id);if(!el){showToast('Page is not available.','error');return;}originalShowView(id);if(id==='promotion'&&window.renderPromotionDraft)window.renderPromotionDraft();if(id==='reports')updateStats();if(id==='acadyears')renderAcadYears();if(id==='subjects'){populateSubjFilters();renderSubjects();}if(id==='classrooms'){populateVCFilters();renderVCTable();}if(id==='attendance')renderAttendance();};
+  const originalShowView=window.showView;window.showView=function(id){const el=document.getElementById('view-'+id);if(!el){showToast('Page is not available.','error');return;}originalShowView(id);if(id==='promotion'&&window.renderPromotionDraft)window.renderPromotionDraft();if(id==='reports')updateStats();if(id==='acadyears')renderAcadYears();if(id==='subjects'){populateSubjFilters();renderSubjects();}if(id==='classrooms'){populateVCFilters();renderVCTable();}if(id==='coverage'&&window.populateCoverageFilters)populateCoverageFilters();if(id==='attendance')renderAttendance();};
 
-  // ── ACADEMIC YEARS (Module 3.1–3.3) ──
-  window.renderAcadYears=function(){
-    const tb=document.getElementById('acadYearsBody');if(!tb)return;
-    if(!state.academicYears.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}
-    tb.innerHTML=state.academicYears.map((a,i)=>{const st=a.status==='Active'?'<span class="pill active">Active</span>':'<span class="pill">Archived</span>';return '<tr><td><strong>'+escHtml(a.label)+'</strong></td><td>'+escHtml(a.start||'—')+'</td><td>'+escHtml(a.end||'—')+'</td><td>'+st+'</td><td><button class="btn btn-outline btn-sm" onclick="editAcadYear('+i+')"><i class="fa-solid fa-pen"></i> Edit</button> <button class="btn btn-outline btn-sm" onclick="archiveAcadYear('+i+')"><i class="fa-solid fa-box-archive"></i> Archive</button></td></tr>';}).join('');
+  // ── ACADEMIC YEARS / SCHOOL YEARS (API-backed) ──
+  // Mirrors the System Admin's School Year view so both dashboards manage the
+  // same server records the same way: GET paints the table, every mutation
+  // POSTs to /api/academic-year/ and repaints from the response payload.
+  function regCsrf(){
+    if (window.csrfToken) return window.csrfToken;
+    try { var m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)'); return m ? decodeURIComponent(m.pop()) : ''; } catch (e) { return ''; }
+  }
+  function regJson(url, opts){
+    opts = opts || {};
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+    var init = { method: opts.method || 'GET', credentials: 'same-origin', signal: ctrl ? ctrl.signal : undefined, headers: {} };
+    if (opts.body !== undefined){ init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opts.body); }
+    init.headers['X-CSRFToken'] = regCsrf();
+    return fetch(url, init).then(function(r){
+      if (timer) clearTimeout(timer);
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        if (!r.ok || d.ok === false){
+          var e = new Error(d.message || ('request failed (' + r.status + ')'));
+          e.payload = d;
+          throw e;
+        }
+        return d;
+      });
+    }, function(){
+      if (timer) clearTimeout(timer);
+      throw new Error('The server did not respond — reconnect and try again.');
+    });
+  }
+  function regYears(){ return Array.isArray(window.__regSchoolYears) ? window.__regSchoolYears : null; }
+  function regActiveYear(){ var ys = regYears() || []; for (var i = 0; i < ys.length; i++){ if (ys[i].status === 'Active') return ys[i]; } return null; }
+  // The server owns the years, but the rest of this dashboard still reads
+  // state.academicYears (create-VC dropdown, year filters), so keep a mirrored,
+  // formatted copy of whatever the API returned.
+  function syncRegYearStore(){
+    var st = (window.getRegState ? window.getRegState() : null);
+    var ys = regYears() || [];
+    if (st && Array.isArray(st.academicYears) && ys.length){
+      st.academicYears.length = 0;
+      ys.forEach(function(y){
+        st.academicYears.push({
+          label: 'S.Y. ' + String(y.label || '').replace('-', '–'),
+          start: y.start || '',
+          end: y.end || '',
+          status: y.status === 'Active' ? 'Active' : 'Archived'
+        });
+      });
+      if (window.__regSave) window.__regSave();
+    }
+    if (window.updateStats) window.updateStats();
+  }
+  function applyRegYears(d){
+    if (d && Array.isArray(d.years)) window.__regSchoolYears = d.years;
+    syncRegYearStore();
+    paintRegSchoolYears();
+  }
+  function paintRegSchoolYears(){
+    var box = document.getElementById('regSchoolYearsBody');
+    var sub = document.getElementById('acadYearsSub');
+    var ys = regYears();
+    if (!box || !ys) return;
+    var active = regActiveYear();
+    if (sub) sub.textContent = active
+      ? 'Active school year: S.Y. ' + String(active.label).replace('-', '–') + ' · grading structure ' + ((active.gradingPeriod && active.gradingPeriod.label) || '—')
+      : 'No active school year yet. Create one to start building the academic structure.';
+    if (!ys.length){
+      box.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No school years have been created yet.<br><span style="color:var(--gray-400);">Create the current school year to begin building the academic structure.</span></td></tr>';
+      return;
+    }
+    box.innerHTML = ys.map(function(y){
+      var isActive = y.status === 'Active';
+      var pill = isActive
+        ? '<span class="pill active">ACTIVE</span>'
+        : '<span class="pill" style="background:#2a3a4e;color:#8aaccc;">ARCHIVED</span>';
+      var g = y.gradingPeriod || {};
+      var grading = '<select class="form-select" style="width:auto;font-size:11.5px;padding:4px 8px;" onchange="setYearGrading(' + y.id + ',this.value)" title="Change this school year\'s grading structure">' + [['QUARTER','Quarter'],['SEMESTER','Semester'],['TRIMESTER','Trimester']].map(function(p){
+        return '<option value="' + escHtml(p[0]) + '"' + (p[0] === g.code ? ' selected' : '') + '>' + escHtml(p[1]) + '</option>';
+      }).join('') + '</select>';
+      var actions = isActive
+        ? '<span style="font-size:11px;color:var(--gray-400);">Current year</span>'
+        : '<button class="btn btn-outline btn-sm" onclick="activateRegYear(' + y.id + ')" title="Make this the active school year"><i class="fa-solid fa-play"></i> Activate</button> <button class="btn btn-outline btn-sm" onclick="archiveRegYear(' + y.id + ')" title="Archive this school year"><i class="fa-solid fa-box-archive"></i> Archive</button>';
+      if (ys.length > 1){
+        actions += ' <button class="btn btn-outline btn-sm" onclick="openRegRolloverModal(' + y.id + ')" title="Copy this year\'s sections, subjects and virtual classrooms into the active school year"><i class="fa-solid fa-copy"></i> Rollover</button>';
+      }
+      return '<tr>' +
+        '<td><strong style="white-space:nowrap;">' + escHtml(y.label) + '</strong></td>' +
+        '<td>' + grading + '</td>' +
+        '<td>' + escHtml(y.start || '—') + '</td>' +
+        '<td>' + escHtml(y.end || '—') + '</td>' +
+        '<td style="text-align:center;">' + (y.sections || 0) + '</td>' +
+        '<td style="text-align:center;">' + (y.subjects || 0) + '</td>' +
+        '<td style="text-align:center;">' + (y.enrolled || 0) + '</td>' +
+        '<td>' + pill + '</td>' +
+        '<td style="white-space:nowrap;">' + actions + '</td></tr>';
+    }).join('');
+  }
+  window.renderAcadYears = function(){
+    var box = document.getElementById('regSchoolYearsBody');
+    if (!box) return;
+    if (regYears()){ paintRegSchoolYears(); return; }
+    if (window.__regYearsPending) return;
+    window.__regYearsPending = true;
+    regJson('/api/academic-year/').then(function(d){
+      window.__regYearsPending = false;
+      applyRegYears(d);
+    }).catch(function(){
+      window.__regYearsPending = false;
+      // Never leave the table on a spinner: fall back to the years already
+      // embedded in the page payload. The cache stays unset so the next paint
+      // retries the endpoint instead of freezing on the fallback rows.
+      var st = (window.getRegState ? window.getRegState() : null);
+      var local = (st && st.academicYears) || [];
+      if (!local.length){
+        box.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';
+        return;
+      }
+      box.innerHTML = local.map(function(a){
+        var pill = a.status === 'Active'
+          ? '<span class="pill active">ACTIVE</span>'
+          : '<span class="pill" style="background:#2a3a4e;color:#8aaccc;">ARCHIVED</span>';
+        return '<tr><td><strong style="white-space:nowrap;">' + escHtml(a.label) + '</strong></td>' +
+          '<td>—</td><td>' + escHtml(a.start || '—') + '</td><td>' + escHtml(a.end || '—') + '</td>' +
+          '<td style="text-align:center;">—</td><td style="text-align:center;">—</td><td style="text-align:center;">—</td>' +
+          '<td>' + pill + '</td><td style="font-size:11px;color:var(--gray-400);">Refresh to manage</td></tr>';
+      }).join('');
+    });
   };
-  let editingAY=-1;
-  window.openAcadYearModal=function(){editingAY=-1;const t=document.getElementById('acadYearModalTitle');if(t)t.textContent='Add Academic Year';document.getElementById('ayLabel').value='';document.getElementById('ayStart').value='';document.getElementById('ayEnd').value='';openModal('acadYearModal');};
-  window.editAcadYear=function(i){editingAY=i;const a=state.academicYears[i];if(!a)return;const t=document.getElementById('acadYearModalTitle');if(t)t.textContent='Update Academic Year';document.getElementById('ayLabel').value=a.label;document.getElementById('ayStart').value=a.start||'';document.getElementById('ayEnd').value=a.end||'';openModal('acadYearModal');};
-  window.saveAcadYear=function(){
-    if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('acadYearModal')))return;
-    const label=document.getElementById('ayLabel').value.trim();
-    const start=document.getElementById('ayStart').value,end=document.getElementById('ayEnd').value;
-    if(!label){showToast('Academic Year label is required.','error');return;}
-    if(!start||!end){showToast('Start and End dates are required.','error');return;}
-    if(start>end){showToast('End date must be after the start date.','error');return;}
-    if(state.academicYears.some((a,i)=>i!==editingAY&&a.label===label)){showToast('Academic Year label already exists.','error');return;}
-    if(editingAY<0){state.academicYears.push({label,start,end,status:'Active'});log('Add Academic Year',label+' · '+start+' to '+end);}
-    else{state.academicYears[editingAY].label=label;state.academicYears[editingAY].start=start;state.academicYears[editingAY].end=end;log('Update Academic Year',label);}
-    save();closeModal('acadYearModal');renderAcadYears();updateStats();showToast('Academic Year saved.','success');
+  window.openCreateSchoolYear = function(){
+    document.getElementById('syLabel').value = '';
+    document.getElementById('syStart').value = '';
+    document.getElementById('syEnd').value = '';
+    document.getElementById('syGrading').value = 'QUARTER';
+    openModal('createSchoolYearModal');
   };
-  window.archiveAcadYear=function(i){
-    const a=state.academicYears[i];if(!a)return;
-    if(a.status==='Archived'){showToast('Academic Year is already archived.','info');return;}
-    if(!confirm('Archive '+a.label+'? It will no longer be selectable, but all linked structural and historical records are retained for that year.'))return;
-    a.status='Archived';save();log('Archive Academic Year',a.label);renderAcadYears();updateStats();showToast('Academic Year archived.','success');
+  window.saveCreateSchoolYear = function(){
+    if (typeof tassValidate === 'function' && !tassValidate(document.getElementById('createSchoolYearModal'))) return;
+    var label = (document.getElementById('syLabel').value || '').trim();
+    var start = document.getElementById('syStart').value;
+    var end = document.getElementById('syEnd').value;
+    var grading = document.getElementById('syGrading').value;
+    if (!label){ showToast('Enter the Academic Year label, e.g. 2026-2027.','error'); return; }
+    if (!start || !end){ showToast('Start and end dates are required.','error'); return; }
+    regJson('/api/academic-year/', { method: 'POST', body: { action: 'create', label: label, start: start, end: end, gradingPeriodType: grading } })
+      .then(function(d){
+        closeModal('createSchoolYearModal');
+        showToast('School Year ' + label + ' created and set as active!','success');
+        log('Add Academic Year', label + ' · ' + start + ' to ' + end);
+        applyRegYears(d);
+      })
+      .catch(function(err){ showToast(err.message || 'Could not create the school year.','error'); });
+  };
+  window.setYearGrading = function(id, code){
+    if (!code){ showToast('Select a grading structure for the year.','error'); return; }
+    regJson('/api/academic-year/', { method: 'POST', body: { action: 'grading', id: id, gradingPeriodType: code } })
+      .then(function(d){
+        var y = (regYears() || []).filter(function(r){ return r.id === id; })[0];
+        showToast('Grading structure updated for S.Y. ' + (y ? y.label : id) + '.','success');
+        applyRegYears(d);
+      })
+      .catch(function(err){ showToast(err.message || 'Could not update the grading structure.','error'); });
+  };
+  window.activateRegYear = function(id){
+    regJson('/api/academic-year/', { method: 'POST', body: { action: 'activate', id: id } })
+      .then(function(d){
+        var y = (regYears() || []).filter(function(r){ return r.id === id; })[0];
+        showToast('S.Y. ' + (y ? y.label : id) + ' is now the active school year.','success');
+        log('Activate Academic Year', y ? y.label : String(id));
+        applyRegYears(d);
+      })
+      .catch(function(err){ showToast(err.message || 'Could not activate that school year.','error'); });
+  };
+  window.archiveRegYear = function(id){
+    var y = (regYears() || []).filter(function(r){ return r.id === id; })[0];
+    if (y && y.status !== 'Active' && !confirm('Archive S.Y. ' + y.label + '? It will no longer be selectable, but all linked structural and historical records are retained for that year.')) return;
+    regJson('/api/academic-year/', { method: 'POST', body: { action: 'archive', id: id } })
+      .then(function(d){
+        showToast('S.Y. ' + (y ? y.label : id) + ' archived.','success');
+        log('Archive Academic Year', y ? y.label : String(id));
+        applyRegYears(d);
+      })
+      .catch(function(err){ showToast(err.message || 'Could not archive that school year.','error'); });
+  };
+  window.openRegRolloverModal = function(id){
+    var ys = regYears() || [];
+    var sources = ys.filter(function(y){ return y.status !== 'Active'; });
+    var sel = document.getElementById('regRoSource');
+    var prev = document.getElementById('regRoPreview');
+    var run = document.getElementById('regRoRunBtn');
+    var refresh = document.getElementById('regRoRefreshBtn');
+    var res = document.getElementById('regRoResult');
+    res.style.display = 'none'; res.innerHTML = '';
+    run.style.display = ''; run.disabled = false;
+    refresh.style.display = 'none';
+    var active = regActiveYear();
+    document.getElementById('regRoTarget').value = 'S.Y. ' + ((active && String(active.label).replace('-', '–')) || '—');
+    if (!sources.length){
+      // Only one year on record: there is nothing to copy from until the next
+      // school year is created (which archives the current one).
+      sel.innerHTML = '';
+      document.getElementById('regRoSourceGroup').style.display = 'none';
+      prev.innerHTML = '<span style="color:#f0ac3a;"><i class="fa-solid fa-triangle-exclamation"></i> No earlier school year is on record, so there is nothing to carry over yet. '
+        + 'Use <strong>New School Year</strong> first — the current year is archived automatically — then come back and roll it into the new one.</span>';
+      run.style.display = 'none';
+      openModal('regRolloverModal');
+      return;
+    }
+    document.getElementById('regRoSourceGroup').style.display = '';
+    sel.innerHTML = sources.map(function(y){
+      return '<option value="' + y.id + '"' + (String(y.id) === String(id) ? ' selected' : '') + '>S.Y. ' + escHtml(y.label) + ' — ' + (y.sections || 0) + ' sections, ' + (y.subjects || 0) + ' subjects</option>';
+    }).join('');
+    previewRegRollover();
+    openModal('regRolloverModal');
+  };
+  window.previewRegRollover = function(){
+    var id = parseInt(document.getElementById('regRoSource').value, 10);
+    var ys = regYears() || [];
+    var y = ys.filter(function(r){ return r.id === id; })[0];
+    var active = regActiveYear();
+    var box = document.getElementById('regRoPreview');
+    if (!box) return;
+    if (!y){ box.textContent = ''; return; }
+    box.innerHTML = 'Will copy <strong>' + (y.sections || 0) + '</strong> sections, <strong>' + (y.subjects || 0) + '</strong> subjects and <strong>' + (y.classrooms || 0) + '</strong> virtual classrooms into S.Y. ' + escHtml(active ? String(active.label).replace('-', '–') : '—') + '.';
+  };
+  window.runRegRollover = function(){
+    var id = parseInt(document.getElementById('regRoSource').value, 10);
+    if (!id){ showToast('Choose the school year to copy data from.','error'); return; }
+    var btn = document.getElementById('regRoRunBtn');
+    btn.disabled = true;
+    regJson('/api/academic-year/', { method: 'POST', body: { action: 'rollover', sourceId: id } })
+      .then(function(d){
+        var r = d.rollover || {};
+        showToast('Carried over ' + r.sections + ' sections, ' + r.subjects + ' subjects and ' + r.classes + ' classrooms from S.Y. ' + r.source + '.','success');
+        log('Rollover', 'S.Y. ' + r.source + ' → S.Y. ' + r.target);
+        applyRegYears(d);
+        var box = document.getElementById('regRoResult');
+        var skipped = r.skipped || [];
+        box.style.display = 'block';
+        box.innerHTML = '<div style="font-weight:600;color:var(--success);"><i class="fa-solid fa-circle-check"></i> S.Y. ' + escHtml(r.source) + ' &rarr; S.Y. ' + escHtml(r.target) + ': ' + r.sections + ' sections, ' + r.subjects + ' subjects, ' + r.classes + ' classrooms copied.</div>'
+          + (skipped.length
+              ? '<div style="margin-top:8px;font-weight:600;color:#f0ac3a;"><i class="fa-solid fa-triangle-exclamation"></i> ' + skipped.length + ' item(s) skipped</div><ul style="margin:6px 0 0 16px;">' + skipped.map(function(s){ return '<li>' + escHtml(s) + '</li>'; }).join('') + '</ul>'
+              : '');
+        document.getElementById('regRoPreview').innerHTML = '';
+        btn.style.display = 'none';
+        document.getElementById('regRoRefreshBtn').style.display = '';
+      })
+      .catch(function(err){ showToast(err.message || 'Could not carry the data over.','error'); })
+      .then(function(){ btn.disabled = false; });
   };
 
   // ── SUBJECTS (Module 3.11–3.13) ──
@@ -2175,7 +2577,7 @@ initCharts();
     const a=document.getElementById('sectionAdviser');if(a)a.value=x.adviser||'';
     const t=document.getElementById('sectionModalTitle');if(t)t.textContent='Update Section';
     const s=document.getElementById('sectionModalSub');if(s)s.textContent='Edit the class section details';
-    populateAdvisers();openModal('sectionModal');
+    populateAdvisers();openModal('sectionModal');renderSectionStudentPicker();
   };
   window.archiveSectionState=function(i){
     const x=state.sections[i];if(!x)return;
@@ -2192,25 +2594,204 @@ initCharts();
     if(!name){showToast('Section name is required.','error');return;}
     const fullName=(name.match(/^section /i)?'':'Section ')+name;
     if(state.sections.some(x=>x.grade===grade&&x.ay===ay&&x.name.toLowerCase()===fullName.toLowerCase())){showToast('Duplicate section in this grade level for the selected academic year.','error');return;}
+    const pending=(window.__sectionStudents||[]).slice();
     if(editingSectionIdx>=0&&state.sections[editingSectionIdx]){const x=state.sections[editingSectionIdx];x.ay=ay;x.grade=grade;x.name=fullName;x.adviser=adviser;log('Update Section',ay+' · '+grade+' - '+fullName);editingSectionIdx=-1;}
     else{state.sections.push({ay,grade,name:fullName,adviser,students:0,status:'Active'});log('Add Section',ay+' · '+grade+' - '+fullName);}
-    save();closeModal('sectionModal');showToast('Section saved.','success');renderAddedSections();updateStats();
+    if(pending.length){enrollStudentsToSection(pending,fullName,grade,ay);log('Enroll Students',pending.length+' student(s) → '+grade+' - '+fullName);}
+    save();closeModal('sectionModal');showToast('Section saved with '+(pending.length?pending.length+' student(s).':'no students.'),'success');renderAddedSections();updateStats();
   };
   function renderAddedSections(){const tbody=document.querySelector('#view-sectioning tbody');if(!tbody)return;tbody.querySelectorAll('tr[data-added]').forEach(r=>r.remove());const act=state.sections.filter(x=>x.status!=='Archived');const empty=tbody.querySelector('.section-empty-row');if(empty)empty.style.display=act.length?'none':'';act.forEach((x,i)=>{const tr=document.createElement('tr');tr.dataset.added='1';tr.innerHTML='<td><span class="pill">'+escHtml(x.grade)+'</span></td><td><strong>'+escHtml(x.name)+'</strong></td><td>'+escHtml(x.adviser||'—')+'</td><td>'+state.students.filter(s=>s.section===x.name&&s.grade===x.grade&&s.status!=='Alumni'&&s.status!=='Archived').length+'</td><td><span class="pill active">Active</span></td><td><button class="btn btn-outline btn-sm" onclick="openEditSection('+i+')"><i class="fa-solid fa-pen"></i> Edit</button> <button class="btn btn-outline btn-sm" onclick="archiveSectionState('+i+')"><i class="fa-solid fa-box-archive"></i> Archive</button></td>';tbody.appendChild(tr);});}
   window.populateSectionAY=function(){const sel=document.getElementById('sectionAY');const ey=document.getElementById('enroll-ay');if(!sel&&!ey)return;const years=(state.academicYears&&state.academicYears.length?state.academicYears.filter(y=>y.status==='Active'):[{label:state.academicYear}]).map(y=>y.label);if(!years.includes(state.academicYear))years.unshift(state.academicYear);[sel,ey].forEach(function(target){if(!target)return;years.forEach(label=>{if(Array.prototype.some.call(target.options,o=>o.value===label))return;const o=document.createElement('option');o.value=label;o.textContent=label;target.appendChild(o);});});};
-  window.populateAdvisers=function(){const sel=document.getElementById('sectionAdviser');if(!sel)return;if(Array.prototype.some.call(sel.options,o=>o.value==='Ms. Lovelyn C. Malanot'))return;['Ms. Lovelyn C. Malanot','Mr. Dennis R. Ocampo','Ms. Karen P. Villanueva','Mr. Jay A. Salvador'].forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});};
+  window.populateAdvisers=function(){const sel=document.getElementById('sectionAdviser');if(!sel)return;const names=(state.sections||[]).map(x=>x.adviser).filter(n=>n&&n!=='—'&&n!=='Unassigned');const uniq=[];names.forEach(n=>{if(!uniq.includes(n))uniq.push(n);});uniq.forEach(n=>{if(Array.prototype.some.call(sel.options,o=>o.value===n))return;const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});if(!uniq.length){sel.innerHTML='<option value="">No advisers yet</option>';sel.disabled=true;}else{sel.disabled=false;}};
+
+  // ── ADD STUDENTS TO A SECTION (one-by-one + bulk import) ──
+  // Students are enrolled against existing accounts only (matched by LRN or
+  // name). Imported rows that match nothing are reported per-row, never
+  // silently dropped, and no new accounts are created.
+  window.__sectionStudents=window.__sectionStudents||[];
+  function sectionStudentLabel(s){return (s.first||'')+' '+(s.last||'')+(s.lrn?' ('+s.lrn+')':'');}
+  window.renderSectionStudentPicker=function(){
+    const box=document.getElementById('sectionStudentCandidates');if(!box)return;
+    const q=(((document.getElementById('sectionStudentSearch')||{}).value)||'').trim().toLowerCase();
+    const g=(document.getElementById('sectionGrade')||{}).value;
+    const pending=window.__sectionStudents;
+    let matches=state.students.filter(function(s){
+      if(s.status==='Alumni'||s.status==='Archived')return false;
+      if(g&&s.grade&&s.grade!==g)return false;
+      if(pending.includes(s.lrn))return false;
+      if(q){const hay=(s.last+' '+(s.first||'')+' '+(s.middle||'')+' '+(s.lrn||'')).toLowerCase();if(hay.indexOf(q)===-1)return false;}
+      return true;
+    }).slice(0,30);
+    if(!matches.length){
+      box.innerHTML='<div style="padding:10px 12px;font-size:12.5px;color:var(--gray-400);">'+(q?'No matching student records found.'+(g?' Try a different search or grade level.':' Try a LRN or name search.') : 'No unassigned students match this grade yet. Enroll students first in the Student List tab.')+'</div>';
+    } else {
+      box.innerHTML=matches.map(function(s){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--gray-100);"><span style="font-size:12.5px;font-weight:600;color:var(--navy);">'+escHtml(sectionStudentLabel(s))+'</span><button class="btn btn-reg btn-sm" onclick="toggleSectionStudent(\''+s.lrn+'\')"><i class="fa-solid fa-plus"></i> Add</button></div>';
+      }).join('');
+    }
+    const list=document.getElementById('sectionStudentList');
+    if(list){
+      if(!pending.length){list.innerHTML='';}
+      else{
+        const rows=pending.map(function(lrn){
+          const s=state.students.find(function(x){return x.lrn===lrn;});
+          const label=s?sectionStudentLabel(s):lrn;
+          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--navy);color:#fff;border-radius:8px;margin-bottom:6px;font-size:12.5px;"><span><i class="fa-solid fa-user-check"></i> '+escHtml(label)+'</span><button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;" onclick="toggleSectionStudent(\''+lrn+'\')"><i class="fa-solid fa-xmark"></i></button></div>';
+        }).join('');
+        list.innerHTML='<div class="form-help" style="margin-bottom:6px;color:var(--success);">'+pending.length+' student(s) will be enrolled.</div>'+rows;
+      }
+    }
+  };
+  window.filterSectionStudentSearch=function(){renderSectionStudentPicker();};
+  window.toggleSectionStudent=function(lrn){
+    const pending=window.__sectionStudents;
+    const i=pending.indexOf(lrn);
+    if(i===-1){pending.push(lrn);showToast('Student added to section.','success');}
+    else{pending.splice(i,1);showToast('Student removed from section.','info');}
+    renderSectionStudentPicker();
+  };
+  window.openSectionImport=function(){
+    const f=document.getElementById('sectionImportFile');if(f)f.value='';
+    const st=document.getElementById('sectionImportStatus');if(st)st.innerHTML='';
+    const fd=document.getElementById('sectionImportFileDisplay');if(fd)fd.innerHTML='';
+    if(f)f.click();
+  };
+  window.handleSectionImportFile=function(ev){
+    const file=ev.target.files[0];if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(!['csv','txt','xls','xlsx'].includes(ext)){showToast('Unsupported file type. Use CSV or TXT.','error');return;}
+    const reader=new FileReader();
+    reader.onload=function(){tryParseSectionImport(String(reader.result||''));};
+    reader.onerror=function(){showToast('Could not read the file.','error');};
+    reader.readAsText(file);
+  };
+  window.tryParseSectionImport=function(text){
+    const box=document.getElementById('sectionImportStatus');if(!box)return;
+    const rows=parseCSV(text);
+    const got=[];const errs=[];
+    rows.forEach(function(r,i){
+      if(i===0)return;
+      const key=(r[0]||'').trim();
+      const keyName=(((r[1]||'').trim()+' '+(r[2]||'').trim())||key||'').trim();
+      if(!key&&!keyName)return;
+      const s=state.students.find(function(x){return (key&&x.lrn===key)||(keyName&&(x.last+' '+x.first).toLowerCase()===keyName.toLowerCase());});
+      if(!s){errs.push('Row '+(i+1)+': "'+(keyName||key)+'" not found');return;}
+      if(s.status==='Alumni'||s.status==='Archived'){errs.push('Row '+(i+1)+': "'+sectionStudentLabel(s)+'" is inactive/archived');return;}
+      if(window.__sectionStudents.includes(s.lrn)){errs.push('Row '+(i+1)+': "'+sectionStudentLabel(s)+'" already added');return;}
+      got.push(s);
+    });
+    const willAdd=got.length;
+    window.__sectionImportGot=got;
+    box.innerHTML='<div style="background:'+(willAdd?(errs.length?'#fefce8':'#f0fdf4'):'#fef2f2')+';border:1px solid '+(errs.length?'#fde047':'#bbf7d0')+';border-radius:9px;padding:12px;font-size:12.5px;">'
+      +'<strong>'+willAdd+'</strong> student(s) matched and ready to add.'
+      +(errs.length?'<div style="margin-top:8px;"><span style="color:var(--danger);">'+errs.length+' skipped:</span><ul style="margin:4px 0 0 18px;color:var(--gray-400);">'+errs.map(e=>'<li>'+escHtml(e)+'</li>').join('')+'</ul></div>':'')
+      +'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">'
+      +'<button class="btn btn-reg btn-sm" onclick="confirmSectionImport()" '+(willAdd?'':'style="display:none;"')+'><i class="fa-solid fa-check"></i> Add '+willAdd+' Student(s)</button>'
+      +'<button class="btn btn-outline btn-sm" onclick="openSectionImport()"><i class="fa-solid fa-rotate"></i> Reset</button></div></div>';
+  };
+  window.confirmSectionImport=function(){
+    const got=window.__sectionImportGot||[];
+    if(!got.length){showToast('Nothing to import.','error');return;}
+    got.forEach(function(s){if(!window.__sectionStudents.includes(s.lrn))window.__sectionStudents.push(s.lrn);});
+    const st=document.getElementById('sectionImportStatus');if(st)st.innerHTML='';
+    const f=document.getElementById('sectionImportFile');if(f)f.value='';
+    renderSectionStudentPicker();
+    showToast(got.length+' student(s) added to this section.','success');
+  };
+  window.enrollStudentsToSection=function(lrns,sectionName,grade,ay){
+    (lrns||[]).forEach(function(lrn){
+      const s=state.students.find(function(x){return x.lrn===lrn;});
+      if(!s)return;
+      s.section=sectionName;s.grade=grade;s.ay=ay||s.ay;
+      if(s.status==='Retained')s.status='Enrolled';
+    });
+  };
 
   // ── SUBJECT COVERAGE (per Academic Year) ──
+  // Every (subject x section) pair needs its own Virtual Classroom, so this
+  // report checks one grade level against the Academic Structure and shows
+  // which classes still have no classroom — and therefore no teacher.
+  function normAy(v){return String(v||'').replace(/[\u2013\u2014]/g,'-').trim();}
+  function requiredSubjects(grade){
+    const yl=normAy((document.getElementById('coverageYear')||{}).value||state.academicYear);
+    const subs=state.subjects.filter(function(s){
+      if(!s||s.status==='Archived')return false;
+      if(s.grade&&s.grade!==grade)return false;
+      return !s.ay||normAy(s.ay)===yl;
+    });
+    if(!subs.length){
+      const g=parseInt(String(grade).replace(/\D/g,''),10);
+      return (!isNaN(g)&&g>0&&g<=6)?ELEM_SUBJECTS.slice():[];
+    }
+    const seen={},out=[];
+    subs.forEach(function(s){if(s.name&&!seen[s.name]){seen[s.name]=1;out.push(s.name);}});
+    return out.sort();
+  }
+  window.requiredSubjects=requiredSubjects;
+  function populateCoverageFilters(){
+    const y=document.getElementById('coverageYear');
+    if(y&&state.academicYears&&state.academicYears.length){
+      const cur=normAy(y.value);
+      y.innerHTML=state.academicYears.map(function(a){return '<option>'+escHtml(a.label)+'</option>';}).join('');
+      const hit=state.academicYears.filter(function(a){return normAy(a.label)===cur;})[0];
+      y.value=(hit&&hit.label)||state.academicYear||'';
+      if(!y.value&&y.options.length)y.selectedIndex=0;
+    }
+    const g=document.getElementById('coverageGrade');
+    if(g&&!g.dataset.filled){g.innerHTML=GRADES.map(function(x){return '<option>'+x+'</option>';}).join('');g.dataset.filled='1';}
+  }
+  window.populateCoverageFilters=populateCoverageFilters;
   window.validateSubjectCoverage=function(){
+    populateCoverageFilters();
     const grade=document.getElementById('coverageGrade').value;
     const ay=document.getElementById('coverageYear')?document.getElementById('coverageYear').value:state.academicYear;
     const required=requiredSubjects(grade);
-    const sections=state.sections.filter(x=>x.grade===grade);
-    let html='<div class="card" style="background:var(--gray-100);"><div class="card-body"><strong>'+escHtml(grade)+'</strong> · <span style="font-size:12px;color:var(--gray-500);">Academic Structure Version: '+escHtml(ay)+'</span><div style="margin-top:8px;font-size:13px;">Required subjects: '+required.length+'</div>';
-    if(!sections.length){html+='<p style="margin-top:8px;color:var(--warning);">No sections found for this grade level. Add a section first.</p>';}
-    else{
-      html+='<p style="margin-top:8px;color:var(--success);">Section records found: '+sections.length+'. Each class (subject + section) will require its own Virtual Classroom.</p><ul style="margin:8px 0 0 18px;font-size:13px;">'+required.map(x=>'<li>'+escHtml(x)+'</li>').join('')+'</ul>';
-      html+='<p style="margin-top:8px;font-size:12px;color:var(--gray-500);">One subject can be taught in different sections (e.g., Mathematics in Section A, B, C). Each section can have multiple subjects. Elective subjects may change every trimester for SHS.</p>';
+    const sections=state.sections.filter(function(x){
+      return x.grade===grade&&x.status!=='Archived'&&(!x.ay||normAy(x.ay)===normAy(ay));
+    });
+    const vcs=(state.virtualClassrooms||[]).filter(function(v){
+      return v.grade===grade&&v.status!=='Archived'&&(!v.ay||normAy(v.ay)===normAy(ay));
+    });
+    const coveredBySection=function(subject,section){
+      return vcs.some(function(v){return v.subject===subject&&v.section===section;});
+    };
+    let html='<div class="card" style="background:var(--gray-100);"><div class="card-body">'
+      +'<strong>'+escHtml(grade)+'</strong> · <span style="font-size:12px;color:var(--gray-500);">Academic Structure Version: '+escHtml(ay)+'</span>'
+      +'<div style="margin-top:8px;font-size:13px;">Required subjects: '+required.length+' · Sections: '+sections.length+' · Virtual Classrooms: '+vcs.length+'</div>';
+    if(!required.length){
+      html+='<p style="margin-top:8px;color:var(--warning);">No subjects are defined for '+escHtml(grade)+' in '+escHtml(ay)+'. Add them under <strong>Subjects</strong> first.</p>';
+    }else if(!sections.length){
+      html+='<p style="margin-top:8px;color:var(--warning);">No sections found for this grade level. Add a section first.</p>';
+    }else{
+      const missing=[];
+      let covered=0;
+      html+='<div style="overflow-x:auto;margin-top:10px;"><table class="data-table" style="min-width:420px;"><thead><tr><th>Subject</th>'
+        +sections.map(function(s){return '<th style="text-align:center;">'+escHtml(s.name)+'</th>';}).join('')
+        +'<th style="text-align:center;">Coverage</th></tr></thead><tbody>';
+      required.forEach(function(sub){
+        let n=0;
+        const cells=sections.map(function(sec){
+          const ok=coveredBySection(sub,sec.name);
+          if(ok){n++;covered++;}
+          else{missing.push(sub+' – '+sec.name);}
+          return '<td style="text-align:center;">'+(ok
+            ?'<span class="pill active"><i class="fa-solid fa-check"></i></span>'
+            :'<span class="pill inactive"><i class="fa-solid fa-xmark"></i></span>')+'</td>';
+        }).join('');
+        const pct=Math.round(n/sections.length*100);
+        html+='<tr><td style="font-weight:600;">'+escHtml(sub)+'</td>'+cells
+          +'<td style="text-align:center;"><span class="pill '+(pct===100?'active':(pct?'warning':'inactive'))+'">'+pct+'%</span></td></tr>';
+      });
+      html+='</tbody></table></div>';
+      const total=required.length*sections.length;
+      html+='<div style="margin-top:12px;font-size:13px;">Covered classes: <strong>'+covered+'</strong> of <strong>'+total+'</strong>'
+        +' · <span style="color:'+(missing.length?'var(--danger)':'var(--success)')+';font-weight:700;">'
+        +(missing.length?(missing.length+' still missing a Virtual Classroom'):'Fully covered')+'</span></div>';
+      if(missing.length){
+        html+='<p style="margin-top:8px;font-size:12px;color:var(--gray-500);">Each class below needs its own Virtual Classroom so a teacher can be assigned and attendance recorded:</p>'
+          +'<ul style="margin:6px 0 0 18px;font-size:12.5px;columns:2;">'+missing.map(function(m){return '<li>'+escHtml(m)+'</li>';}).join('')+'</ul>';
+      }
+      html+='<p style="margin-top:10px;font-size:12px;color:var(--gray-500);">One subject can be taught in different sections (e.g., Mathematics in Section A, B, C). Each section can have multiple subjects. Elective subjects may change every trimester for SHS.</p>';
     }
     html+='</div></div>';
     document.getElementById('coverageResult').innerHTML=html;
@@ -2243,7 +2824,7 @@ initCharts();
     if((window.studentPage||1)>pages)window.studentPage=pages;
     var start=(window.studentPage-1)*studentPageSize;
     var page=filteredStudents().slice(start,start+studentPageSize);
-    if(!state.students.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet. Enroll students or load demo data.</td></tr>';}
+    if(!state.students.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet. Enrolled students appear here.</td></tr>';}
     else if(!page.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No students match the current filters.</td></tr>';}
     else{
       tb.innerHTML=page.map((s)=>{
@@ -2308,12 +2889,12 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
         return '<tr><td>'+g+'</td><td>'+escHtml(secs.join(', ')||'—')+'</td><td>'+st.length+'</td><td>'+st.filter(s=>s.account==='Generated').length+'</td><td>'+st.filter(s=>s.account==='Pending').length+'</td></tr>'; 
       }).join(''); 
     }
-    if(enrollChart){
-      const labels=GRADES;
-      enrollChart.data.labels=labels;
-      enrollChart.data.datasets[0].data=labels.map(g=>state.students.filter(s=>s.grade===g&&s.gender==='Male').length);
-      enrollChart.data.datasets[1].data=labels.map(g=>state.students.filter(s=>s.grade===g&&s.gender==='Female').length);
-      enrollChart.update();
+    // Rebuild the chart through enrollmentSeries() instead of writing
+    // datasets[0]/[1] by index. That assumed a fixed Male/Female pair, wrote
+    // Male into the Female slot, and relabelled the axis with all 12 GRADES
+    // whether or not those sections exist.
+    if(enrollChart&&typeof window.refreshEnrollChart==='function'){ 
+      window.refreshEnrollChart();
     }
     renderRecentActivity();
   }
@@ -2381,23 +2962,23 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
   };
 
   // ── PROMOTION / ROLLOVER (Final Grade ≥ 75 rule) ──
-  function seedFinalGrades(s){
-    if(s.finalGrades)return;
-    const subs=requiredSubjects(s.grade);
-    const tail=parseInt(String(s.lrn||'0').slice(-4),10)||17;
-    s.finalGrades=subs.map((sub,i)=>{
-      let g=78+((tail+i*7)%16);
-      if(tail%10<2&&i===subs.length-1)g=Math.max(56,g-24);
-      return g;
-    });
+  // Final grades are READ-ONLY here and come from the student record (bridged
+  // from the database). They are never inferred: this module used to invent a
+  // grade per learning area from the digits of the LRN, then commit the
+  // resulting promote / retain / alumni decisions to PostgreSQL. A student with
+  // no recorded grades is left as AWAITING and cannot be committed.
+  function recordedFinalGrades(s){
+    if(!Array.isArray(s.finalGrades))return null;
+    const g=s.finalGrades.filter(v=>typeof v==='number'&&!isNaN(v));
+    return g.length?g:null;
   }
   function buildPromotionDraft(){
     const pool=state.students.filter(s=>s.status!=='Archived');
-    pool.forEach(seedFinalGrades);
     state.draft=pool.map(s=>{
-      const grades=s.finalGrades||[];
-      const min=grades.length?Math.min.apply(null,grades):99;
-      const pass=grades.length>0&&grades.every(g=>g>=PASSING_GRADE);
+      const grades=recordedFinalGrades(s);
+      if(!grades)return {s,grades:[],min:null,pass:null,action:'AWAITING',nextGrade:'',reason:'No final grades recorded for this student yet.'};
+      const min=Math.min.apply(null,grades);
+      const pass=grades.every(g=>g>=PASSING_GRADE);
       const isG6=gradeNum(s.grade)===6;
       const isG12=gradeNum(s.grade)===12;
       let action,nextGrade='',reason='';
@@ -2406,40 +2987,50 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
       else if(isG6){action='DUAL';reason='Completes Elementary (Alumni) and continues to Junior High as Grade 7 — dual record created.';nextGrade='Grade 7';}
       else if(gradeNum(s.grade)>=12){action='ALUMNI';reason='Graduates as Alumni.';}
       else{action='PROMOTE';nextGrade=GRADES[gradeNum(s.grade)]||s.grade;reason='Passed all learning areas (Final Grade ≥ '+PASSING_GRADE+').';}
-      return {s,min,pass,action,nextGrade,reason};
+      return {s,grades,min,pass,action,nextGrade,reason};
     });
-    save();
     return state.draft;
   }
   window.buildPromotionDraft=buildPromotionDraft;
   window.renderPromotionDraft=function(){
     const rows=state.draft||[];const el=document.getElementById('promotionSummary');if(!el)return;
-    if(!rows.length){el.innerHTML='';return;}
-    const promote=rows.filter(r=>r.action==='PROMOTE').length;
-    const retain=rows.filter(r=>r.action==='RETAIN').length;
-    const alumni=rows.filter(r=>r.action==='ALUMNI'||r.action==='DUAL').length;
+    if(!rows.length){TASS.empty.list(el,{message:'No students to evaluate.',hint:'Enrol students first, then generate a preview.'});return;}
+    const ready=rows.filter(r=>r.action!=='AWAITING');
+    const awaiting=rows.length-ready.length;
+    if(!ready.length){TASS.empty.list(el,{message:'No final grades recorded yet.',hint:'Promotion decisions need a recorded final grade in every learning area. Nothing can be committed until grades are entered.'});return;}
+    const promote=ready.filter(r=>r.action==='PROMOTE').length;
+    const retain=ready.filter(r=>r.action==='RETAIN').length;
+    const alumni=ready.filter(r=>r.action==='ALUMNI'||r.action==='DUAL').length;
     const stat=(v,icon,color,label)=>'<div class="stat-card"><div class="stat-icon '+color+'"><i class="fa-solid '+icon+'"></i></div><div class="stat-val">'+v+'</div><div class="stat-label">'+label+'</div></div>';
-    let html='<div class="stats-grid" style="margin-bottom:14px;">'+stat(promote,'fa-arrow-up','green','Promote to next grade')+stat(retain,'fa-repeat','orange','Retained / Remedial')+stat(alumni,'fa-graduation-cap','blue','Alumni (G6 / G12)'+(rows.filter(r=>r.action==='DUAL').length?' · '+rows.filter(r=>r.action==='DUAL').length+' dual':''))+'</div>';
+    let html='<div class="stats-grid" style="margin-bottom:14px;">'+stat(promote,'fa-arrow-up','green','Promote to next grade')+stat(retain,'fa-repeat','orange','Retained / Remedial')+stat(alumni,'fa-graduation-cap','blue','Alumni (G6 / G12)'+(ready.filter(r=>r.action==='DUAL').length?' · '+ready.filter(r=>r.action==='DUAL').length+' dual':''));
+    if(awaitting)html+=stat(awaitting,'fa-hourglass-half','blue','Awaiting final grades — not committed');
+    html+='</div>';
     html+='<div style="margin-bottom:14px;font-size:12px;color:var(--gray-500);line-height:1.6;">Rule: <strong>Final Grade ≥ '+PASSING_GRADE+' required in all learning areas</strong> for promotion (DepEd). Non-passers are NOT auto-incremented and are flagged for retention/remedial. Grade 6/12 passers become <strong>Alumni</strong>; Grade 6 passers continuing to JHS get a <strong>dual record</strong> (Alumni in Elementary + Grade 7 in High School).</div>';
     html+='<table class="data-table"><thead><tr><th>Student</th><th>LRN</th><th>Current Grade</th><th>Final Grades (per learning area)</th><th>Min</th><th>Decision</th><th>Next Record</th></tr></thead><tbody>';
     rows.forEach(r=>{
-      const badge=r.action==='PROMOTE'?'<span class="pill active">Promote</span>':r.action==='RETAIN'?'<span class="pill warning">Retain</span>':'<span class="pill blue">'+ (r.action==='DUAL'?'Alumni + Grade 7':'Alumni') +'</span>';
-      html+='<tr><td style="white-space:nowrap;"><strong>'+escHtml(r.s.last+', '+r.s.first)+'</strong></td><td style="font-family:monospace;font-size:12px;">'+escHtml(r.s.lrn)+'</td><td>'+escHtml(r.s.grade)+'</td><td style="font-size:11.5px;">'+r.s.finalGrades.map(g=>'<span style="color:'+(g>=PASSING_GRADE?'#16a34a':'#dc2626')+';">'+g+'</span>').join(', ')+'</td><td><strong>'+r.min+'</strong></td><td>'+badge+'</td><td>'+escHtml(r.nextGrade||'—')+'</td></tr>';
+      const badge=r.action==='PROMOTE'?'<span class="pill active">Promote</span>':r.action==='RETAIN'?'<span class="pill warning">Retain</span>':r.action==='AWAITING'?'<span class="pill">Awaiting grades</span>':'<span class="pill blue">'+ (r.action==='DUAL'?'Alumni + Grade 7':'Alumni') +'</span>';
+      const gradeCells=r.grades.length?r.grades.map(g=>'<span style="color:'+(g>=PASSING_GRADE?'#16a34a':'#dc2626')+';">'+g+'</span>').join(', '):'<span style="color:var(--text-muted);">—</span>';
+      html+='<tr><td style="white-space:nowrap;"><strong>'+escHtml(r.s.last+', '+r.s.first)+'</strong></td><td style="font-family:monospace;font-size:12px;">'+escHtml(r.s.lrn)+'</td><td>'+escHtml(r.s.grade)+'</td><td style="font-size:11.5px;">'+gradeCells+'</td><td><strong>'+(r.min===null?'—':r.min)+'</strong></td><td>'+badge+'</td><td>'+escHtml(r.nextGrade||'—')+'</td></tr>';
     });
     html+='</tbody></table>';
     el.innerHTML=html;
   };
   window.generatePromotionPreview=function(){
-    if(!state.students.length){document.getElementById('promotionSummary').innerHTML='<div style="font-size:13px;color:var(--warning);padding:10px 0;"><i class="fa-solid fa-circle-info"></i> No enrolled students yet. Enroll students or click <strong>Load Demo Data</strong> first.</div>';return;}
+    if(!state.students.length){TASS.empty.list(document.getElementById('promotionSummary'),{message:'No enrolled students yet.',hint:'Enrol students before generating a promotion preview.'});return;}
     buildPromotionDraft();
     renderPromotionDraft();
     log('Generate Promotion Preview','Final Grade ≥ '+PASSING_GRADE+' rule applied · '+state.academicYear);
-    showToast('Promotion preview generated from Final Grades.','success');
+    showToast('Promotion preview generated from recorded Final Grades.','success');
   };
   window.confirmPromotion=function(){
-    const rows=state.draft;
-    if(!rows||!rows.length){showToast('Generate the promotion preview first.','error');return;}
-    if(!confirm('Confirm promotion for '+rows.length+' student(s)? Retained and Alumni/dual cases will be committed. All changes are logged.'))return;
+    const draft=state.draft;
+    if(!draft||!draft.length){showToast('Generate the promotion preview first.','error');return;}
+    // AWAITING rows have no recorded grades — they are never committed.
+    const rows=draft.filter(r=>r.action!=='AWAITING');
+    if(!rows.length){showToast('No student has recorded final grades. Nothing to commit.','error');return;}
+    const held=draft.length-rows.length;
+    const msg='Confirm promotion for '+rows.length+' student(s)? Retained and Alumni/dual cases will be committed. All changes are logged.'+(held?' '+held+' student(s) without recorded grades will be skipped.':'');
+    if(!confirm(msg))return;
     rows.forEach(r=>{
       const s=r.s;
       if(r.action==='RETAIN'){s.status='Retained';s.retainedAY=state.academicYear;s.reason=r.reason;log('Flag Retention',s.first+' '+s.last+' — '+r.reason);}
@@ -2455,31 +3046,10 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     });
     state.draft=null;
     save();renderStudentList();
-    showToast('Promotion batch committed. '+rows.length+' record(s) updated.','success');
+    showToast('Promotion batch committed. '+rows.length+' record(s) updated.'+(held?' '+held+' skipped — no final grades recorded.':''),'success');
   };
-  window.loadPromotionDemo=function(){
-    if(state.students.length&&!confirm('This will add demo students on top of existing records. Continue?'))return;
-    const demo=[
-      ['Angeles','Liza','P.','136410050101','Female','Section A','R. Angeles'],
-      ['Bautista','Miguel','C.','136410050102','Male','Section A','N. Bautista'],
-      ['Cruz','Anna','R.','136410050103','Female','Grade 7','Section A','M. Cruz'],
-      ['Dela Fuente','Marco','S.','136410050104','Male','Grade 7','Section B','L. Dela Fuente'],
-      ['Espino','Joy','T.','136410050105','Female','Grade 12','Section C','J. Espino'],
-      ['Garcia','Ramon','D.','136410050106','Male','Grade 8','Section B','A. Garcia'],
-      ['Hernandez','Sofia','M.','136410050107','Female','Grade 4','Section A','P. Hernandez'],
-      ['Iglesias','Nathan','V.','136410050108','Male','Grade 10','Section C','R. Iglesias']
-    ];
-    const grades=['Grade 6','Grade 6','Grade 7','Grade 7','Grade 12','Grade 8','Grade 4','Grade 10'];
-    demo.forEach((d,i)=>{
-      const [last,first,middle,lrn,gender,section,guardian]=d;
-      const grade=grades[i];
-      if(state.students.some(x=>x.lrn===lrn))return;
-      state.students.push({last,first,middle,lrn,gender,birth:'2008-05-1'+((i%9)+1),contact:'09171234567',grade,section,guardian,email:(first+'.'+last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph',status:'Enrolled',account:'Generated',acctUsername:(first+'.'+last).toLowerCase().replace(/[^a-z]/gi,'')+'@sanvicente.edu.ph',tempPass:'SVI'+lrn.slice(-4),accountVerified:false});
-    });
-    log('Load Demo Data','8 sample students seeded across Elementary, JHS, and SHS');
-    save();renderStudentList();renderAddedSections();populateAdvisers();
-    showToast('Demo students loaded. Open Promotion / Rollover and generate a preview.','success');
-  };
+  // Demo seeding has been removed. There is no longer a code path that writes
+  // invented students into the store that api_bridge.js POSTs to PostgreSQL.
 
   // ── AUTO-ENROLLMENT TO VIRTUAL CLASSROOMS ──
   window.autoEnrollVC=function(){
@@ -2530,7 +3100,7 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     w.document.close();
   }
   window.openSF1=function(){
-    if(!state.students.length){showToast('No student records yet. Enroll or load demo data first.','error');return;}
+    if(!state.students.length){showToast('No student records yet. Enrol a student first.','error');return;}
     let html='<h1>School Form 1 (SF1) — School Register</h1><h2>'+escHtml(state.academicYear)+' · '+escHtml(state.gradingPeriod)+' grading · San Vicente Institute</h2><table><tr><th class="center">#</th><th>Learner Name</th><th>LRN</th><th class="center">Birthdate</th><th class="center">Sex</th><th>Grade &amp; Section</th><th class="center">Final Average</th><th class="center">Remarks</th></tr>';
     state.students.forEach((s,i)=>{
       const grades=s.finalGrades||[];
@@ -2544,20 +3114,22 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     showToast('SF1 School Register generated.','success');
   };
   window.openSF2=function(){
-    if(!state.students.length){showToast('No student records yet. Enroll or load demo data first.','error');return;}
-    const days=5;
-    let html='<h1>School Form 2 (SF2) — Daily Attendance Report of Learners</h1><h2>'+escHtml(state.academicYear)+' · Sample summary (P=Present, L=Late, A=Absent, E=Excused) · San Vicente Institute</h2><table><tr><th class="center">#</th><th>Learner Name</th><th>Grade &amp; Section</th><th class="center">Present</th><th class="center">Late</th><th class="center">Absent</th><th class="center">Excused</th><th class="center">Attendance %</th><th class="center">Flag</th></tr>';
+    if(!state.students.length){showToast('No student records yet. Enrol students first.','error');return;}
+    // SF2 reports real attendance only. It used to derive a per-learner
+    // present/late/absent/excused split from the digits of the LRN.
+    const records=Array.isArray(state.attendance)?state.attendance:[];
+    if(!records.length){showToast('No attendance records available for this academic year.','error');return;}
+    let html='<h1>School Form 2 (SF2) — Daily Attendance Report of Learners</h1><h2>'+escHtml(state.academicYear)+' · Recorded sessions (P=Present, L=Late, A=Absent, E=Excused) · San Vicente Institute</h2><table><tr><th class="center">#</th><th>Learner Name</th><th>Grade &amp; Section</th><th class="center">Present</th><th class="center">Late</th><th class="center">Absent</th><th class="center">Excused</th><th class="center">Attendance %</th><th class="center">Flag</th></tr>';
     const threshold=state.attendanceThreshold;
-    state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived').forEach((s,i)=>{
-      const tail=parseInt(String(s.lrn||'0').slice(-4),10)||0;
-      const abs=(tail%7===0)?2:((tail%11===0)?1:0);
-      const exc=(tail%5===0)?1:0;
-      const late=(tail%3===0)?1:0;
-      const total=days;
-      const present=total-abs-exc;
-      const pct=Math.round((present/total)*100);
-      const flag=pct<=threshold?'<span style="color:#dc2626;font-weight:700;">CHRONIC</span>':(abs? '<span style="color:#d97706;">Watch</span>':'—');
-      html+='<tr><td class="center">'+(i+1)+'</td><td>'+escHtml(s.last+', '+s.first)+'</td><td>'+escHtml(s.grade+' – '+(s.section||'—'))+'</td><td class="center">'+present+'</td><td class="center">'+late+'</td><td class="center">'+abs+'</td><td class="center">'+exc+'</td><td class="center">'+pct+'%</td><td class="center">'+flag+'</td></tr>';
+    const byLrn={};state.students.forEach(function(s){if(s&&s.lrn)byLrn[s.lrn]=s;});
+    records.forEach(function(rec,i){
+      const c=attendanceCounts(rec);if(!c)return;
+      const s=byLrn[rec.lrn]||{};
+      if(s.status==='Alumni'||s.status==='Archived')return;
+      const name=rec.name||(s.last?s.last+', '+s.first:'');
+      const pct=c.pct;
+      const flag=pct===null?'—':pct<=threshold?'<span style="color:#dc2626;font-weight:700;">CHRONIC</span>':(c.abs? '<span style="color:#d97706;">Watch</span>':'—');
+      html+='<tr><td class="center">'+(i+1)+'</td><td>'+escHtml(name||rec.lrn||'—')+'</td><td>'+escHtml((s.grade||'—')+' – '+(s.section||'—'))+'</td><td class="center">'+c.present+'</td><td class="center">'+c.late+'</td><td class="center">'+c.abs+'</td><td class="center">'+c.exc+'</td><td class="center">'+(pct===null?'—':pct+'%')+'</td><td class="center">'+flag+'</td></tr>';
     });
     html+='</table><div class="muted">Teacher records attendance per student per session in each Virtual Classroom. Excused absences require a descriptive justification and may include supporting documents. Chronic absenteeism threshold is configured by the Registrar ('+threshold+'%).</div>';
     openReportWindow('SF2 Daily Attendance',html);
@@ -2579,23 +3151,54 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
   };
   window.generateAtRiskReport=function(){
     const threshold=state.attendanceThreshold;
-    let html='<h1>At-Risk Students Report</h1><h2>Attendance at/below '+threshold+'% (chronic absenteeism threshold configured by Registrar)</h2><table><tr><th>Learner</th><th>Grade &amp; Section</th><th>Estimated Attendance %</th><th>Flag</th></tr>';
-    state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived').forEach(s=>{
-      const tail=parseInt(String(s.lrn||'0').slice(-4),10)||0;
-      const pct=100-((tail%7===0?40:(tail%11===0?25:0)));
-      if(pct<=threshold)html+='<tr><td>'+escHtml(s.last+', '+s.first)+'</td><td>'+escHtml(s.grade+' – '+(s.section||'—'))+'</td><td class="center">'+pct+'%</td><td class="center" style="color:#dc2626;font-weight:700;">CHRONIC</td></tr>';
+    // Built from recorded attendance only — the previous version estimated a
+    // chronic-absenteeism rate per learner from the digits of the LRN.
+    const records=Array.isArray(state.attendance)?state.attendance:[];
+    if(!records.length){showToast('No attendance records available. At-risk learners cannot be determined yet.','error');return;}
+    let html='<h1>At-Risk Students Report</h1><h2>Attendance at/below '+threshold+'% (chronic absenteeism threshold configured by Registrar)</h2><table><tr><th>Learner</th><th>Grade &amp; Section</th><th>Recorded Attendance %</th><th>Flag</th></tr>';
+    const byLrn={};state.students.forEach(function(s){if(s&&s.lrn)byLrn[s.lrn]=s;});
+    let flagged=0;
+    records.forEach(function(rec){
+      const c=attendanceCounts(rec);
+      if(!c||c.pct===null||c.pct>threshold)return;
+      const s=byLrn[rec.lrn]||{};
+      if(s.status==='Alumni'||s.status==='Archived')return;
+      flagged++;
+      html+='<tr><td>'+escHtml(rec.name||(s.last?s.last+', '+s.first:'')||rec.lrn||'—')+'</td><td>'+escHtml((s.grade||'—')+' – '+(s.section||'—'))+'</td><td class="center">'+c.pct+'%</td><td class="center" style="color:#dc2626;font-weight:700;">CHRONIC</td></tr>';
     });
+    if(!flagged)html+='<tr><td colspan="4" class="center">No learner is at or below the '+threshold+'% threshold.</td></tr>';
     html+='</table>';
     openReportWindow('At-Risk Students',html);log('Generate At-Risk Report','Threshold '+threshold+'%');showToast('At-risk report generated.','success');
   };
 
   // ── ATTENDANCE OVERVIEW (FR Module 7 — school-level monitoring view) ──
+  // Attendance is READ-ONLY monitoring data supplied by the backend. It used to
+  // be synthesised here from the digits of each student's LRN, which invented a
+  // present/absent/late/excused split for every real student. Nothing is
+  // derived now: with no attendance records bridged in, the view says so.
   const ACADEMIC_MONTHS=['June','July','August','September','October','November','December','January','February','March'];
+
+  // Normalises a bridged attendance record. Returns null when the record does
+  // not carry real counts, so a partial record can never be shown as a zero.
+  function attendanceCounts(rec){
+    var num=function(v){return typeof v==='number'&&!isNaN(v)?v:null;};
+    var present=num(rec&&rec.present),abs=num(rec&&rec.absent!==undefined?rec.absent:rec.abs),
+        late=num(rec&&rec.late),exc=num(rec&&rec.excused!==undefined?rec.excused:rec.exc);
+    if(present===null&&abs===null&&late===null&&exc===null)return null;
+    present=present||0;abs=abs||0;late=late||0;exc=exc||0;
+    var total=present+abs+exc+late;
+    // A learner who arrives late was still present that day, so the rate counts
+    // on-time and late together over every recorded day.
+    return {present:present,abs:abs,late:late,exc:exc,days:total,pct:total?Math.round(((present+late)/total)*100):null};
+  }
+  window.attendanceCounts=attendanceCounts;
+
   window.renderAttendance=function(){
     const tb=document.getElementById('attendanceBody');if(!tb)return;
     const sf=document.getElementById('attSubjectFilter');
     if(sf&&sf.options.length===1){
-      sf.innerHTML='<option>All Subjects</option>'+state.subjects.filter(function(s){return s.status!=='Archived';}).map(function(s){return '<option>'+escHtml(s.name)+'</option>';}).join('');
+      var subjOpts=state.subjects.filter(function(s){return s.status!=='Archived';}).map(function(s){return '<option>'+escHtml(s.name)+'</option>';}).join('');
+      sf.innerHTML=subjOpts?'<option>All Subjects</option>'+subjOpts:'<option>All Subjects</option>';
     }
     const mf=document.getElementById('attMonthFilter');
     if(mf&&mf.options.length===1){
@@ -2604,35 +3207,55 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     const subj=(sf&&sf.value)||'All Subjects';
     const month=(mf&&mf.value)||'All Months';
     const q=(((document.getElementById('attSearch')||{}).value)||'').trim().toLowerCase();
-    const days=5;
     const threshold=state.attendanceThreshold||80;
-    const rows=state.students.map(function(s){
-      const tail=parseInt(String(s.lrn||'0').slice(-4),10)||0;
-      const abs=(tail%7===0)?2:((tail%11===0)?1:0);
-      const exc=(tail%5===0)?1:0;
-      const late=(tail%3===0)?1:0;
-      const present=Math.max(0,days-abs-exc);
-      const pct=Math.round((present/days)*100);
-      const name=s.last+', '+s.first+(s.middle?' '+s.middle[0]+'.':'');
-      return {s:s,name:name,present:present,abs:abs,late:late,exc:exc,pct:pct};
-    }).filter(function(r){return r.s.status!=='Alumni'&&r.s.status!=='Retained'&&r.s.status!=='Archived';});
-    const filtered=rows.filter(function(r){return !q||r.name.toLowerCase().indexOf(q)>-1;});
-    if(!filtered.length){
-      tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No attendance records found.</td></tr>';
+
+    const records=Array.isArray(state.attendance)?state.attendance:[];
+    const byLrn={};
+    (state.students||[]).forEach(function(s){if(s&&s.lrn)byLrn[s.lrn]=s;});
+
+    const rows=records.map(function(rec){
+      const c=attendanceCounts(rec);
+      if(!c)return null;
+      const s=byLrn[rec.lrn]||{};
+      const name=rec.name||(s.last?(s.last+', '+s.first+(s.middle?' '+String(s.middle)[0]+'.':'')):'');
+      return {s:s,lrn:rec.lrn||'',name:name,subject:rec.subject||'',month:rec.month||'',
+              present:c.present,abs:c.abs,late:c.late,exc:c.exc,days:c.days,pct:c.pct};
+    }).filter(function(r){
+      if(!r)return false;
+      if(subj!=='All Subjects'&&r.subject&&r.subject!==subj)return false;
+      if(month!=='All Months'&&r.month&&r.month!==month)return false;
+      const st=r.s&&r.s.status;
+      if(st==='Alumni'||st==='Retained'||st==='Archived')return false;
+      return !q||r.name.toLowerCase().indexOf(q)>-1||String(r.lrn).toLowerCase().indexOf(q)>-1;
+    });
+
+    if(!rows.length){
+      TASS.empty.table(tb,7,{
+        message: records.length?'No attendance records match the current filter.':'No attendance records yet.',
+        hint: records.length?'':undefined,
+        source:'attendance.records'
+      });
     }else{
-      tb.innerHTML=filtered.map(function(r){
-        const st=r.pct<=threshold?'<span class="pill" style="background:#fee2e2;color:#dc2626;">AT RISK</span>':(r.abs?'<span class="pill" style="background:#fef9c3;color:#a16207;">WATCH</span>':'<span class="pill" style="background:#dcfce7;color:#16a34a;">GOOD</span>');
-        return '<tr><td><div style="font-weight:600;font-size:13px;">'+escHtml(r.name)+'</div><div style="font-size:11px;color:var(--gray-400);">'+escHtml(r.s.grade+' · '+(r.s.section||'—'))+'</div></td><td style="text-align:center;">'+r.present+'</td><td style="text-align:center;color:var(--danger);">'+r.abs+'</td><td style="text-align:center;color:var(--warning);">'+r.late+'</td><td style="text-align:center;">'+r.exc+'</td><td style="text-align:center;"><strong>'+r.pct+'%</strong></td><td>'+st+'</td></tr>';
+      tb.innerHTML=rows.map(function(r){
+        const st=r.pct===null?'<span class="pill">No data</span>':r.pct<=threshold?'<span class="pill" style="background:#fee2e2;color:#dc2626;">AT RISK</span>':(r.abs?'<span class="pill" style="background:#fef9c3;color:#a16207;">WATCH</span>':'<span class="pill" style="background:#dcfce7;color:#16a34a;">GOOD</span>');
+        return '<tr><td><div style="font-weight:600;font-size:13px;">'+escHtml(r.name||r.lrn)+'</div><div style="font-size:11px;color:var(--gray-400);">'+escHtml((r.s.grade||'—')+' · '+(r.s.section||'—'))+'</div></td><td style="text-align:center;">'+r.present+'</td><td style="text-align:center;color:var(--danger);">'+r.abs+'</td><td style="text-align:center;color:var(--warning);">'+r.late+'</td><td style="text-align:center;">'+r.exc+'</td><td style="text-align:center;"><strong>'+(r.pct===null?'—':r.pct+'%')+'</strong></td><td>'+st+'</td></tr>';
       }).join('');
     }
-    const avg=rows.length?Math.round(rows.reduce(function(a,r){return a+r.pct;},0)/rows.length):0;
-    const atRisk=rows.filter(function(r){return r.pct<=threshold;}).length;
+
+    const rated=rows.filter(function(r){return r.pct!==null;});
+    const avg=rated.length?Math.round(rated.reduce(function(a,r){return a+r.pct;},0)/rated.length):null;
+    const atRisk=rated.filter(function(r){return r.pct<=threshold;}).length;
     const totAbs=rows.reduce(function(a,r){return a+r.abs;},0);
+    const days=rows.reduce(function(a,r){return a+r.days;},0);
     const setV=function(id,v){const el=document.getElementById(id);if(el)el.textContent=v;};
-    setV('attAvgRate',avg+'%');
-    setV('attSchoolDays',days+' days / '+month.toLowerCase());
-    setV('attAtRisk',atRisk);
-    setV('attAbsences',totAbs);
+    setV('attAvgRate',avg===null?'—':avg+'%');
+    setV('attSchoolDays',days?String(days):'No data yet');
+    setV('attAtRisk',rated.length?atRisk:'—');
+    setV('attAbsences',rows.length?totAbs:'—');
+    TASS.wire.slots.stats=Object.assign({},TASS.wire.slots.stats,{
+      'attAvgRate':'attendance.rate','attSchoolDays':'attendance.session_count',
+      'attAtRisk':'attendance.at_risk_count','attAbsences':'attendance.absence_count'
+    });
   };
 
   // ── BULK IMPORT COMMIT ──
@@ -2663,7 +3286,10 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
 
 
 // ── VIRTUAL CLASSROOM MANAGEMENT (Module 4 + Bulk Import 1.11) ──
-  const TEACHERS=['Ms. Lovelyn C. Malanot','Mr. Dennis R. Ocampo','Ms. Karen P. Villanueva','Mr. Jay A. Salvador','Mr. Jose Ramirez','Ms. Gina Aguilar','Ms. Norma Villanueva','Mr. Ben Castillo'];
+  // Teacher list is derived from real section advisers. It used to fall back to
+  // a hardcoded roster of eight names, which let a registrar assign a class to
+  // somebody who does not have an account.
+  const TEACHERS=(function(){const names=(state.sections||[]).map(x=>x.adviser).filter(n=>n&&n!=='—'&&n!=='Unassigned');const uniq=[];names.forEach(n=>{if(!uniq.includes(n))uniq.push(n);});return uniq;})();
   function activeAYLabel(){const a=state.academicYears.find(x=>x.status==='Active');return a?a.label:(state.academicYear||'S.Y. 2025–2026');}
   function currentGradingDefault(){return state.gradingPeriod==='Quarter'?'Quarter':(state.gradingPeriod==='Semester'?'Semester':'Trimester');}
   function populateSubjFilters(){
@@ -3029,16 +3655,14 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
 
 
   // ── INIT ──
+  // Notifications are derived from the real activity log, not a fixed list of
+  // four invented items naming real-sounding students.
   function refreshRegistrarNotifications(){
     const list=document.getElementById('notifList');if(!list)return;
-    const items=[
-      {icon:'fa-user-graduate',bg:'#dcfce7',c:'#16a34a',t:'LMS account generated',d:'Account auto-created for Sofia Villanueva · credentials queued',time:'12 min ago',unread:true},
-      {icon:'fa-file-import',bg:'#dbeafe',c:'#2563eb',t:'Bulk import available',d:'12 records prepared · review & confirm to enroll',time:'1 hr ago',unread:true},
-      {icon:'fa-arrow-up-right-dots',bg:'#fef9c3',c:'#a16207',t:'Promotion pending',d:'Unapplied promotion preview from S.Y. 2025–2026',time:'3 hrs ago',unread:false},
-      {icon:'fa-calendar-check',bg:'#e0f2fe',c:'#0284c7',t:'Attendance threshold update',d:'Chronic absenteeism threshold set to 80%',time:'Yesterday',unread:false}
-    ];
+    const logs=(state.logs||[]).slice(0,12);
+    if(!logs.length){TASS.empty.list(list,{message:'No notifications.',hint:'Activity on enrolment, sections and academic structure will appear here.'});return;}
     list.style.textAlign='left';
-    list.innerHTML=items.map(n=>'<div class="notif-item'+(n.unread?' notif-unread':'')+'"><div style="width:32px;height:32px;border-radius:9px;background:'+n.bg+';color:'+n.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid '+n.icon+'"></i></div><div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+n.t+'</div><div style="font-size:11px;color:var(--gray-400);line-height:1.4;">'+n.d+'</div><div style="font-size:10px;color:var(--gray-400);margin-top:2px;">'+n.time+'</div></div></div>').join('');
+    list.innerHTML=logs.map(n=>'<div class="notif-item"><div style="width:32px;height:32px;border-radius:9px;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-clock-rotate-left"></i></div><div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(n.action||'Activity')+'</div><div style="font-size:11px;color:var(--gray-400);line-height:1.4;">'+escHtml(n.detail||'')+'</div><div style="font-size:10px;color:var(--gray-400);margin-top:2px;">'+escHtml(n.time||'')+'</div></div></div>').join('');
   }
   window.refreshRegistrarNotifications=refreshRegistrarNotifications;
   function init(){
@@ -3055,6 +3679,11 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     if(importNext)importNext.addEventListener('click',function(e){const f=document.getElementById('importFileInput');if(!f||!f.files||!f.files.length){e.preventDefault();showToast('Please select a CSV or Excel file first.','error');}});
     refreshRegistrarNotifications();
   }
+  // Exposed so the backend bridge and the enrollment chart (defined in an
+  // earlier script block) can read the live store. Without these the bridge
+  // bailed out at its first line and no backend record ever reached the page.
+  window.getRegState=function(){return state;};
+  window.__regSave=save;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
@@ -3075,7 +3704,7 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
   .sidebar,.sidebar:hover,body.sidebar-expanded .sidebar{width:var(--sidebar-w) !important;padding:16px 10px;transform:translateX(-110%);box-shadow:4px 0 32px rgba(7,24,50,0.4) !important;transition:transform var(--transition),width var(--transition)}
   .sidebar.mobile-open{transform:translateX(0)}
   .sidebar-section-label,.sidebar:hover .sidebar-section-label,body.sidebar-expanded .sidebar .sidebar-section-label{opacity:1}
-  .nav-item{padding:10px 12px;gap:12px;justify-content:flex-start}
+  .nav-item{padding:7px 12px;gap:12px;justify-content:flex-start}
   .nav-item-icon{width:18px;min-width:18px}
   .nav-item-label,.sidebar:hover .nav-item-label,.sidebar.mobile-open .nav-item-label,body.sidebar-expanded .sidebar .nav-item-label,.sidebar:hover .nav-item span,.sidebar.mobile-open .nav-item span,body.sidebar-expanded .sidebar .nav-item span{opacity:1 !important;max-width:200px}
   .nav-item-badge,.sidebar:hover .nav-item-badge,body.sidebar-expanded .sidebar .nav-item-badge{opacity:1}
@@ -3217,7 +3846,7 @@ header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
 /* ---------- Touch-friendly hit areas (phones/tablets) ---------- */
 @media (hover:none),(pointer:coarse){
   .icon-btn,.dark-toggle,.hamburger-btn{ width:42px; height:42px; border-radius:11px; }
-  .nav-item{ padding:12px 0; }
+  .nav-item{ padding:9px 0; }
   .btn{ padding-top:11px; padding-bottom:11px; }
   .form-control,select.form-control,input[type="search"],.search-bar,.search-input{ min-height:44px; }
 }
@@ -3483,12 +4112,23 @@ canvas{ max-width:100% !important; }
 // ── My Profile (avatar + contact info, per-dashboard storage) ──
 const PROFILE_KEY='tass_profile_registrar';
 const PROFILE_MODAL_ID='profileModal';
-const PROFILE_DEFAULTS={name:'Mr. Carlo B. Fernandez',email:'carlo.fernandez@sanvicente.edu.ph',role:'Registrar · Records Office',dept:'Records Office',contact:'0917 555 0042',avatar:''};
+const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Registrar" }}',dept:'',contact:'',avatar:'{{ user_avatar_url|default:"" }}'};
 let profileAvatarData=""
 function profil_initials(n){return (n||"").split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x[0];}).join("").toUpperCase()||"..";}
-function getProfile(){try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(p)return p;}catch(e){}return JSON.parse(JSON.stringify(PROFILE_DEFAULTS));}
+function initialsAvatar(sz,fs){var ini=('{{ user_initials|default:"U" }}'||'..');return "data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 "+sz+" "+sz+"%22><circle cx=%22"+(sz/2)+"%22 cy=%22"+(sz/2)+"%22 r=%22"+(sz/2)+"%22 fill=%22%233a86d4%22/><text x=%22"+(sz/2)+"%22 y=%22"+Math.round(sz*0.675)+"%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%22"+fs+"%22>"+ini+"</text></svg>";}
+function getProfile(){
+  // Identity belongs to the server account, so a stale local edit can never
+  // rename the signed-in user. Only the optional extras persist locally.
+  const d=JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
+  const srv=window.__TASS_PROFILE__;
+  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
+    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar)d.avatar=p.avatar;}
+  }catch(e){}
+  return d;
+}
 function profileSet(id,v){const el=document.getElementById(id);if(el)el.value=(v==null?"":String(v));}
-function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
+function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src=initialsAvatar(40,16);}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src=initialsAvatar(80,30);}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
 function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
 function closeProfile(){if(typeof closeModal==="function")closeModal(PROFILE_MODAL_ID);}
 function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
@@ -3501,7 +4141,11 @@ if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
 // ── Notifications (functional, per-dashboard storage) ──
 const NOTIFS_STORAGE_KEY='tass_notifs_reg';
 const NOTIFS_CONTAINER='notifList';
-const NOTIFS_DEFAULT_ITEMS=[{icon:'fa-file-signature',title:'Enrollment Form Received',msg:'New student enrollment for Grade 7 — pending verification.',unread:true,mins:12},{icon:'fa-user-graduate',title:'Records Request',msg:'Transcript request for alumni verification is pending.',unread:true,mins:46},{icon:'fa-clipboard-check',title:'Sectioning Complete',msg:'Grade 9 sectioning finalized for S.Y. 2026–2027.',unread:true,mins:190},{icon:'fa-calendar-check',title:'AY Now Open',msg:'Academic year 2026–2027 records are now open for encoding.',unread:false,mins:2880}];
+// Fabricated first-load alerts: a pending Grade 7 enrollment, a transcript
+// request, and a scholarship deadline. persistNotifs() would have stored them
+// in localStorage, where api_bridge.js could POST them onward.
+// Start empty; fill from D.notifs.
+const NOTIFS_DEFAULT_ITEMS=[];
 function notifEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';});}
 function notifTimeAgo(m){if(m==null||m<1)return'Just now';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';var d=Math.floor(h/24);return d+' d ago';}
 function loadNotifs(){try{var a=JSON.parse(localStorage.getItem(NOTIFS_STORAGE_KEY)||'null');if(Array.isArray(a))return a;}catch(e){}return NOTIFS_DEFAULT_ITEMS.map(function(n){return Object.assign({},n);});}
@@ -3675,7 +4319,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
   var ORIG = window.showView;
   if (typeof ORIG !== 'function') return;
-  var NAV = {'acadyears':1,'attendance':1,'classrooms':1,'coverage':1,'dashboard':1,'enrollment':1,'import':1,'promotion':1,'reports':1,'sectioning':1,'settings':1,'students':1,'subjects':1};
+  var NAV = {'acadyears':1,'attendance':1,'classrooms':1,'coverage':1,'dashboard':1,'enrollment':1,'import':1,'promotion':1,'demographics':1,'staffdemographics':1,'reports':1,'sectioning':1,'settings':1,'students':1,'subjects':1};
   function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
   function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
   function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
@@ -3692,10 +4336,28 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script>
 /* Registrar real-data bridge — loads backend records into the demo state store. */
 (function(){
+  TASS.page = 'registrar';
   if (!window.__TASS_REAL__) return;
   var el = document.getElementById('registrar-backend-data');
   if (!el) return;
   var data = null; try { data = JSON.parse(el.textContent); } catch (e) {}
+
+  // Age/Sex panels: rows arrive as {name, code, gender, birth, group, meta}.
+  // Both lists are kept on window because the shared renderer holds one row set
+  // at a time — each view passes its own rows on every render.
+  if (window.TASS && TASS.demo && data) {
+    window.__regStudentDemo = (data.demographics && Array.isArray(data.demographics.rows)) ? data.demographics.rows : [];
+    window.__regStaffDemo = (data.staffDemographics && Array.isArray(data.staffDemographics.rows)) ? data.staffDemographics.rows : [];
+    TASS.demo.setRows(window.__regStudentDemo);
+  }
+
+  // The signed-in user's own record, straight from the server.
+  window.__TASS_PROFILE__ = (data && data.profile) || null;  // Notifications are orthogonal to the rest of the payload, so they load before
+  // the guard below. Expected shape: {icon, title, msg, unread, mins}.
+  // With no notifs key the panel keeps its empty state rather than inventing events.
+  if (data && Array.isArray(data.notifs) && data.notifs.length) {
+    try { persistNotifs(data.notifs); renderNotifs(); } catch (e) {}
+  }
   if (!data || !data.students || !window.getRegState) return;
   var st = window.getRegState();
   if (!st) return;
@@ -3706,6 +4368,10 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   fill(st.virtualClassrooms, data.virtualClassrooms);
   fill(st.academicYears, data.academicYears);
   fill(st.logs, data.logs);
+  // Attendance is read-only monitoring data: registrar_context() ships one row
+  // per learner x subject x month of real AttendanceRecord counts.
+  if (Array.isArray(data.attendance)) fill(st.attendance, data.attendance);
+  if (!Array.isArray(st.attendance)) st.attendance = [];
   if (data.virtualClassrooms) st.vcCount = data.virtualClassrooms.length;
   if (data.yearLabel) st.academicYear = data.yearLabel;
   if (window.__regSave) window.__regSave();
@@ -3718,6 +4384,9 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   if (window.renderVCTable) window.renderVCTable();
   if (window.populateSubjFilters) window.populateSubjFilters();
   if (window.refreshRegistrarNotifications) window.refreshRegistrarNotifications();
+  if (window.refreshEnrollChart) window.refreshEnrollChart();
+  if (window.renderAttendance) window.renderAttendance();
+  if (window.renderPromotionDraft) window.renderPromotionDraft();
 })();
 </script>
 
@@ -3725,9 +4394,40 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script src="/static/js/api_bridge.js"></script>
 <script>
 window.__TASS_BRIDGE__={interval:4000,watch:[
- {key:'tass_registrar_demo_v2',endpoint:'students/',guard:function(v){return Array.isArray(v.students)&&v.students.length>0;},map:function(v){return {students:v.students};}},
- {key:'tass_registrar_demo_v2',endpoint:'academic-structure/',guard:function(v){return (v.sections&&v.sections.length)||(v.subjects&&v.subjects.length)||(v.virtualClassrooms&&v.virtualClassrooms.length);},map:function(v){return {sections:v.sections||[],subjects:v.subjects||[],vcs:v.virtualClassrooms||[]};}}
+ {key:'tass_registrar_state_v1',endpoint:'students/',guard:function(v){return Array.isArray(v.students)&&v.students.length>0;},map:function(v){return {students:v.students};}},
+ {key:'tass_registrar_state_v1',endpoint:'academic-structure/',guard:function(v){return (v.sections&&v.sections.length)||(v.subjects&&v.subjects.length)||(v.virtualClassrooms&&v.virtualClassrooms.length);},map:function(v){return {sections:v.sections||[],subjects:v.subjects||[],vcs:v.virtualClassrooms||[]};}}
 ]};
 </script>
+<script>
+/* The shared calendar (and the backup runner) post JSON, which Django
+   rejects without a CSRF token in the header. This template is standalone,
+   so base.html does not set it. */
+window.csrfToken = (function () {
+  var el = document.querySelector('#logoutForm input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+})();
+</script>
+<script src="{% static 'js/calendar.js' %}"></script>
+<script>
+/* Activity calendar — the payload arrives inside the same json_script blob the
+   rest of this dashboard reads, so the first month paints with no request.
+   Controls are rendered only when the backend says canEdit (System
+   Administrator / Principal / Registrar — the registrar adds and edits school
+   activities directly from this card). */
+(function () {
+  if (!window.TASS || !TASS.calendar) return;
+  var el = document.getElementById('registrar-backend-data');
+  if (!el) return;
+  var payload;
+  try { payload = JSON.parse(el.textContent); } catch (e) { return; }
+  var cal = payload && payload.calendar;
+  if (!cal) return;
+  TASS.calendar.mount('calRoot', { data: cal });
+})();
+</script>
+
+<script src="/static/js/profile_bridge.js"></script>
+<script src="{% static 'js/tass_live.js' %}"></script>
+<script src="/static/js/pilot_guard.js"></script>
 </body> 
 </html>  

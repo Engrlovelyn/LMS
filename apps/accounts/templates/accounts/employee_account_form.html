@@ -17,6 +17,9 @@
     <div class="card-title"><i class="fa-solid fa-key"></i> Account Created</div>
   </div>
   <div class="card-body">
+    {% if email_error %}
+    <div class="message warning"><i class="fa-solid fa-triangle-exclamation"></i> The account was created but the verification email <strong>failed to send</strong> — {{ email_error }}. Resend it after fixing email settings.</div>
+    {% endif %}
     <p>Share these credentials with <strong>{{ created_email }}</strong>. The password is shown only once.</p>
     <div class="form-row">
       <div class="form-group">

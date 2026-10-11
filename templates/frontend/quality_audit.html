@@ -7,6 +7,14 @@
 <title>SVI LMS – Quality Assurance Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/calendar.css' %}">
+<link rel="stylesheet" href="{% static 'css/empty_state.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+<!-- Defines window.TASS / TASS.empty.* . Must load before any inline script on
+     this page: the renderers below call TASS.empty.list/table/stats/chart, and
+     a bare "TASS.page = '...'" throws ReferenceError (TASS undefined), which
+     aborts the rest of that block and blanks the view. -->
+<script src="{% static 'js/empty_state.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
@@ -72,9 +80,10 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar { position:fixed; top:var(--header-h); left:0; bottom:0; width:var(--sidebar-collapsed); background:var(--sidebar-bg); z-index:150; display:flex; flex-direction:column; overflow:hidden; transition:width var(--transition),box-shadow var(--transition),background var(--transition); border-right:1px solid rgba(255,255,255,0.06); }
 .sidebar:hover, body.sidebar-expanded .sidebar { width:var(--sidebar-w); box-shadow:4px 0 32px rgba(7,24,50,0.4); }
 .sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
-.sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:10px 10px 5px; white-space:nowrap; opacity:0; transition:opacity 0.15s; }
-.sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label { opacity:1; transition-delay:0.07s; }
-.nav-item { display:flex; align-items:center; gap:0; padding:10px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
+.sidebar-section-label, .sidebar-label { font-size:9.5px; line-height:1.2; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:12px 10px 4px; white-space:nowrap; overflow:hidden; text-overflow:clip; opacity:0; max-height:0; transition:opacity 0.15s, max-height 0.15s; }
+.sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label,
+.sidebar:hover .sidebar-label, body.sidebar-expanded .sidebar .sidebar-label { opacity:1; max-height:24px; transition-delay:0.07s; }
+.nav-item { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
 .nav-item-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; font-size:15.5px; flex-shrink:0; transition:color .18s; }
 .nav-item-label { opacity:0; transition:opacity 0.15s; padding-right:12px; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
@@ -631,8 +640,8 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="header-right">
       <button class="icon-btn" onclick="toggleNotif()"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
       <button class="profile-btn" onclick="toggleProfile()">
-        <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>EV</text></svg>'">
-        <div><div class="profile-name">Dr. Elena V.</div><div class="profile-role">Quality Assurance</div></div>
+        <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+        <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label }}</div></div>
         <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i>
       </button>
     </div>
@@ -645,9 +654,9 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
   <!-- Profile Panel -->
   <div class="profile-panel" id="profilePanel">
     <div class="profile-panel-header">
-      <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>EV</text></svg>'">
-      <div class="profile-panel-name">Elena V. Reyes</div>
-      <div class="profile-panel-role">Quality Assurance Officer</div>
+      <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials }}</text></svg>" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+      <div class="profile-panel-name">{{ user_display_name }}</div>
+      <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
@@ -658,17 +667,26 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
-      <div class="sidebar-section-label">Main Menu</div>
-      <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Overview</span></button>
-      <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Monitor</span></button>
-      <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></button>
-      <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-xmark"></i></div><span class="nav-item-label">Attendance &amp; Absence</span></button>
-      <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></button>
-      <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Monitor</span></button>
-      <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
-      <div class="sidebar-spacer"></div>
+    
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Overview</span></button>
+    <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
+    
+    <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Monitor</span></button>
+    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-xmark"></i></div><span class="nav-item-label">Attendance &amp; Absence</span></button>
+    <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Monitor</span></button>
+    
+    <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></button>
+    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></button>
+    
+    <div class="sidebar-label">Academic</div>
+    <button class="nav-item" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Students</span></button>
+    <button class="nav-item" onclick="showView('sections')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sections</span></button>
+    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button>
+    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></button>
+    
+    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
+    <div class="sidebar-spacer"></div>
     </div>
-    <div class="sidebar-footer" style="display:none;"></div>
   </aside>
   <!-- MAIN -->
   <main class="main" id="mainContent">
@@ -682,6 +700,14 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
         </div>
         <button class="btn btn-sm" style="background:rgba(255,255,255,.16);border:1px solid #fff;color:#fff;" onclick="tassEXQAReport()"><i class="fa-solid fa-download"></i> QA Report</button>
       </div>
+
+      <!-- ═════════════════════════ SCHOOL CALENDAR ═════════════════════════════ -->
+      <div class="card" style="margin-bottom:22px;">
+        <div class="card-body">
+          <div id="calRoot"></div>
+        </div>
+      </div>
+
       <div class="dash-filter-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:18px;">
         <span style="font-size:12.5px;font-weight:700;color:var(--navy);display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-filter" style="color:var(--blue);"></i>Filters</span>
         <label style="font-size:12px;font-weight:600;color:var(--gray-500);">Academic Year</label>
@@ -697,7 +723,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <div class="stats-grid">
         <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-users"></i></div><div class="stat-val" id="ovTotalStudents">—</div><div class="stat-label">Total Students</div></div>
         <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-chalkboard-user"></i></div><div class="stat-val" id="ovTotalTeachers">—</div><div class="stat-label">Faculty Members</div></div>
-        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-calendar-check"></i></div><div class="stat-val" id="ovAttRate">—</div><div class="stat-label">Avg. Attendance</div></div>
+        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-ranking-star"></i></div><div class="stat-val" id="ovStandingTop">—</div><div class="stat-label">Most Common Standing</div></div>
         <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-chart-simple"></i></div><div class="stat-val" id="ovPassRate">—</div><div class="stat-label">Passing Rate</div></div>
       </div>
       <div class="analytics-row">
@@ -747,10 +773,39 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
         </div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-gauge-high"></i></div><div class="stat-val" id="pfOverallAvg">—</div><div class="stat-label">Overall Average</div></div>
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-ranking-star"></i></div><div class="stat-val" id="pfStandingCount">—</div><div class="stat-label">Learners Graded</div></div>
         <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div><div class="stat-val" id="pfTopSubject">—</div><div class="stat-label">Top Subject Subject</div></div>
         <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-arrow-trend-down"></i></div><div class="stat-val" id="pfLowSubject">—</div><div class="stat-label">Subject Needs Focus</div></div>
         <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-chart-simple"></i></div><div class="stat-val" id="pfPassRate">—</div><div class="stat-label">Passing Rate</div></div>
+      </div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);margin-right:8px;"></i>Academic Standing per Grade &amp; Section</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label class="form-label" style="margin:0;white-space:nowrap;" for="standGradeSel">Grade Level</label>
+            <select id="standGradeSel" class="form-control" style="width:140px;" onchange="renderStanding()">
+              <option value="">All Grade Levels</option>
+            </select>
+            <label class="form-label" style="margin:0;white-space:nowrap;" for="standRiskSel">Standing</label>
+            <select id="standRiskSel" class="form-control" style="width:160px;" onchange="renderStanding()">
+              <option value="">All Learners</option>
+              <option value="risk">At-Risk Only (&lt; 75)</option>
+              <option value="pass">Passing Only (&ge; 75)</option>
+              <option value="ungraded">Ungraded</option>
+            </select>
+            <input id="standSearch" class="form-control" type="search" placeholder="Search learner..." style="width:190px;" oninput="renderStanding()">
+          </div>
+        </div>
+        <div class="card-body" style="padding:10px 16px 14px;">
+          <div class="stats-grid" style="margin-bottom:14px;" id="standSummary"></div>
+          <div id="standAtRiskBanner"></div>
+          <div style="overflow-x:auto;">
+            <table class="score-table">
+              <thead><tr><th>Grade</th><th>Section</th><th>Learner</th><th style="text-align:center;">Subjects</th><th style="text-align:center;">General Average</th><th style="text-align:center;">Academic Standing</th><th style="text-align:center;">Status</th></tr></thead>
+              <tbody id="standRows"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <div class="analytics-row">
         <div class="card">
@@ -922,6 +977,90 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       </div>
     </div>
 
+<!-- ═══════════════════ STUDENTS ═══════════════════ -->
+    <div class="view" id="view-students">
+      <div class="page-header">
+        <div><div class="page-title">Students</div><div class="page-sub" id="qaStudentsSub">Every learner record, with their active-year section and academic standing</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <input id="qaStudentsSearch" class="form-control" type="search" placeholder="Search by name or LRN..." style="width:220px;" oninput="renderQaStudents()">
+        </div>
+      </div>
+      <div class="stats-grid" id="qaStudentsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-user-graduate" style="color:var(--blue);margin-right:8px;"></i>All Students</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Student</th><th>LRN</th><th>Grade / Section</th><th style="text-align:center;">Sex</th><th style="text-align:center;">General Average</th><th style="text-align:center;">Academic Standing</th><th style="text-align:center;">Status</th></tr></thead>
+            <tbody id="qaStudentsRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+<!-- ═══════════════════ SECTIONS ═══════════════════ -->
+    <div class="view" id="view-sections">
+      <div class="page-header">
+        <div><div class="page-title">Sections</div><div class="page-sub" id="qaSectionsSub">Every section in the active school year</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <input id="qaSectionsSearch" class="form-control" type="search" placeholder="Search sections..." style="width:220px;" oninput="renderQaSections()">
+        </div>
+      </div>
+      <div class="stats-grid" id="qaSectionsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);margin-right:8px;"></i>All Sections</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Section</th><th>Grade Level</th><th>Adviser</th><th style="text-align:center;">Classrooms</th><th style="text-align:center;">Students</th><th style="text-align:center;">At-Risk</th><th style="text-align:center;">Status</th></tr></thead>
+            <tbody id="qaSectionsRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+<!-- ═══════════════════ SUBJECTS ═══════════════════ -->
+    <div class="view" id="view-subjects">
+      <div class="page-header">
+        <div><div class="page-title">Subjects</div><div class="page-sub" id="qaSubjectsSub">Every subject in the active school year</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <input id="qaSubjectsSearch" class="form-control" type="search" placeholder="Search subjects..." style="width:220px;" oninput="renderQaSubjects()">
+        </div>
+      </div>
+      <div class="stats-grid" id="qaSubjectsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-book" style="color:var(--blue);margin-right:8px;"></i>All Subjects</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Subject</th><th>Grade Level</th><th style="text-align:center;">Type</th><th style="text-align:center;">Grading Period</th><th style="text-align:center;">Classrooms</th><th style="text-align:center;">Assessments</th><th style="text-align:center;">Status</th></tr></thead>
+            <tbody id="qaSubjectsRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+<!-- ═══════════════════ ASSESSMENTS ═══════════════════ -->
+    <div class="view" id="view-assessments">
+      <div class="page-header">
+        <div><div class="page-title">Assessments</div><div class="page-sub" id="qaAssessmentsSub">Assessments recorded for the active school year</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <input id="qaAssessmentsSearch" class="form-control" type="search" placeholder="Search assessments..." style="width:220px;" oninput="renderQaAssessments()">
+        </div>
+      </div>
+      <div class="stats-grid" id="qaAssessmentsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--blue);margin-right:8px;"></i>All Assessments</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Assessment</th><th style="text-align:center;">Type</th><th>Teacher</th><th>Class</th><th style="text-align:center;">Submissions</th><th style="text-align:center;">Average Score</th><th style="text-align:center;">Status</th></tr></thead>
+            <tbody id="qaAssessmentsRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
 <!-- ═══════════════════ SETTINGS ═══════════════════ -->
     <div class="view" id="view-settings">
       <div class="page-header">
@@ -1089,6 +1228,7 @@ const DATA = {
 };
 
 // ════════════════ HELPERS ════════════════
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 const JHS_GRADES=['Grade 7','Grade 8','Grade 9','Grade 10'];
 const SHS_GRADES=['Grade 11','Grade 12'];
 const EMPTY_TABLE='<tr><td colspan="9" style="text-align:center;padding:26px 12px;color:var(--text-muted);font-size:13px;">No records found.</td></tr>';
@@ -1102,6 +1242,270 @@ function fmtName(st){ return st.first+' '+(st.middle?st.middle+' ':'')+st.last; 
 function pill(status){ const cls=(status==='Needs Attention'||status==='At Risk'||status==='Low')?'bad':((status==='High'||status==='Excellent'||status==='Active')?'good':'ok'); return '<span class="status-pill '+cls+'">'+status+'</span>'; }
 function actPill(lv){ return '<span class="status-pill '+(lv==='high'?'good':(lv==='mid'?'ok':'bad'))+'">'+lv.toUpperCase()+'</span>'; }
 function round(n){ return Math.round(n*10)/10; }
+
+// ════════════════ ACADEMIC STANDING ════════════════
+// The standing table is driven by DATA.standing, which the backend computes from
+// stored StudentGrade rows. DATA.grades is kept separate because the older
+// performance panels still read it, and it pads a learner's missing subjects with
+// 0 — which would silently drag an average down. Standing never does that.
+const STANDING_ORDER=['Outstanding','Very Good','Good','Fair','Needs Improvement','Failed','Ungraded'];
+let STANDING_ROWS=Array.isArray(DATA.standing)?DATA.standing:[];
+
+function standingPill(label){
+  const cls=label==='Outstanding'||label==='Very Good'?'good':(label==='Good'||label==='Fair'?'ok':'bad');
+  return '<span class="status-pill '+cls+'">'+escHtml(label)+'</span>';
+}
+// Rank bands so "most common standing" always reports the strongest one present.
+function topStanding(rows){
+  if(!rows||!rows.length) return '—';
+  const counts={};
+  rows.forEach(r=>{ counts[r.standing]=(counts[r.standing]||0)+1; });
+  let best=null;
+  STANDING_ORDER.forEach(label=>{ if(counts[label]&&(best===null||counts[label]>counts[best])) best=label; });
+  return best?best+' ('+counts[best]+')':'—';
+}
+function standGradeLabel(row){
+  const g=row.grade||'';
+  if(!g) return '—';
+  return String(g).indexOf('Grade')===0 ? g : 'Grade '+g;
+}
+// Re-read the standing rows after the backend bridge swaps in the real payload.
+function refreshQaStanding(){
+  STANDING_ROWS=Array.isArray(DATA.standing)?DATA.standing:[];
+  QA_STANDING_BY_NAME={};
+  STANDING_ROWS.forEach(r=>{
+    const key=(r.name||'')+'|'+(r.section||'');
+    if(QA_STANDING_BY_NAME[key]===undefined) QA_STANDING_BY_NAME[key]=r;
+  });
+  const sel=document.getElementById('standGradeSel');
+  if(sel) sel.dataset.ready='';
+}
+function refreshQaDirectory(){
+  const dir=(DATA.directory&&typeof DATA.directory==='object')?DATA.directory:{};
+  QA_DIR_SECTIONS=(dir.sections||[]).slice();
+  QA_DIR_SUBJECTS=(dir.subjects||[]).slice();
+  QA_ROSTER_STUDENTS=(Array.isArray(DATA.rosterStudents)&&DATA.rosterStudents.length?DATA.rosterStudents:(DATA.students||[])).slice();
+  QA_LIST_ASSESSMENTS=(DATA.assessments||[]).slice();
+}
+function renderStandingFilters(){
+  const sel=document.getElementById('standGradeSel');
+  if(!sel||sel.dataset.ready) return;
+  const seen=[];
+  STANDING_ROWS.forEach(r=>{ const g=standGradeLabel(r); if(g!=='—'&&seen.indexOf(g)<0) seen.push(g); });
+  seen.sort((a,b)=>parseInt(a.replace(/\D/g,''),10)-parseInt(b.replace(/\D/g,''),10));
+  sel.innerHTML='<option value="">All Grade Levels</option>'+seen.map(g=>'<option value="'+escHtml(g)+'">'+escHtml(g)+'</option>').join('');
+  sel.dataset.ready='1';
+}
+function renderStanding(){
+  const box=document.getElementById('standRows');
+  if(!box) return;
+  renderStandingFilters();
+  const gSel=document.getElementById('standGradeSel');
+  const rSel=document.getElementById('standRiskSel');
+  const q=document.getElementById('standSearch');
+  const grade=gSel?gSel.value:'';
+  const risk=rSel?rSel.value:'';
+  const term=(q&&q.value||'').trim().toLowerCase();
+
+  let rows=STANDING_ROWS.slice();
+  if(grade) rows=rows.filter(r=>standGradeLabel(r)===grade);
+  if(risk==='risk') rows=rows.filter(r=>r.at_risk);
+  else if(risk==='pass') rows=rows.filter(r=>r.average!=null&&!r.at_risk);
+  else if(risk==='ungraded') rows=rows.filter(r=>r.average==null);
+  if(term) rows=rows.filter(r=>String(r.name||'').toLowerCase().indexOf(term)>=0||String(r.lrn||'').toLowerCase().indexOf(term)>=0);
+
+  const grid=document.getElementById('standSummary');
+  if(grid){
+    const atRisk=rows.filter(r=>r.at_risk).length;
+    const passing=rows.filter(r=>r.average!=null&&!r.at_risk).length;
+    const graded=rows.filter(r=>r.average!=null).length;
+    const sections={}; rows.forEach(r=>{ const k=standGradeLabel(r)+' · '+(r.section||'—'); sections[k]=true; });
+    grid.innerHTML=standStat('Learners Listed',rows.length,'fa-users')+
+      standStat('Grade / Sections',Object.keys(sections).length,'fa-layer-group')+
+      standStat('At-Risk (< 75)',atRisk,'fa-triangle-exclamation')+
+      standStat('Passing (≥ 75)',passing,'fa-circle-check')+
+      standStat('Ungraded',rows.filter(r=>r.average==null).length,'fa-circle-question');
+  }
+
+  const banner=document.getElementById('standAtRiskBanner');
+  const atRiskAll=rows.filter(r=>r.at_risk);
+  if(banner){
+    banner.innerHTML=atRiskAll.length
+      ? '<div class="at-risk-banner" style="margin:0 0 14px;"><span class="at-risk-icon" style="font-size:18px;">⚠️</span><div><div class="at-risk-title">'+atRiskAll.length+' learner'+(atRiskAll.length>1?'s':'')+' below the passing mark of 75</div><div class="at-risk-sub">Highlighted in red below. Recommended intervention: remediation, peer tutoring and regular progress tracking by the Academic Coordinator.</div></div></div>'
+      : '';
+  }
+
+  if(!rows.length){
+    box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-user-graduate" style="font-size:24px;margin-bottom:10px;display:block;opacity:.5;"></i>No learners match the selected filters.</td></tr>';
+    return;
+  }
+  const lastKey={};
+  box.innerHTML=rows.map(r=>{
+    const key=standGradeLabel(r)+' · '+(r.section||'—');
+    const showHead=lastKey[key]!==true;
+    lastKey[key]=true;
+    const head='<tr style="background:var(--accent);"><td colspan="7" style="padding:8px 6px;font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.3px;text-transform:uppercase;">'+escHtml(key)+'</td></tr>';
+    const avg=r.average==null?'—':round(r.average);
+    const avgStyle=r.at_risk?'color:#dc2626;font-weight:800;':(r.average==null?'color:var(--text-muted);':'font-weight:700;');
+    const riskTag=r.at_risk?'<span class="status-pill bad">At-Risk</span>':'<span class="status-pill good">OK</span>';
+    const row='<tr'+(r.at_risk?' style="background:#fef2f2;"':'')+'><td>'+escHtml(standGradeLabel(r))+'</td><td>'+escHtml(r.section||'—')+'</td><td style="font-weight:600;">'+escHtml(r.name)+'</td><td style="text-align:center;">'+escHtml(String(r.subjects||0))+'</td><td style="text-align:center;'+avgStyle+'">'+avg+'</td><td style="text-align:center;">'+standingPill(r.standing)+'</td><td style="text-align:center;">'+riskTag+'</td></tr>';
+    return showHead?head+row:row;
+  }).join('');
+}
+function standStat(label,value,icon){
+  return '<div class="stat-card"><div class="stat-icon blue"><i class="fa-solid '+(icon||'fa-chart-simple')+'"></i></div><div class="stat-val">'+escHtml(String(value))+'</div><div class="stat-label">'+escHtml(label)+'</div></div>';
+}
+
+// ════════════════ ACADEMIC DIRECTORY PANELS ════════════════
+// Students, Sections, Subjects and Assessments are read-only mirrors of the
+// Principal's panels. They are fed from the same backend directory payload, so
+// a row here cannot disagree with the identical row on the Principal dashboard.
+let QA_DIR_SECTIONS=((DATA.directory&&typeof DATA.directory==='object')?(DATA.directory.sections||[]):[]).slice();
+let QA_DIR_SUBJECTS=((DATA.directory&&typeof DATA.directory==='object')?(DATA.directory.subjects||[]):[]).slice();
+let QA_ROSTER_STUDENTS=(Array.isArray(DATA.rosterStudents)&&DATA.rosterStudents.length?DATA.rosterStudents:(DATA.students||[])).slice();
+let QA_LIST_ASSESSMENTS=(DATA.assessments||[]).slice();
+// The standing rows are keyed by learner name + section, which is how the
+// existing panels already join to the roster, so no extra query is needed.
+let QA_STANDING_BY_NAME={};
+STANDING_ROWS.forEach(r=>{
+  const key=(r.name||'')+'|'+(r.section||'');
+  if(QA_STANDING_BY_NAME[key]===undefined) QA_STANDING_BY_NAME[key]=r;
+});
+function qaStandingFor(name,section,grade){
+  const byKey=QA_STANDING_BY_NAME[(name||'')+'|'+(section||'')];
+  if(byKey) return byKey;
+  // Fall back to a name-only match when the section label differs in casing or
+  // spacing, so a learner still shows their standing rather than a blank cell.
+  const loose=STANDING_ROWS.find(r=>r.name===name && (!section||!r.section||r.section===section));
+  return loose||null;
+}
+function qaFilter(rows,term,fields){
+  if(!term) return rows;
+  return rows.filter(r=>fields.some(f=>String(r[f]==null?'':r[f]).toLowerCase().indexOf(term)>=0));
+}
+function qaTerm(id){ const el=document.getElementById(id); return el?(el.value||'').trim().toLowerCase():''; }
+function qaGradeText(v){ if(v==null||v==='') return '—'; const s=String(v); return s.indexOf('Grade')===0?s:'Grade '+s; }
+
+function renderQaStudents(){
+  const box=document.getElementById('qaStudentsRows');
+  if(!box) return;
+  const rows=qaFilter(QA_ROSTER_STUDENTS,qaTerm('qaStudentsSearch'),['name','lrn','section','grade','email']);
+  const grid=document.getElementById('qaStudentsStats');
+  const sub=document.getElementById('qaStudentsSub');
+  if(sub) sub.textContent=QA_ROSTER_STUDENTS.length?('Every learner record, with their active-year section and academic standing · '+QA_ROSTER_STUDENTS.length+' learner'+(QA_ROSTER_STUDENTS.length===1?'':'s')):'No student records yet.';
+  if(grid){
+    const atRisk=QA_ROSTER_STUDENTS.filter(r=>{ const s=qaStandingFor(r.name,r.section,r.grade); return s&&s.at_risk; }).length;
+    const graded=QA_ROSTER_STUDENTS.filter(r=>{ const s=qaStandingFor(r.name,r.section,r.grade); return s&&s.average!=null; }).length;
+    const levels={}; QA_ROSTER_STUDENTS.forEach(r=>{ if(r.grade) levels[qaGradeText(r.grade)]=true; });
+    grid.innerHTML=standStat('Students',QA_ROSTER_STUDENTS.length,'fa-user-graduate')+
+      standStat('Grade Levels',Object.keys(levels).length,'fa-layer-group')+
+      standStat('Graded',graded,'fa-ranking-star')+
+      standStat('At-Risk (< 75)',atRisk,'fa-triangle-exclamation');
+  }
+  if(!QA_ROSTER_STUDENTS.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No student records yet.</td></tr>'; return; }
+  if(!rows.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No students match that search.</td></tr>'; return; }
+  box.innerHTML=rows.map(r=>{
+    const st=qaStandingFor(r.name,r.section,r.grade);
+    const avg=st&&st.average!=null?round(st.average):'—';
+    const standing=st?standingPill(st.standing):'—';
+    const tag=st&&st.at_risk?'<span class="status-pill bad">At-Risk</span>':(st&&st.average==null?'<span class="status-pill ok">Ungraded</span>':'<span class="status-pill good">OK</span>');
+    const sex=r.sex==='M'?'Male':(r.sex==='F'?'Female':(r.sex||'—'));
+    return '<tr'+(st&&st.at_risk?' style="background:#fef2f2;"':'')+'>'+
+      '<td style="font-weight:600;">'+escHtml(r.name||'')+'</td>'+
+      '<td>'+escHtml(r.lrn||'—')+'</td>'+
+      '<td>'+escHtml(qaGradeText(r.grade))+' · '+escHtml(r.section||'—')+'</td>'+
+      '<td style="text-align:center;">'+escHtml(sex)+'</td>'+
+      '<td style="text-align:center;'+(st&&st.at_risk?'color:#dc2626;font-weight:800;':'font-weight:700;')+'">'+escHtml(String(avg))+'</td>'+
+      '<td style="text-align:center;">'+standing+'</td>'+
+      '<td style="text-align:center;">'+tag+'</td></tr>';
+  }).join('');
+}
+
+function renderQaSections(){
+  const box=document.getElementById('qaSectionsRows');
+  if(!box) return;
+  const term=qaTerm('qaSectionsSearch');
+  const rows=qaFilter(QA_DIR_SECTIONS,term,['name','gradeLevel','year','adviser','status']);
+  const grid=document.getElementById('qaSectionsStats');
+  const sub=document.getElementById('qaSectionsSub');
+  if(sub) sub.textContent=QA_DIR_SECTIONS.length?('Every section in the active school year · '+QA_DIR_SECTIONS.length+' section'+(QA_DIR_SECTIONS.length===1?'':'s')):'No sections have been created yet.';
+  if(grid){
+    const advisers={}; QA_DIR_SECTIONS.forEach(r=>{ if(r.adviser) advisers[r.adviser]=true; });
+    grid.innerHTML=standStat('Sections',QA_DIR_SECTIONS.length,'fa-layer-group')+
+      standStat('With Adviser',Object.keys(advisers).length,'fa-user-tie')+
+      standStat('Classrooms',QA_DIR_SECTIONS.reduce((n,r)=>n+(r.classrooms||0),0),'fa-chalkboard-user')+
+      standStat('Enrolled Students',QA_DIR_SECTIONS.reduce((n,r)=>n+(r.students||0),0),'fa-users');
+  }
+  if(!QA_DIR_SECTIONS.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No sections yet. Sections created by the registrar appear here.</td></tr>'; return; }
+  if(!rows.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No sections match that search.</td></tr>'; return; }
+  box.innerHTML=rows.map(r=>{
+    const risk=STANDING_ROWS.filter(x=>qaGradeText(x.grade)===qaGradeText(r.gradeLevel)&&x.section===r.name&&x.at_risk).length;
+    return '<tr><td style="font-weight:600;">'+escHtml(r.name||'')+'</td>'+
+      '<td>'+escHtml(qaGradeText(r.gradeLevel))+'</td>'+
+      '<td>'+escHtml(r.adviser||'Unassigned')+'</td>'+
+      '<td style="text-align:center;">'+escHtml(String(r.classrooms||0))+'</td>'+
+      '<td style="text-align:center;font-weight:700;">'+escHtml(String(r.students||0))+'</td>'+
+      '<td style="text-align:center;">'+(risk?'<span class="status-pill bad">'+risk+'</span>':'<span class="status-pill good">0</span>')+'</td>'+
+      '<td style="text-align:center;">'+pill(r.status||'Active')+'</td></tr>';
+  }).join('');
+}
+
+function renderQaSubjects(){
+  const box=document.getElementById('qaSubjectsRows');
+  if(!box) return;
+  const term=qaTerm('qaSubjectsSearch');
+  const rows=qaFilter(QA_DIR_SUBJECTS,term,['name','gradeLevel','subjectType','status']);
+  const grid=document.getElementById('qaSubjectsStats');
+  const sub=document.getElementById('qaSubjectsSub');
+  if(sub) sub.textContent=QA_DIR_SUBJECTS.length?('Every subject in the active school year · '+QA_DIR_SUBJECTS.length+' subject'+(QA_DIR_SUBJECTS.length===1?'':'s')):'No subjects have been created yet.';
+  if(grid){
+    const levels={}; QA_DIR_SUBJECTS.forEach(r=>{ if(r.gradeLevel) levels[qaGradeText(r.gradeLevel)]=true; });
+    grid.innerHTML=standStat('Subjects',QA_DIR_SUBJECTS.length,'fa-book')+
+      standStat('Grade Levels',Object.keys(levels).length,'fa-layer-group')+
+      standStat('With Classrooms',QA_DIR_SUBJECTS.filter(r=>(r.classrooms||0)>0).length,'fa-chalkboard-user')+
+      standStat('Assessments',QA_DIR_SUBJECTS.reduce((n,r)=>n+(r.assessments||0),0),'fa-file-signature');
+  }
+  if(!QA_DIR_SUBJECTS.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No subjects yet. Subjects created by the registrar appear here.</td></tr>'; return; }
+  if(!rows.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No subjects match that search.</td></tr>'; return; }
+  box.innerHTML=rows.map(r=>'<tr><td style="font-weight:600;">'+escHtml(r.name||'')+'</td>'+
+    '<td>'+escHtml(qaGradeText(r.gradeLevel))+'</td>'+
+    '<td style="text-align:center;">'+escHtml(r.subjectType||'—')+'</td>'+
+    '<td style="text-align:center;">'+escHtml(r.gradingPeriod||'—')+'</td>'+
+    '<td style="text-align:center;">'+escHtml(String(r.classrooms||0))+'</td>'+
+    '<td style="text-align:center;">'+escHtml(String(r.assessments||0))+'</td>'+
+    '<td style="text-align:center;">'+pill(r.status||'Active')+'</td></tr>').join('');
+}
+
+function renderQaAssessments(){
+  const box=document.getElementById('qaAssessmentsRows');
+  if(!box) return;
+  const term=qaTerm('qaAssessmentsSearch');
+  const rows=qaFilter(QA_LIST_ASSESSMENTS,term,['title','type','teacher','class','status']);
+  const grid=document.getElementById('qaAssessmentsStats');
+  const sub=document.getElementById('qaAssessmentsSub');
+  if(sub) sub.textContent=QA_LIST_ASSESSMENTS.length?('Assessments recorded for the active school year · '+QA_LIST_ASSESSMENTS.length+' assessment'+(QA_LIST_ASSESSMENTS.length===1?'':'s')):'No assessments have been recorded yet.';
+  if(grid){
+    const subs=QA_LIST_ASSESSMENTS.reduce((n,r)=>n+(r.submissions||0),0);
+    const scored=QA_LIST_ASSESSMENTS.filter(r=>(r.avgScore||0)>0);
+    const avg=scored.length?round(scored.reduce((n,r)=>n+r.avgScore,0)/scored.length):0;
+    grid.innerHTML=standStat('Assessments',QA_LIST_ASSESSMENTS.length,'fa-file-pen')+
+      standStat('Submissions',subs,'fa-paper-plane')+
+      standStat('Average Score',scored.length?avg:'—','fa-chart-simple')+
+      standStat('Teachers',Object.keys(QA_LIST_ASSESSMENTS.reduce((m,r)=>{ m[r.teacher]=1; return m; },{})).length,'fa-chalkboard-user');
+  }
+  if(!QA_LIST_ASSESSMENTS.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No assessments have been recorded yet.</td></tr>'; return; }
+  if(!rows.length){ box.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No assessments match that search.</td></tr>'; return; }
+  box.innerHTML=rows.map(r=>{
+    const low=(r.avgScore||0)>0&&r.avgScore<75;
+    return '<tr><td style="font-weight:600;">'+escHtml(r.title||'')+'</td>'+
+      '<td style="text-align:center;">'+escHtml(r.type||'—')+'</td>'+
+      '<td>'+escHtml(r.teacher||'—')+'</td>'+
+      '<td>'+escHtml(r.class||'—')+'</td>'+
+      '<td style="text-align:center;">'+escHtml(String(r.submissions||0))+'</td>'+
+      '<td style="text-align:center;'+(low?'color:#dc2626;font-weight:800;':'font-weight:700;')+'">'+escHtml((r.avgScore||0)>0?round(r.avgScore):'—')+'</td>'+
+      '<td style="text-align:center;">'+pill(r.status||'Active')+'</td></tr>';
+  }).join('');
+}
 
 let AGG=null;
 function aggGrades(){
@@ -1130,7 +1534,18 @@ function attendanceRows(){ return Object.values(DATA.attendance).map(a=>{ const 
 
 // ════════════════ CHARTS ════════════════
 const QAcharts={};
-function mk(id,cfg){ if(QAcharts[id]) QAcharts[id].destroy(); const canvas=document.getElementById(id); if(!canvas) return; QAcharts[id]=new Chart(canvas.getContext('2d'), cfg); }
+// mk() draws a chart only when the backend supplied points. Otherwise the canvas
+// is left untouched and the shared empty-state overlay explains the gap, so a
+// zero-length dataset never renders as a flat 0% axis.
+function mk(id,cfg,source){
+  if(QAcharts[id]){ QAcharts[id].destroy(); delete QAcharts[id]; }
+  const canvas=document.getElementById(id); if(!canvas) return;
+  const ds=(cfg&&cfg.data&&cfg.data.datasets)||[];
+  const pts=ds.reduce((n,d)=>n+((d.data&&d.data.length)||0),0);
+  if(!pts){ TASS.empty.chart(id,{source:source||('qa.'+id)}); return; }
+  TASS.empty.fillChart(id);
+  QAcharts[id]=new Chart(canvas.getContext('2d'), cfg);
+}
 const TXT=()=>cssv('--gray-600')||'#4a637f';
 const GRID=()=>cssv('--gray-100')||'#eef2f8';
 function baseChart(){ return { responsive:true, maintainAspectRatio:false, animation:{duration:600,easing:'easeOutQuart'}, plugins:{ legend:{ labels:{ boxWidth:9, boxHeight:9, padding:12, color:TXT(), font:{ size:11, family:'Plus Jakarta Sans' } } } } }; }
@@ -1147,7 +1562,7 @@ function renderOverview(){
   const att=attendanceRows();
   document.getElementById('ovTotalStudents').textContent=st.length;
   document.getElementById('ovTotalTeachers').textContent=DATA.teachers.length;
-  document.getElementById('ovAttRate').textContent=round(att.reduce((s,a)=>s+a.rawRate,0)/att.length*100)+'%';
+  document.getElementById('ovStandingTop').textContent=topStanding(DATA.standing);
   const pass=AGG.students.filter(s=>s.avg>=75).length;
   document.getElementById('ovPassRate').textContent=AGG.students.length?round(pass/AGG.students.length*100)+'%':'—';
 
@@ -1194,7 +1609,8 @@ function renderOverview(){
 function renderPerformance(){
   const base=['Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
   const vals=base.map(g=>AGG.grades[g]?AGG.grades[g].avg:0);
-  document.getElementById('pfOverallAvg').textContent=round(AGG.students.reduce((s,x)=>s+x.avg,0)/AGG.students.length);
+  document.getElementById('pfStandingCount').textContent=STANDING_ROWS.filter(r=>r.average!=null).length;
+  renderStanding();
   const subs=AGG.subjects.slice().sort((a,b)=>b.avg-a.avg);
   const top=subs[0], low=subs[subs.length-1];
   document.getElementById('pfTopSubject').textContent=top?top.name:'—';
@@ -1318,7 +1734,7 @@ function renderTeachers(){
 }
 
 // ════════════════ VIEW INIT ════════════════
-const QA_VIEW_INIT={ dashboard:renderOverview, performance:renderPerformance, enrollment:renderEnrollment, attendance:renderAttendance, demographics:renderDemographics, teachers:renderTeachers };
+const QA_VIEW_INIT={ dashboard:renderOverview, performance:renderPerformance, enrollment:renderEnrollment, attendance:renderAttendance, demographics:renderDemographics, teachers:renderTeachers, students:renderQaStudents, sections:renderQaSections, subjects:renderQaSubjects, assessments:renderQaAssessments };
 function initViewCharts(id){ if(QA_VIEW_INIT[id]) { try { QA_VIEW_INIT[id](); } catch(e){ console.warn('QA init',id,e); } } }
 function initAll(){ Chart.defaults.font.family='Plus Jakarta Sans'; aggGrades(); initViewCharts('dashboard'); }
 
@@ -1381,7 +1797,7 @@ initAll();
 @media(max-width:900px){
   .sidebar,.sidebar:hover,body.sidebar-expanded .sidebar{width:var(--sidebar-w) !important;padding:16px 10px;transform:translateX(-110%);box-shadow:4px 0 32px rgba(7,24,50,0.4) !important;transition:transform var(--transition),width var(--transition)}
   .sidebar.mobile-open{transform:translateX(0)}
-  .sidebar-section-label,.sidebar:hover .sidebar-section-label,body.sidebar-expanded .sidebar .sidebar-section-label{opacity:1}
+  .sidebar-section-label,.sidebar-label,.sidebar:hover .sidebar-section-label,body.sidebar-expanded .sidebar .sidebar-section-label,.sidebar:hover .sidebar-label,body.sidebar-expanded .sidebar .sidebar-label{opacity:1;max-height:24px}
   .nav-item{padding:10px 12px;gap:12px;justify-content:flex-start}
   .nav-item-icon{width:18px;min-width:18px}
   .nav-item-label,.sidebar:hover .nav-item-label,body.sidebar-expanded .sidebar .nav-item-label{opacity:1;max-width:200px}
@@ -1534,7 +1950,9 @@ header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
   .sidebar:not(.mobile-open):not(body.sidebar-expanded){ width:var(--sidebar-collapsed); box-shadow:none; }
   .sidebar:not(.mobile-open) .nav-item-label,
   .sidebar:not(.mobile-open) .sidebar-section-label,
+  .sidebar:not(.mobile-open) .sidebar-label,
   .sidebar:not(.mobile-open) .nav-item-badge{ opacity:0; }
+  .sidebar:not(.mobile-open) .sidebar-label{ max-height:0; }
 }
 
 /* ---------- Responsive: tablets ---------- */
@@ -1798,12 +2216,23 @@ window.tassEXMonReport=function(){window.tassExportByFieldList('dmStudentTable',
 // ── My Profile (avatar + contact info, per-dashboard storage) ──
 const PROFILE_KEY='tass_profile_qa';
 const PROFILE_MODAL_ID='profileModal';
-const PROFILE_DEFAULTS={name:'Ms. Rosario D. Lim',email:'qa.auditor@sanvicente.edu.ph',role:'Quality Assurance Auditor',dept:'Quality Audit Office',contact:'0917 555 0103',avatar:''};
+const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Quality Assurance" }}',dept:'',contact:'',avatar:'{{ user_avatar_url|default:"" }}'};
 let profileAvatarData=""
 function profil_initials(n){return (n||"").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"..";}
-function getProfile(){try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(p)return p;}catch(e){}return JSON.parse(JSON.stringify(PROFILE_DEFAULTS));}
+function initialsAvatar(sz,fs){const ini=('{{ user_initials }}'||'..');return "data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 "+sz+" "+sz+"%22><circle cx=%22"+(sz/2)+"%22 cy=%22"+(sz/2)+"%22 r=%22"+(sz/2)+"%22 fill=%22%233a86d4%22/><text x=%22"+(sz/2)+"%22 y=%22"+Math.round(sz*0.675)+"%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%22"+fs+"%22>"+ini+"</text></svg>";}
+function getProfile(){
+  // Identity belongs to the server account, so a stale local edit can never
+  // rename the signed-in user. Only the optional extras persist locally.
+  const d=JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
+  const srv=window.__TASS_PROFILE__;
+  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
+    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar)d.avatar=p.avatar;}
+  }catch(e){}
+  return d;
+}
 function profileSet(id,v){const el=document.getElementById(id);if(el)el.value=(v==null?"":String(v));}
-function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
+function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src=initialsAvatar(40,16);}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src=initialsAvatar(80,30);}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
 function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
 function closeProfile(){if(typeof closeModal==="function")closeModal(PROFILE_MODAL_ID);}
 function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
@@ -1816,7 +2245,11 @@ if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
 // ── Notifications (functional, per-dashboard storage) ──
 const NOTIFS_STORAGE_KEY='tass_notifs_qa';
 const NOTIFS_CONTAINER='notifList';
-const NOTIFS_DEFAULT_ITEMS=[{icon:'fa-clipboard-list',title:'Audit Schedule',msg:'Classroom audit for Grade 7 on Thursday, 9:00 AM.',unread:true,mins:40},{icon:'fa-triangle-exclamation',title:'Compliance Reminder',msg:'3 documents are awaiting sign-off this week.',unread:true,mins:130},{icon:'fa-file-circle-check',title:'Report Finalized',msg:'Student records audit report is ready for sign-off.',unread:true,mins:470},{icon:'fa-database',title:'System Check',msg:'Quarterly system verification continues tomorrow.',unread:false,mins:2600}];
+// Four invented notifications (a Grade 7 audit on Thursday, "3 documents awaiting
+// sign-off", a finalized report, a quarterly system check) used to sit here.
+// Notifications must come from the Notification table; expected bridge key:
+// D.notifs = [{icon,title,msg,unread,mins}].
+const NOTIFS_DEFAULT_ITEMS=[];
 function notifEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';});}
 function notifTimeAgo(m){if(m==null||m<1)return'Just now';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';var d=Math.floor(h/24);return d+' d ago';}
 function loadNotifs(){try{var a=JSON.parse(localStorage.getItem(NOTIFS_STORAGE_KEY)||'null');if(Array.isArray(a))return a;}catch(e){}return NOTIFS_DEFAULT_ITEMS.map(function(n){return Object.assign({},n);});}
@@ -2007,15 +2440,28 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script>
 // Backend bridge: replace demo/mock data in the QA dashboard with real data.
 function qaBackendBridge() {
+  TASS.page = 'quality_audit';
   var el = document.getElementById('qa-backend-data');
   if (!el) return;
   var D;
   try { D = JSON.parse(el.textContent); } catch (e) { return; }
   if (!D || typeof D !== 'object') return;
-  if (!D.students || !D.students.length) return;
 
-  var keys = ['academicYear', 'students', 'sections', 'teachers', 'grades', 'attendance', 'assessments', 'activityLog'];
+  // The signed-in user's own record, straight from the server.
+  window.__TASS_PROFILE__ = (D && D.profile) || null;  // An empty cohort is a valid state, not a reason to skip: the KPI tiles and
+  // charts must fall back to their empty states rather than keep demo values.
+
+  var keys = ['academicYear', 'students', 'sections', 'teachers', 'grades', 'attendance', 'assessments', 'activityLog', 'notifs',
+    'standing', 'directory', 'rosterStudents'];
   keys.forEach(function (k) { if (D[k] !== undefined) DATA[k] = D[k]; });
+  // Standing and the directory panels are captured into module-level constants at
+  // parse time, so they have to be refreshed whenever real data lands.
+  if (typeof refreshQaStanding === 'function') { try { refreshQaStanding(); } catch (e) {} }
+  if (typeof refreshQaDirectory === 'function') { try { refreshQaDirectory(); } catch (e) {} }
+  if (Array.isArray(D.notifs) && D.notifs.length) {
+    try { localStorage.setItem(NOTIFS_STORAGE_KEY, JSON.stringify(D.notifs)); } catch (e) {}
+    if (typeof renderNotifs === 'function') { try { renderNotifs(); } catch (e) {} }
+  }
 
   if (typeof AGG !== 'undefined' && AGG) AGG = null;
   if (typeof aggGrades === 'function') aggGrades();
@@ -2043,5 +2489,35 @@ if (document.readyState === 'loading') {
   qaBackendBridge();
 }
 </script>
+<script>
+/* The shared calendar (and the backup runner) post JSON, which Django
+   rejects without a CSRF token in the header. This template is standalone,
+   so base.html does not set it. */
+window.csrfToken = (function () {
+  var el = document.querySelector('#logoutForm input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+})();
+</script>
+<script src="{% static 'js/calendar.js' %}"></script>
+<script>
+/* Activity calendar — the payload arrives inside the same json_script blob the
+   rest of this dashboard reads, so the first month paints with no request.
+   Controls are rendered only when the backend says canEdit (System
+   Administrator / Principal). */
+(function () {
+  if (!window.TASS || !TASS.calendar) return;
+  var el = document.getElementById('qa-backend-data');
+  if (!el) return;
+  var payload;
+  try { payload = JSON.parse(el.textContent); } catch (e) { return; }
+  var cal = payload && payload.calendar;
+  if (!cal) return;
+  TASS.calendar.mount('calRoot', { data: cal });
+})();
+</script>
+
+<script src="/static/js/profile_bridge.js"></script>
+<script src="{% static 'js/tass_live.js' %}"></script>
+<script src="/static/js/pilot_guard.js"></script>
 </body>
 </html>

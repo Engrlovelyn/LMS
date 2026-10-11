@@ -37,23 +37,13 @@
         <tr>
           <td>{{ row.student.lrn }}</td>
           <td>{{ row.student.last_name }}, {{ row.student.first_name }}</td>
-          <td>
-            <form method="post" action="{% url 'attendance:record_status_update' session.pk %}" enctype="multipart/form-data" novalidate>
-              {% csrf_token %}
-              <input type="hidden" name="student_id" value="{{ row.student.pk }}">
-              {{ row.status_form.status }}
-          </td>
-          <td>
-              {{ row.status_form.remarks }}
-          </td>
-          <td>
-              {{ row.status_form.attachment }}
-          </td>
-          <td>
-              <button type="submit" class="btn btn-primary btn-sm">
-                <i class="fa-solid fa-floppy-disk"></i> Save
-              </button>
-            </form>
+          <td>{{ row.status_form.status }}</td>
+          <td>{{ row.status_form.remarks }}</td>
+          <td>{{ row.status_form.attachment }}</td>
+          <td class="text-right">
+            <button type="submit" form="{{ row.form_id }}" class="btn btn-primary btn-sm">
+              <i class="fa-solid fa-floppy-disk"></i> Save
+            </button>
           </td>
           <td>
             {% if row.record %}
@@ -67,6 +57,14 @@
       </tbody>
     </table>
   </div>
+  {# Forms live outside the table: HTML does not allow a form to span cells, and
+     each row's controls reference its own form via the `form` attribute. #}
+  {% for row in rows %}
+  <form id="{{ row.form_id }}" method="post" action="{% url 'attendance:record_status_update' session.pk %}" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="student_id" value="{{ row.student.pk }}">
+  </form>
+  {% endfor %}
   {% else %}
   <div class="card-body">
     <div class="empty-state">
@@ -76,4 +74,61 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* An "Absent - Excused" row must carry a remark or an attachment (enforced by
+   AttendanceRecord.clean()). Reflect that in the UI before submit. */
+(function () {
+  function baseOf(name) { return name.slice(0, name.length - 'status'.length); }
+  function rowFields(sel) {
+    var row = sel.closest('tr');
+    var b = baseOf(sel.getAttribute('name') || '');
+    return {
+      row: row,
+      remark: row ? row.querySelector('[name="' + b + 'remarks"]') : null,
+      file: row ? row.querySelector('[name="' + b + 'attachment"]') : null
+    };
+  }
+  var selects = Array.prototype.slice.call(
+    document.querySelectorAll('select[name$="-status"], select[name="status"]')
+  );
+  if (!selects.length) return;
+  function sync(sel) {
+    var f = rowFields(sel);
+    var on = sel.value === 'absent_excused';
+    [f.remark, f.file].forEach(function (el) {
+      var cell = el && el.closest('td');
+      if (cell) cell.style.background = on ? '#fffbeb' : '';
+    });
+  }
+  selects.forEach(function (sel) {
+    sync(sel);
+    sel.addEventListener('change', function () { sync(sel); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('form'), function (form) {
+    var mine = selects.filter(function (s) { return (s.form || s.closest('form')) === form; });
+    if (!mine.length) return;
+    form.addEventListener('submit', function (ev) {
+      var missing = [];
+      mine.forEach(function (sel) {
+        if (sel.value !== 'absent_excused') return;
+        var f = rowFields(sel);
+        var hasRemark = f.remark && f.remark.value.trim().length > 0;
+        var hasFile = f.file && f.file.files && f.file.files.length > 0;
+        if (!hasRemark && !hasFile) {
+          var cells = f.row ? f.row.querySelectorAll('td') : [];
+          missing.push(cells.length > 1 ? cells[1].textContent.trim() : 'a student');
+          if (f.row) f.row.style.background = '#fef2f2';
+        }
+      });
+      if (missing.length) {
+        ev.preventDefault();
+        alert('An excused absence needs a remark or an attachment for: ' + missing.join(', '));
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

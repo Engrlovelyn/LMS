@@ -43,14 +43,28 @@ class EmployeeAccountForm(forms.ModelForm):
         label="Staff access (Django admin)",
         required=False,
     )
+    role = forms.ModelChoiceField(
+        queryset=Role.objects.none(),
+        label="Role",
+        help_text="The dashboard this employee signs in to.",
+    )
 
     class Meta:
         model = EmployeeProfile
+        # sex/birthdate feed the Staff Demographics panel; they were left off
+        # this form, so no employee record ever carried one.
         fields = ["employee_number", "first_name", "last_name",
-                  "middle_initial", "suffix", "contact_number"]
+                  "middle_initial", "suffix", "sex", "birthdate", "contact_number"]
+        widgets = {
+            "birthdate": forms.DateInput(attrs={"type": "date"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["role"].queryset = (
+            Role.objects.exclude(code="student").order_by("code")
+        )
+        self.fields["role"].initial = Role.objects.filter(code="teacher").first()
         apply_form_control(self.fields)
 
 
@@ -60,7 +74,10 @@ class EmployeeAccountUpdateForm(forms.ModelForm):
     class Meta:
         model = EmployeeProfile
         fields = ["employee_number", "first_name", "last_name",
-                  "middle_initial", "suffix", "contact_number"]
+                  "middle_initial", "suffix", "sex", "birthdate", "contact_number"]
+        widgets = {
+            "birthdate": forms.DateInput(attrs={"type": "date"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -198,12 +215,26 @@ class ChangePasswordForm(forms.Form):
 
 
 class AdminResetPasswordForm(forms.Form):
-    """System administrator resets another user's password."""
+    """Administrator sets a password for a user who cannot use the emailed reset.
+
+    Rendered as a plain text field rather than a password input on purpose:
+    the administrator has to read the value out to the user (or write it on a
+    slip), so hiding it behind dots just guarantees transcription mistakes. The
+    page masks it behind a "reveal" toggle for the shoulder-surfing case.
+
+    Full policy validation happens in
+    ``apps.accounts.account_admin.issue_temporary_password`` so the HTML form
+    and the JSON endpoint reject exactly the same passwords.
+    """
     new_password = forms.CharField(
-        label="New Password",
-        widget=forms.PasswordInput,
-        min_length=8,
-        help_text="The user will be asked to use this password next sign-in and it will be recorded in password history.",
+        label="Temporary Password",
+        widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}),
+        max_length=128,
+        help_text=(
+            "Hand this to the user. They will be forced to choose their own "
+            "password the next time they sign in, so this one stops working "
+            "for them straight after."
+        ),
     )
 
     def __init__(self, *args, **kwargs):

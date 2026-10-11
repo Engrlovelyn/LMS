@@ -1,19 +1,64 @@
+import os
+
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import ProtectedError, Q
+from django.http import FileResponse, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from apps.accounts.decorators import perm_required
 from apps.academic_structure.models import AcademicYear, Subject
-from apps.virtual_classrooms.models import VirtualClassroom
+from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
 from .forms import LearningResourceForm, ResourceAttachForm, TopicForm
 from .models import LearningResource, LearningResourcePlacement, Topic
 
 
+@login_required
+def resource_download(request, pk):
+    """Serve a placed file, but only to someone entitled to that classroom.
+
+    The file itself lives on shared storage, so the check matters: without it any
+    logged-in user could read another section's material by guessing the id.
+    """
+    resource = get_object_or_404(LearningResource.objects.select_related("subject"), pk=pk)
+    if not resource.file:
+        return HttpResponse("No file attached to this resource.", status=404)
+
+    user = request.user
+    if not (user.is_superuser or user.is_staff):
+        as_student = VirtualClassroom.objects.filter(
+            resource_placements__resource=resource,
+            enrollments__student__user=user,
+            enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).exists()
+        as_teacher = VirtualClassroom.objects.filter(
+            resource_placements__resource=resource, teacher=user,
+        ).exists()
+        if not (as_student or as_teacher):
+            return HttpResponseForbidden("You do not have access to this material.")
+
+    try:
+        return FileResponse(resource.file.open("rb"), as_attachment=True,
+                            filename=os.path.basename(resource.file.name))
+    except FileNotFoundError:
+        return HttpResponse("The stored file is missing.", status=404)
+
+
 def _is_teacher_of(user, vc):
     return user.is_superuser or vc.teacher_id == user.id
+
+
+def _notify_materials_changed(vc, actor):
+    """Let the enrolled students repaint their Materials tab without a reload."""
+    from apps.communication.realtime import notify_enrolled_students
+
+    try:
+        notify_enrolled_students(vc.pk, kind=["materials", "topics"], actor=actor, exclude=actor)
+    except Exception:  # realtime must never block a save
+        pass
 
 
 def _teacher_subject_ids(user):
@@ -27,7 +72,7 @@ def _teacher_subject_ids(user):
 @perm_required("access_subject_level_repository")
 def repository_list(request):
     q = request.GET.get("q", "").strip()
-    qs = LearningResource.objects.all()
+    qs = LearningResource.objects.filter(share_to_repository=True)
     is_teacher = (
         request.user.groups.filter(name="teacher").exists()
         and not request.user.is_superuser
@@ -62,6 +107,7 @@ def resource_add(request):
         resource = form.save(commit=False)
         resource.uploaded_by = request.user
         resource.academic_year = active_year
+        resource.share_to_repository = True
         resource.save()
         messages.success(request, "Learning resource added successfully.")
         return redirect(reverse("teaching:repository_list"))
@@ -194,6 +240,7 @@ def resource_attach(request, vc_pk):
                 continue
         if created:
             messages.success(request, f"Attached {created} resource(s).")
+            _notify_materials_changed(vc, request.user)
         else:
             messages.info(request, "No new resources were attached.")
         return redirect(reverse("teaching:class_materials", args=[vc.pk]))

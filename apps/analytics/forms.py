@@ -9,6 +9,7 @@ class SFReportForm(forms.Form):
     REPORT_TYPE_CHOICES = [
         (GeneratedReport.TYPE_SF1, "School Form 1 (SF1) - Learner Roster"),
         (GeneratedReport.TYPE_SF2, "School Form 2 (SF2) - Daily Attendance"),
+        (GeneratedReport.TYPE_SF3, "School Form 3 (SF3) - Summary of Attendance"),
     ]
 
     report_type = forms.ChoiceField(choices=REPORT_TYPE_CHOICES, label="Report Type")

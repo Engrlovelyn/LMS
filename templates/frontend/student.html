@@ -7,6 +7,14 @@
 <title>SVI LMS – Student Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/calendar.css' %}">
+<link rel="stylesheet" href="{% static 'css/empty_state.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+<!-- Defines window.TASS / TASS.empty.* . Must load before any inline script on
+     this page: the renderers below call TASS.empty.list/table/stats/chart, and
+     a bare "TASS.page = '...'" throws ReferenceError (TASS undefined), which
+     aborts the rest of that block and blanks the view. -->
+<script src="{% static 'js/empty_state.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
@@ -337,32 +345,41 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 [data-theme="dark"] .perf-score{color:#d0dce8}
 
 /* MESSAGING */
-.msg-layout{display:grid;grid-template-columns:230px 1fr;gap:0;height:520px;border:1px solid var(--card-border);border-radius:var(--radius);overflow:hidden;background:var(--card-bg)}
-.msg-sidebar{border-right:1px solid var(--card-border);display:flex;flex-direction:column}
+.msg-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;height:520px;border:1px solid var(--card-border);border-radius:var(--radius);overflow:hidden;background:var(--card-bg)}
+.msg-sidebar{border-right:1px solid var(--card-border);display:flex;flex-direction:column;min-height:0}
 .msg-sidebar-header{padding:12px 14px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);border-bottom:1px solid var(--gray-100)}
 .msg-thread{padding:11px 13px;cursor:pointer;display:flex;gap:9px;align-items:center;border-bottom:1px solid var(--gray-100);transition:background .15s}
 .msg-thread:hover{background:var(--accent)}
 .msg-thread.active{background:var(--light-blue)}
-.msg-thread-name{font-size:12.5px;font-weight:600;color:var(--text-primary)}
+.msg-thread-name{font-size:12.5px;font-weight:600;color:var(--text-primary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msg-thread-preview{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;margin-top:2px}
-.msg-main{display:flex;flex-direction:column;background:var(--body-bg)}
-.msg-main-header{padding:12px 16px;border-bottom:1px solid var(--gray-100);font-weight:700;font-size:13.5px;color:var(--navy);background:var(--card-bg);display:flex;align-items:center;justify-content:space-between}
+.msg-main{display:flex;flex-direction:column;background:var(--body-bg);min-width:0;min-height:0}
+.msg-main-header{padding:12px 16px;border-bottom:1px solid var(--gray-100);font-weight:700;font-size:13.5px;color:var(--navy);background:var(--card-bg);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 [data-theme="dark"] .msg-main-header{color:#d0dce8}
-.msg-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-.msg{max-width:70%}
+/* min-height:0 is required on this flex item. Without it the default
+   min-height:auto lets the list grow to its full content height instead of
+   scrolling, which pushed the composer below the clipped .msg-layout so a long
+   message made the whole chat box disappear. */
+.msg-messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:70%;min-width:0}
 .msg.sent{margin-left:auto}
-.msg-bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5}
+/* A long message must wrap. Without an explicit break opportunity a run of
+   text with no spaces (a URL, a pasted paragraph) sets the bubble's min-content
+   width, which used to widen the `1fr` grid track until the message list and
+   the composer were pushed outside the clipped .msg-layout and the chat box
+   appeared to vanish. */
+.msg-bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word;min-width:0}
 .msg.received .msg-bubble{background:var(--card-bg);border:1px solid var(--card-border);color:var(--text-primary);border-radius:4px 12px 12px 12px}
 .msg.sent .msg-bubble{background:var(--navy);color:#fff;border-radius:12px 4px 12px 12px}
-.msg-time{font-size:10px;color:var(--text-muted);margin-top:3px}
+.msg-time{font-size:10px;color:var(--text-muted);margin-top:3px;overflow-wrap:anywhere}
 .msg.sent .msg-time{text-align:right}
-.msg-input-area{padding:12px 14px;border-top:1px solid var(--gray-100);display:flex;gap:8px;background:var(--card-bg)}
+.msg-input-area{padding:12px 14px;border-top:1px solid var(--gray-100);display:flex;gap:8px;background:var(--card-bg);flex-shrink:0}
 .msg-input{flex:1;border:1.5px solid var(--card-border);border-radius:9px;padding:9px 13px;font-size:13px;outline:none;font-family:'Plus Jakarta Sans',sans-serif;transition:border-color .2s;background:var(--input-bg);color:var(--text-primary)}
 .msg-input:focus{border-color:var(--blue)}
 .msg-tab-bar{display:flex;border-bottom:1px solid var(--gray-100)}
 .msg-tab{flex:1;padding:10px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;color:var(--text-muted);border-bottom:2.5px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Plus Jakarta Sans',sans-serif}
 .msg-tab.active{color:var(--navy);border-bottom-color:var(--blue)}
-.msg-tab-list{overflow-y:auto;flex:1}
+.msg-tab-list{overflow-y:auto;flex:1;min-height:0}
 
 /* LOG */
 .log-list{display:flex;flex-direction:column}
@@ -578,7 +595,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 
 /* RESPONSIVE */
 @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr)}.analytics-grid{grid-template-columns:repeat(2,1fr)}.analytics-row.three{grid-template-columns:1fr 1fr}.upload-type-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:900px){.grid-2,.analytics-row{grid-template-columns:1fr}.class-grid{grid-template-columns:repeat(2,1fr)}.msg-layout{grid-template-columns:1fr;height:auto}.msg-sidebar{max-height:200px}.main{padding:16px}.report-export-grid{grid-template-columns:repeat(2,1fr)}.upload-type-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.grid-2,.analytics-row{grid-template-columns:1fr}.class-grid{grid-template-columns:repeat(2,1fr)}.msg-layout{grid-template-columns:minmax(0,1fr);height:auto}.msg-sidebar{max-height:200px}.main{padding:16px}.report-export-grid{grid-template-columns:repeat(2,1fr)}.upload-type-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.stats-grid,.analytics-grid,.class-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.main{padding:12px}.classroom-tabs{flex-wrap:nowrap;overflow-x:auto}.tab-btn{min-width:100px;flex:0 0 auto}.analytics-row.three{grid-template-columns:1fr}.report-export-grid{grid-template-columns:1fr 1fr}.upload-type-grid{grid-template-columns:repeat(2,1fr)}}
 
 /* ── SETTINGS: THEME SWITCH ── */
@@ -724,6 +741,7 @@ html{ scroll-behavior:smooth; }
 .attend-sum-lbl{ font-size:11px; color:var(--gray-400); margin-top:2px; }
 .unread-dot{ width:8px; height:8px; border-radius:50%; background:var(--blue); flex-shrink:0; }
 .msg-thread-tag{ font-size:9px; font-weight:700; padding:2px 6px; border-radius:20px; background:#dbeafe; color:#2563eb; }
+.msg-unread{ display:inline-block; background:var(--red,#e11d48); color:#fff; font-size:9.5px; font-weight:700; border-radius:9px; padding:0 5px; line-height:14px; vertical-align:1px; margin-left:3px; }
 .perf-subject-section{ margin-bottom:24px; }
 .perf-subject-header{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--accent); border-radius:10px 10px 0 0; border:1px solid var(--gray-200); border-bottom:none; }
 .perf-subject-name{ font-size:14px; font-weight:700; color:var(--navy); }
@@ -880,8 +898,8 @@ html{ scroll-behavior:smooth; }
     <div class="header-right">
       <button class="icon-btn" onclick="toggleNotif()" title="Notifications"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
       <button class="profile-btn" onclick="toggleProfile()">
-        <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>ST</text></svg>'">
-        <div><div class="profile-name">Student</div><div class="profile-role">Student</div></div>
+        <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+        <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label }}</div></div>
         <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i>
       </button>
     </div>
@@ -896,9 +914,9 @@ html{ scroll-behavior:smooth; }
   <!-- PROFILE PANEL -->
   <div class="profile-panel" id="profilePanel">
     <div class="profile-panel-header">
-      <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>ST</text></svg>'">
-      <div class="profile-panel-name">Student</div>
-      <div class="profile-panel-role">Student</div>
+      <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials }}</text></svg>" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+      <div class="profile-panel-name">{{ user_display_name }}</div>
+      <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
@@ -913,14 +931,19 @@ html{ scroll-behavior:smooth; }
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
-    <div class="sidebar-section-label">Main Menu</div>
+    
+    <div class="sidebar-label">Main</div>
     <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
-    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">My Classes</span></button>
-    <button class="nav-item" onclick="openStudentHub('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
-    <button class="nav-item" onclick="openStudentHub('messages')"><div class="nav-item-icon"><i class="fa-solid fa-comments"></i></div><span class="nav-item-label">Messages</span></button>
-    <button class="nav-item" onclick="openStudentHub('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></button>
+    <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
+    
+    <div class="sidebar-label">My Learning</div>
+    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button>
     <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Tracking</span></button>
+    
+    <div class="sidebar-label">Activity</div>
     <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
+    
+    <div class="sidebar-label">Settings</div>
     <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
     <div class="sidebar-spacer"></div>
     </div>
@@ -942,6 +965,14 @@ html{ scroll-behavior:smooth; }
           <div class="welcome-stat"><div class="val">—</div><div class="lbl">Overdue</div></div>
         </div>
       </div>
+
+      <!-- ═════════════════════════ SCHOOL CALENDAR ═════════════════════════════ -->
+      <div class="card" style="margin-bottom:22px;">
+        <div class="card-body">
+          <div id="calRoot"></div>
+        </div>
+      </div>
+
 
       <!-- Stats -->
       <div class="stats-grid">
@@ -1053,15 +1084,14 @@ html{ scroll-behavior:smooth; }
       </div>
 
       <!-- ANNOUNCEMENTS TAB -->
+      <!-- School-wide announcements from the Principal are deliberately NOT
+           shown here. They belong to the school, not to one classroom, and
+           live on the student's dashboard. This tab is scoped to the open
+           virtual classroom and shows only what that classroom's teacher
+           posted for it. -->
       <div class="tab-pane" id="tab-sannouncements">
         <div class="card">
-          <div class="card-header"><div class="card-title"><i class="fa-solid fa-bullhorn" style="color:var(--blue);"></i> School Announcements</div><span style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;" onclick="markSchoolAnnouncementsRead(true)">Mark all read</span></div>
-          <div class="card-body" id="schoolAnnounceList" style="padding:0;">
-            <div style="text-align:center;padding:24px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No school announcements yet.</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Class Announcements</div><span style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;" onclick="markClassAnnouncementsRead()">Mark all read</span></div>
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-bullhorn" style="color:var(--blue);"></i> Class Announcements</div><span style="font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;" onclick="markClassAnnouncementsRead()">Mark all read</span></div>
           <div class="card-body" id="classAnnounceList">
             <div class="announce-item">
               <div style="text-align:center;padding:24px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>
@@ -1343,10 +1373,21 @@ window.addEventListener('resize', () => {
 // STATE
 // ════════════════════════════════════════════════
 let currentSMsgTab = 'class', sMsgActive = 'class-chat';
+// The virtual classroom (and its teacher) currently open, tracked so the
+// Messages view is confined to that class instead of every class the student
+// is enrolled in. Both are null while the student is outside a classroom,
+// in which case the Messages view keeps its global behaviour.
+let currentSVCId = null, currentSVTeacherId = null;
+function sMsgScopedThreads(list) {
+  if (!currentSVCId) return list || [];
+  if (currentSMsgTab === 'class' || !currentSVTeacherId)
+    return (list || []).filter(t => String(t.classroom_id) === String(currentSVCId));
+  return (list || []).filter(t => String(t.peer_id) === String(currentSVTeacherId));
+}
 let quizTimer = null, quizSeconds = 3600, quizAnswers = {}, quizSubmitted = false;
 let quizAssessmentKey = '', quizAssessmentTitle = '';
 let isDark = false;
-const STUDENT_GRADE = 9;
+let STUDENT_GRADE = 9;
 const STORAGE = {
   submissions: 'tass_student_submissions_v2',
   quizDraft: 'tass_student_quiz_draft_v2',
@@ -1403,6 +1444,16 @@ const sampleQuiz = [];
 const sClassThreads = [];
 const sTeacherThreads = [];
 let sMsgRealLoaded=false;
+// Who this student may start a private message with. The Teachers tab used to
+// list only conversations that already existed, so a student who had never
+// written to their teacher saw an empty list and had no way to begin — the one
+// flow the whole feature exists for.
+let sMsgContacts=[], sMsgContactsByClassroom={};
+function sMsgScopedContacts(){
+  if(!currentSVCId) return sMsgContacts||[];
+  const bucket=sMsgContactsByClassroom[String(currentSVCId)];
+  return bucket?bucket.slice():[];
+}
 function msgApi(path,opts){return fetch(path,opts||{}).then(r=>r.json()).catch(()=>({ok:false}));}
 function msgCsrf(){const m=document.cookie.match(/csrftoken=([^;]+)/);return m?m[1]:'';}
 function msgGradFor(name){const palette=['linear-gradient(135deg,#1e5faf,#3a86d4)','linear-gradient(135deg,#e11d48,#f43f5e)','linear-gradient(135deg,#7c3aed,#a78bfa)','linear-gradient(135deg,#16a34a,#4ade80)','linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#0891b2,#22d3ee)','linear-gradient(135deg,#dc2626,#f87171)','linear-gradient(135deg,#4f46e5,#818cf8)'];let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return palette[h%palette.length];}
@@ -1413,10 +1464,10 @@ function sMsgEmptyScreen(){return '<div style="text-align:center;padding:32px 16
 function sMsgRenderBody(t){
   if(!t)return;
   sMsgActive=t.id;
-  document.getElementById('sMsgChatTitle').innerHTML=`<span style="display:flex;align-items:center;gap:8px;"><div style="background:${t.grad};width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">${t.icon}</div>${t.name}</span>`;
+  document.getElementById('sMsgChatTitle').innerHTML=`<span style="display:flex;align-items:center;gap:8px;"><div style="background:${t.grad};width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">${t.icon}</div>${escHtml(t.name||'')}</span>`;
   const msgs=document.getElementById('sMsgMessages');msgs.innerHTML='';
   if(!t.msgs.length){msgs.innerHTML=sMsgEmptyChat();return;}
-  t.msgs.forEach(m=>{msgs.innerHTML+='<div class="msg '+(m.sent?'sent':'received')+'"><div class="msg-bubble">'+escHtml(m.text)+'</div><div class="msg-time">'+(m.sent?'':m.sender+' · ')+m.time+'</div></div>';});
+  t.msgs.forEach(m=>{msgs.innerHTML+='<div class="msg '+(m.sent?'sent':'received')+'"><div class="msg-bubble">'+escHtml(m.text).replace(/\n/g,'<br/>')+'</div><div class="msg-time">'+(m.sent?'':m.sender+' · ')+m.time+'</div></div>';});
   msgs.scrollTop=msgs.scrollHeight;
 }
 function sMsgFetchHistory(t){
@@ -1430,11 +1481,12 @@ function syncSMsgThreads(){
   return msgApi('/api/messages/',{credentials:'same-origin'}).then(d=>{
     if(!(d&&d.ok))return false;
     sMsgRealLoaded=true;
+    sMsgContacts=d.contacts||[];sMsgContactsByClassroom=d.contacts_by_classroom||{};
     sClassThreads.length=0;sTeacherThreads.length=0;
     (d.group||[]).forEach(t=>sClassThreads.push(sMsgFromData(t,'class')));
     (d.private||[]).forEach(t=>sTeacherThreads.push(sMsgFromData(t,'private')));
     renderSMsgThreads();
-    const threads=currentSMsgTab==='class'?sClassThreads:sTeacherThreads;
+    const threads=sMsgScopedThreads(currentSMsgTab==='class'?sClassThreads:sTeacherThreads);
     const keep=threads.find(x=>x.id===sMsgActive)||threads[0];
     if(keep){setSMsgThread(keep);}else{document.getElementById('sMsgChatTitle').innerHTML='Class Chat';document.getElementById('sMsgMessages').innerHTML=sMsgEmptyScreen();}
     startSMsgPoll();
@@ -1466,10 +1518,16 @@ function showView(id) {
 let currentSubject = '';
 function renderSubjectTabsFor(title){ if(typeof renderMaterials==='function')renderMaterials(title); if(typeof renderAssessments==='function')renderAssessments(title); if(typeof renderClassAnnouncements==='function')renderClassAnnouncements(title); if(typeof renderStudentAttendance==='function')renderStudentAttendance(title); }
 
-function openSubject(title, teacher, sub, color, gradeNum) {
-  if (parseInt(gradeNum) !== STUDENT_GRADE) { showToast('You can only access Grade ' + STUDENT_GRADE + ' subjects.', 'error'); return; }
+function openSubject(title, teacher, sub, color, gradeNum, vcId, teacherId) {
+  currentSVCId = (vcId === undefined || vcId === null || vcId === '') ? null : String(vcId);
+  currentSVTeacherId = (teacherId === undefined || teacherId === null || teacherId === '') ? null : String(teacherId);
   currentSubject = title;
-  const meta = (typeof SUBJECTS!=='undefined' && SUBJECTS.find(s=>s.title===title)) || null;
+  const meta = (typeof SUBJECTS!=='undefined' && (SUBJECTS.find(s=>s.id===vcId) || SUBJECTS.find(s=>s.title===title))) || null;
+  // Grade mismatch no longer blocks the classroom; the content is scoped to
+  // this virtual classroom, so incorrect metadata cannot leak across levels.
+  if (meta && gradeNum !== undefined && parseInt(meta.grade) !== parseInt(gradeNum)) {
+    // do not block; just log for debugging
+  }
   document.getElementById('subjectTitle').textContent = title;
   document.getElementById('subjectTeacher').textContent = teacher;
   document.getElementById('subjectSub').textContent = sub;
@@ -1485,7 +1543,7 @@ function openSubject(title, teacher, sub, color, gradeNum) {
 
 function openSubjectAndTab(subjectName, tabId) {
   const meta=(typeof SUBJECTS!=='undefined')?SUBJECTS.find(s=>s.title===subjectName):null;
-  openSubject(subjectName, meta?meta.teacher:'', meta?meta.sub:'', meta?meta.color:'#1e5faf', meta?meta.grade:STUDENT_GRADE);
+  openSubject(subjectName, meta?meta.teacher:'', meta?meta.sub:'', meta?meta.color:'#1e5faf', meta?meta.grade:STUDENT_GRADE, meta?meta.id:null, meta?meta.teacher_id:null);
   const tabIds = ['stla','sassessment','sannouncements','smessages','sattendance'];
   const tabMap = { materials:0, assessments:1, announcements:2, messages:3, attendance:4 };
   const idx = tabMap[tabId] ?? 2;
@@ -1501,7 +1559,7 @@ function openSubjectAndTab(subjectName, tabId) {
 function openStudentHub(which){
   const first=(typeof SUBJECTS!=='undefined'&&SUBJECTS.length)?SUBJECTS[0]:null;
   if(!first){ showView('subjects'); return; }
-  if(which==='announcements'){ switchSchoolAnnTab(); return; }
+  if(which==='announcements'){ goToSchoolAnnouncements(); return; }
   openSubjectAndTab(first.title, which);
 }
 
@@ -1572,9 +1630,16 @@ function clearFile() {
   document.getElementById('uploadedFileDisplay').innerHTML = '';
 }
 
-function findStudentMaterial(name){
-  if(typeof STUDENT_MATERIALS==='undefined') return null;
-  for(const subj in STUDENT_MATERIALS){ const found=(STUDENT_MATERIALS[subj]||[]).find(m=>m.name===name); if(found) return found; }
+function findStudentMaterial(name, classroomId){
+  if (!name || typeof STUDENT_MATERIALS==='undefined') return null;
+  var cid = classroomId != null ? String(classroomId) : (currentSVCId != null ? String(currentSVCId) : null);
+  if (cid && STUDENT_MATERIALS[cid]) {
+    var list = STUDENT_MATERIALS[cid];
+    for (var i=0;i<list.length;i++) {
+      var m=list[i];
+      if (m && (m.name===name || m.original_name===name || m.title===name || (m.file && m.file===name))) return m;
+    }
+  }
   return null;
 }
 function resourceKindLabel(m){
@@ -1629,6 +1694,14 @@ function confirmSubmitWork() {
   const now = new Date();
   const key = currentSubmitKey || (title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'upload');
   setSubmission(key, { title, fileName:file.name, size:file.size, submittedAt:now.toISOString(), late:isLate, type:'upload', note });
+  // Persist the submission + file to PostgreSQL (file stored in R2).
+  try {
+    const fd = new FormData();
+    fd.append('title', title);
+    fd.append('note', note);
+    if (file) fd.append('file', file);
+    fetch('/api/submissions/', { method:'POST', credentials:'same-origin', headers:{ 'X-CSRFToken':msgCsrf() }, body:fd }).catch(function(){});
+  } catch (e) {}
   const card = document.querySelector('[data-assessment="'+key+'"]');
   if (card) {
     const status = card.querySelector('.assess-status');
@@ -1765,6 +1838,7 @@ function submitQuiz() {
   const pct = totalPts === 0 ? 0 : Math.round((score/totalPts)*100);
   const passed = pct >= 60;
   setSubmission(quizAssessmentKey, { title: quizAssessmentTitle, submittedAt: new Date().toISOString(), score, totalPts, pct, status:'Submitted' });
+  try { fetch('/api/submissions/', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json', 'X-CSRFToken':msgCsrf() }, body:JSON.stringify({ title: quizAssessmentTitle, score: score }) }).catch(function(){}); } catch (e) {}
   const drafts = readStore(STORAGE.quizDraft, {}); delete drafts[quizAssessmentKey]; writeStore(STORAGE.quizDraft, drafts);
   logStudentActivity('You submitted ' + quizAssessmentTitle + ' · Score: ' + score + '/' + totalPts, 'submit');
   const card = document.querySelector('[data-assessment="'+quizAssessmentKey+'"]');
@@ -1823,23 +1897,231 @@ function pollSMsgSummary(){
     renderSMsgThreads();
   });
 }
+let sMsgWS=null,sMsgWSReady=false,msgMeId=null,sMsgWSReconn=0;
+function sMsgOpenWS(){
+  if(sMsgWS&&(sMsgWS.readyState===WebSocket.OPEN||sMsgWS.readyState===WebSocket.CONNECTING))return;
+  const proto=location.protocol==='https:'?'wss://':'ws://';
+  sMsgWS=new WebSocket(proto+location.host+'/ws/chat/');
+  sMsgWS.onopen=function(){sMsgWSReady=true;sMsgWSReconn=0;};
+  sMsgWS.onclose=function(){sMsgWSReady=false;sMsgWS=null;const d=Math.min(10000,2000*Math.pow(2,sMsgWSReconn++));setTimeout(sMsgOpenWS,d);};
+  sMsgWS.onerror=function(){try{sMsgWS.close();}catch(e){}};
+  sMsgWS.onmessage=function(e){try{sMsgHandleNew(JSON.parse(e.data));}catch(err){}};
+}
+function msgSendWS(payload){
+  if(sMsgWSReady&&sMsgWS){try{sMsgWS.send(JSON.stringify(payload));return true;}catch(e){sMsgWSReady=false;}}
+  return false;
+}
+function sMsgHandleNew(d){
+  if(d.type==='hello'){msgMeId=d.me;return;}
+  if(d.type==='error'){showToast(d.message||'Message error','error');return;}
+  if(d.type!=='chat')return;
+  const all=[...sClassThreads,...sTeacherThreads];
+  let t=all.find(x=>x.id===d.thread);
+  if(!t){
+    sMsgRealLoaded=true;
+    if(d.kind==='dm'){
+      t=sMsgFromData({id:d.thread,name:d.sender,sub:'',unread:1,peer_id:d.peer_id},'private');
+      sTeacherThreads.push(t);
+    }else{
+      t=sMsgFromData({id:d.thread,name:'Class Chat',sub:'',unread:1,classroom_id:d.classroom_id},'class');
+      sClassThreads.push(t);
+    }
+  }
+  t._ids=t._ids||{};
+  if(t._ids[d.id])return;
+  t._ids[d.id]=true;
+  const mine=d.sender_id===msgMeId;
+  if(mine){
+    const opt=t.msgs.find(m=>!m.id&&m.sent&&m.text===d.text);
+    if(opt){opt.id=d.id;opt.time=d.time;opt.sender=d.sender;}
+    else t.msgs.push({id:d.id,sent:true,sender:d.sender,text:d.text,time:d.time});
+  }else{
+    t.msgs.push({id:d.id,sent:false,sender:d.sender,text:d.text,time:d.time});
+    t.unread=(t.unread||0)+1;
+  }
+  t.sub=(mine?'You: ':'')+d.text.substring(0,30);
+  if(sMsgActive===t.id)sMsgRenderBody(t);
+  renderSMsgThreads();
+}
+sMsgOpenWS();
 function startSMsgPoll(){if(window.__sMsgPollStarted)return;window.__sMsgPollStarted=true;setInterval(()=>{pollSMsgActive();pollSMsgSummary();},15000);}
+
+// ── Live updates (no page refresh) ─────────────────────────────────────────
+// tass_live.js holds one socket at /ws/live/ and calls onTassLiveRefresh() when
+// a teacher changes something in the virtual classroom this student is in. The
+// signal carries no data - only "this classroom changed" - so the fresh content
+// is re-fetched from /api/my/classrooms/<id>/ and the open tabs are repainted.
+// Refresh is deliberately scoped to the classroom on screen: a change in another
+// of the student's classrooms waits until they open that subject.
+const STUDENT_LIVE = { classroom_id: null, materials: [], assessments: [], announcements: [] };
+
+function applyStudentClassroomPayload(d){
+  if (!d || !d.classroom_id) return;
+  const key = String(d.classroom_id);
+  STUDENT_LIVE.classroom_id = d.classroom_id;
+  if (Array.isArray(d.materials)) {
+    STUDENT_MATERIALS[key] = d.materials;
+    STUDENT_LIVE.materials = d.materials;
+  }
+  if (Array.isArray(d.assessments)) {
+    var byId = {};
+    if (Array.isArray(STUDENT_ASSESSMENTS)) {
+      for (var i=0;i<STUDENT_ASSESSMENTS.length;i++) {
+        var x=STUDENT_ASSESSMENTS[i];
+        if (x && x.id!==undefined && x.id!==null) byId[String(x.id)]=x;
+      }
+    }
+    for (var j=0;j<d.assessments.length;j++) {
+      var a=d.assessments[j];
+      if (!a) continue;
+      var kA = a.id!==undefined&&a.id!==null ? String(a.id) : (a.title+'|'+a.classroom_id+'|'+a.subject);
+      if (byId[kA]) Object.assign(byId[kA], a);
+      else byId[kA]=a;
+    }
+    var listA=[];
+    for (var m in byId){ if (byId.hasOwnProperty(m)) listA.push(byId[m]); }
+    STUDENT_ASSESSMENTS = listA;
+    STUDENT_LIVE.assessments = d.assessments;
+  }
+  if (Array.isArray(d.announcements)) {
+    var byC={};
+    if (Array.isArray(CLASS_ANNOUNCEMENTS)) {
+      for (var i=0;i<CLASS_ANNOUNCEMENTS.length;i++) {
+        var ca=CLASS_ANNOUNCEMENTS[i]; if (ca&&ca.id!==undefined&&ca.id!==null) byC[String(ca.id)]=ca;
+      }
+    }
+    for (var j=0;j<d.announcements.length;j++) {
+      var ca2=d.announcements[j]; if (!ca2) continue;
+      var cK = ca2.id!==undefined&&ca2.id!==null ? String(ca2.id) : (ca2.content.substring(0,60)+'|'+ca2.classroom_id);
+      if (byC[cK]) Object.assign(byC[cK], ca2); else byC[cK]=ca2;
+    }
+    var listC=[]; for (var m in byC){ if (byC.hasOwnProperty(m)) listC.push(byC[m]); }
+    CLASS_ANNOUNCEMENTS = listC;
+    if (d.classroom_id != null && typeof STUDENT_CLASS_ANN !== 'undefined') {
+      STUDENT_CLASS_ANN[String(d.classroom_id)] = d.announcements;
+    }
+    STUDENT_LIVE.announcements = d.announcements;
+  }
+  const subject = (typeof currentSubject !== 'undefined' && currentSubject) ? currentSubject : '';
+  if (subject) {
+    if (typeof renderMaterials === 'function') renderMaterials(subject);
+    if (typeof renderAssessments === 'function') renderAssessments(subject);
+    if (typeof renderClassAnnouncements === 'function') renderClassAnnouncements(subject);
+  }
+  if (typeof renderPendingTasks === 'function') renderPendingTasks();
+  if (typeof renderRecentScores === 'function') renderRecentScores();
+  document.dispatchEvent(new CustomEvent('tass:student-classroom-updated', {
+    detail: { classroom_id: d.classroom_id, kinds: d.kinds || null }
+  }));
+}
+
+let __studentLivePending = false;
+function onTassLiveRefresh(evt){
+  const id = (typeof currentSVCId !== 'undefined' && currentSVCId != null && currentSVCId !== '') ? currentSVCId : null;
+  if (!id) {
+    // Not inside a classroom; do not discard live pushes globally. The live
+    // socket's `relevant()` already passes dashboard events; ignore classroom-
+    // specific refreshes here, but let dashboard-level refreshes be picked up
+    // elsewhere.
+    return;
+  }
+  if (evt && evt.classroom_id != null && String(evt.classroom_id) !== String(id)) return;
+  if (__studentLivePending) return;
+  __studentLivePending = true;
+  fetch('/api/my/classrooms/' + encodeURIComponent(id) + '/', {
+    credentials: 'same-origin',
+    headers: { 'Accept': 'application/json' }
+  }).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if (d && d.ok !== false) applyStudentClassroomPayload(d); })
+    .finally(function(){ __studentLivePending = false; });
+}
+
 function initStudentMsgTab() {
   syncSMsgThreads();
   renderSMsgThreads();
-  if (sClassThreads.length > 0) setSMsgThread(sClassThreads[0]);
+  // Previously this always opened sClassThreads[0], so a student who opened a
+  // second subject saw the wrong class's conversation. Open the current
+  // classroom's chat instead.
+  const scoped = sMsgScopedThreads(sClassThreads);
+  if (scoped.length > 0) setSMsgThread(scoped[0]);
   else document.getElementById('sMsgMessages').innerHTML = sMsgEmptyScreen();
+}
+// The Teachers tab lists everyone this student may write to, not just the
+// threads that already have history: existing conversations first (server order
+// is most-recent first), then their teachers who have never been contacted,
+// alphabetically. Picking a name opens the chat ready to type — no separate
+// "new message" step.
+function sMsgPersonalRows(){
+  const seen={}, withThread=[], fresh=[];
+  sMsgScopedThreads(sTeacherThreads).forEach(function(t){
+    if(t.peer_id===undefined||t.peer_id===null||t.peer_id===''){withThread.push({kind:'thread',t:t});return;}
+    const key='p-'+t.peer_id;
+    if(seen[key])return;
+    seen[key]=1;
+    withThread.push({kind:'thread',t:t});
+  });
+  sMsgScopedContacts().forEach(function(c){
+    const key='p-'+c.id;
+    if(seen[key])return;
+    seen[key]=1;
+    fresh.push({kind:'contact',c:c});
+  });
+  fresh.sort(function(a,b){return String(a.c.name).localeCompare(String(b.c.name));});
+  return withThread.concat(fresh);
 }
 function renderSMsgThreads() {
   const list = document.getElementById('sMsgThreadList');
   list.innerHTML = '';
-  const threads = currentSMsgTab === 'class' ? sClassThreads : sTeacherThreads;
+  if (sMsgRealLoaded && currentSMsgTab === 'teacher') {
+    const rows = sMsgPersonalRows();
+    if (!rows.length) {
+      list.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--text-muted);">'
+        + (currentSVCId ? 'No teacher to message in this class yet.'
+                        : 'No teachers to message yet. Teachers appear here once you are enrolled in one of their classes.')
+        + '</div>';
+      return;
+    }
+    rows.forEach(function(r){
+      if(r.kind==='thread'){
+        const t=r.t;
+        list.innerHTML += `<div class="msg-thread ${t.id===sMsgActive?'active':''}" data-tid="${escHtml(t.id)}" onclick="sMsgOpenRow(this)">
+          <div style="background:${t.grad};width:34px;height:34px;border-radius:8px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;">${escHtml(t.icon)}</div>
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;"><div class="msg-thread-name">${escHtml(t.name)}</div>${t.unread>0?`<span class="msg-unread">${t.unread}</span>`:''}</div>
+            <div class="msg-thread-preview">${escHtml(t.sub||'')}</div>
+          </div>
+        </div>`;
+      }else{
+        const c=r.c;
+        list.innerHTML += `<div class="msg-thread" data-cid="${c.id}" data-cname="${escHtml(c.name)}" onclick="sMsgOpenRow(this)" title="Start a conversation with ${escHtml(c.name)}">
+          <div style="background:${msgGradFor(c.name)};width:34px;height:34px;border-radius:8px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;">${escHtml(msgIcon(c.name))}</div>
+          <div style="min-width:0;flex:1;">
+            <div class="msg-thread-name">${escHtml(c.name)}</div>
+            <div class="msg-thread-preview">${escHtml(c.role||'Teacher')} · New conversation</div>
+          </div>
+        </div>`;
+      }
+    });
+    return;
+  }
+  const threads = sMsgScopedThreads(currentSMsgTab === 'class' ? sClassThreads : sTeacherThreads);
+  if (!threads.length) {
+    list.innerHTML = currentSVCId
+      ? '<div style="padding:16px;font-size:12px;color:var(--text-muted);">No conversations in this class yet.</div>'
+      : '<div style="padding:16px;font-size:12px;color:var(--text-muted);">No conversations yet.</div>';
+    return;
+  }
   threads.forEach(t => {
+    // No `t.tag` here: neither the /api/messages/ payload nor sMsgFromData()
+    // ever produced one, so the old pill rendered a literal "undefined" on
+    // every row. The Class/Teacher split above already says what kind of
+    // conversation this is, so the space is better spent on the unread count,
+    // which the server sends and the student list previously ignored.
     list.innerHTML += `<div class="msg-thread ${t.id===sMsgActive?'active':''}" onclick="setSMsgThread_byId('${t.id}')">
       <div style="background:${t.grad};width:34px;height:34px;border-radius:8px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;">${t.icon}</div>
       <div style="min-width:0;flex:1;">
-        <div style="display:flex;align-items:center;gap:6px;"><div class="msg-thread-name">${t.name}</div><span class="msg-thread-tag">${t.tag}</span></div>
-        <div class="msg-thread-preview">${escHtml(t.sub)}</div>
+        <div style="display:flex;align-items:center;gap:6px;"><div class="msg-thread-name">${escHtml(t.name)}</div>${t.unread>0?`<span class="msg-unread">${t.unread}</span>`:''}</div>
+        <div class="msg-thread-preview">${escHtml(t.sub||'')}</div>
       </div>
     </div>`;
   });
@@ -1849,22 +2131,48 @@ function setSMsgThread_byId(id) {
   const t = all.find(x=>x.id===id);
   if (t) setSMsgThread(t);
 }
+// One handler for both row kinds: reuse the thread when it already exists,
+// otherwise create it lazily from the contact row and open it ready to type.
+function sMsgOpenRow(el){
+  const tid=el.getAttribute('data-tid');
+  let t=tid?sTeacherThreads.find(x=>x.id===tid):null;
+  if(!t){
+    const cid=parseInt(el.getAttribute('data-cid'),10);
+    if(!cid){showToast('Could not open that conversation.','error');return;}
+    const name=el.getAttribute('data-cname')||'Teacher';
+    t=sTeacherThreads.find(x=>x.id==='p-'+cid);
+    if(!t){
+      t=sMsgFromData({id:'p-'+cid,name:name,sub:'No messages yet',unread:0,peer_id:cid},'private');
+      sTeacherThreads.push(t);
+    }
+  }
+  if(!t)return;
+  // Set the tab directly instead of calling switchSMsgTab(): that helper opens
+  // the first thread it finds, which would throw away the row just clicked.
+  currentSMsgTab='teacher';
+  document.getElementById('sMsgTabClass').classList.toggle('active',false);
+  document.getElementById('sMsgTabTeacher').classList.toggle('active',true);
+  setSMsgThread(t);
+}
 function setSMsgThread(t) {
   if (!t) return;
   sMsgActive = t.id;
+  // Paint the selection immediately. The history fetch below returns early, so
+  // without this the clicked row kept no active highlight until the network
+  // round-trip came back.
+  renderSMsgThreads();
   if (sMsgRealLoaded && !t._loaded && ((t.peer_id!==undefined&&t.peer_id!==null) || (t.classroom_id!==undefined&&t.classroom_id!==null))) {
     t._loaded = true;
     sMsgFetchHistory(t);
     return;
   }
   sMsgRenderBody(t);
-  renderSMsgThreads();
 }
 function switchSMsgTab(tab) {
   currentSMsgTab = tab;
   document.getElementById('sMsgTabClass').classList.toggle('active', tab==='class');
   document.getElementById('sMsgTabTeacher').classList.toggle('active', tab==='teacher');
-  const threads = tab==='class' ? sClassThreads : sTeacherThreads;
+  const threads = sMsgScopedThreads(tab==='class' ? sClassThreads : sTeacherThreads);
   if (threads.length > 0) { sMsgActive = threads[0].id; setSMsgThread(threads[0]); }
   else {
     sMsgActive = '';
@@ -1890,6 +2198,9 @@ function sendStudentMsg() {
   if (!sMsgRealLoaded) return;
   const payload = (t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='') ? {recipient_id:t.peer_id,body:text} : (t.classroom_id!==undefined&&t.classroom_id!==null&&t.classroom_id!=='') ? {classroom_id:t.classroom_id,body:text} : null;
   if (!payload) return;
+  const wsPayload={action:'send',kind:(t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='')?'dm':'group',body:text};
+  if(wsPayload.kind==='dm'){wsPayload.peer_id=t.peer_id;}else{wsPayload.classroom_id=t.classroom_id;}
+  if (msgSendWS(wsPayload)) return;
   msgApi('/api/messages/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)}).then(d=>{
     if (d && d.ok) return;
     const i = t.msgs.indexOf(optimistic);
@@ -1944,7 +2255,7 @@ function openStudentProfileModal() {
   const wrap=document.getElementById('studentProfileBody');
   if(wrap){
     const det=(l,v)=>'<div style="padding:9px 12px;background:var(--accent);border:1px solid var(--gray-100);border-radius:8px;"><div style="font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">'+l+'</div><div style="font-size:12.5px;font-weight:600;color:var(--navy);word-break:break-word;">'+escHtml(v)+'</div></div>';
-    wrap.innerHTML=det('Full Name','Student')+det('LRN','136100100099')+det('Grade Level','Grade '+STUDENT_GRADE)+det('Section','Section C')+det('Email','student@sanvicente.edu.ph')+det('Account Status','Active · Verified')+det('School Year','S.Y. 2025-2026')+det('Adviser','Ms. Lovelyn C. Malanot');
+    wrap.innerHTML=det('Full Name','{{ user_display_name|default:"" }}')+det('LRN','{{ lrn|default:"" }}')+det('Grade Level','Grade '+(STUDENT_GRADE||'–'))+det('Section','')+det('Email','{{ user_email|default:"" }}')+det('Account Status','Active')+det('School Year','')+det('Adviser','');
   }
   closeAllPanels();
   openModal('studentProfileModal');
@@ -1994,33 +2305,41 @@ document.addEventListener('click', function(e) {
 // ════════════════════════════════════════════════
 let dashChart, perfChart;
 function studentChartSeries(){
+  // 'Class Average' used to be invented as `myScore - 8` (or -10 when the student
+  // failed), which drew a comparison bar out of thin air. It now reads
+  // s.classAvg, an aggregate the backend has to supply per assessment.
   const scores=(typeof STUDENT_SCORES!=='undefined'?STUDENT_SCORES:[]).slice(0,5);
-  return {labels:scores.map(s=>s.title.length>16?s.title.slice(0,15)+'…':s.title),mine:scores.map(s=>s.pct),avg:scores.map(s=>Math.max(0,s.pct-(s.failed?10:8)))};
+  return {
+    labels:scores.map(s=>s.title.length>16?s.title.slice(0,15)+'…':s.title),
+    mine:scores.map(s=>s.pct),
+    avg:scores.map(s=>(s.classAvg==null?null:s.classAvg))
+  };
 }
+function studentSeriesHasData(ser){ return !!(ser&&ser.mine&&ser.mine.length); }
 function initDashboardChart() {
-  if (dashChart) dashChart.destroy();
+  if (dashChart) { dashChart.destroy(); dashChart=null; }
   const ctx = document.getElementById('perfOverviewChart');
   if (!ctx) return;
+  const ser=(typeof studentChartSeries==='function')?studentChartSeries():{labels:[],mine:[],avg:[]};
+  if(!studentSeriesHasData(ser)){TASS.empty.chart('perfOverviewChart',{source:'student.score_vs_class'});return;}
+  TASS.empty.fillChart('perfOverviewChart');
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.color = '#4a637f';
-  const ser=(typeof studentChartSeries==='function')?studentChartSeries():{labels:[],mine:[],avg:[]};
+  const datasets=[{label:'My Score (%)',data:ser.mine,backgroundColor:'#1e5faf',borderRadius:8,barThickness:28}];
+  if(ser.avg.some(v=>v!=null)) datasets.push({label:'Class Average (%)',data:ser.avg,backgroundColor:'rgba(30,95,175,0.2)',borderRadius:8,barThickness:28});
   dashChart = new Chart(ctx, {
     type:'bar',
-    data:{
-      labels:ser.labels,
-      datasets:[
-        {label:'My Score (%)',data:ser.mine,backgroundColor:'#1e5faf',borderRadius:8,barThickness:28},
-        {label:'Class Average (%)',data:ser.avg,backgroundColor:'rgba(30,95,175,0.2)',borderRadius:8,barThickness:28}
-      ]
-    },
+    data:{labels:ser.labels,datasets:datasets},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
   });
 }
 function initPerfDetailChart() {
-  if (perfChart) perfChart.destroy();
+  if (perfChart) { perfChart.destroy(); perfChart=null; }
   const ctx = document.getElementById('perfDetailChart');
   if (!ctx) return;
   const ser=(typeof studentChartSeries==='function')?studentChartSeries():{labels:[],mine:[],avg:[]};
+  if(!studentSeriesHasData(ser)){TASS.empty.chart('perfDetailChart',{source:'student.performance_detail'});return;}
+  TASS.empty.fillChart('perfDetailChart');
   perfChart = new Chart(ctx, {
     type:'bar',
     data:{
@@ -2054,42 +2373,56 @@ function schoolAnnCardHTML(a, unread){
       '<div style="font-size:11.5px;color:var(--gray-400,var(--text-muted));margin-top:8px;"><i class="fa-regular fa-clock"></i> Posted '+(escHtml(a.date||'')||'just now')+(a.updated?' &middot; <i class="fa-solid fa-pen"></i> Edited '+escHtml(a.updated):'')+'</div>'+
     '</div></div>';
 }
+let SCHOOL_ANN_EXPANDED = false;
 function renderSchoolAnnouncements(){
   const list = getSchoolAnnouncements();
   const readIds = getReadAnnIds();
   let newCount = list.filter(a => !readIds.includes(a.id)).length;
 
-  const listEl = document.getElementById('schoolAnnounceList');
+  // Dashboard only. A school announcement is not owned by any one virtual
+  // classroom, so it must never be rendered into a classroom's Announcements
+  // tab, and "View all" expands here instead of navigating into a subject.
   const dashEl = document.getElementById('dashRecentAnnouncements');
-  if (listEl) {
-    if (!list.length) listEl.innerHTML = '<div style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No school announcements yet.</div>';
-    else listEl.innerHTML = list.map(a => schoolAnnCardHTML(a, !readIds.includes(a.id))).join('') + '<div style="padding:14px 20px;text-align:right;font-size:11px;color:var(--text-muted);"><button class="btn btn-outline btn-sm" onclick="markSchoolAnnouncementsRead(true)"><i class="fa-regular fa-circle-check"></i> Mark all school announcements as read</button></div>';
-  }
   if (dashEl) {
     if (!list.length) dashEl.innerHTML = '<div style="text-align:center;padding:26px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';
-    else dashEl.innerHTML = list.slice(0,3).map(a => schoolAnnCardHTML(a, !readIds.includes(a.id))).join('') +
-      '<div style="padding:8px 4px 0;"><a href="#" style="font-size:12px;font-weight:600;color:var(--blue);text-decoration:none;cursor:pointer;" onclick="switchSchoolAnnTab();return false;">View all announcements <i class="fa-solid fa-arrow-right"></i></a></div>';
+    else {
+      const shown = SCHOOL_ANN_EXPANDED ? list : list.slice(0,3);
+      dashEl.innerHTML = shown.map(a => schoolAnnCardHTML(a, !readIds.includes(a.id))).join('') +
+        (list.length > 3
+          ? '<div style="padding:8px 4px 0;text-align:center;"><a href="#" style="font-size:12px;font-weight:600;color:var(--blue);text-decoration:none;cursor:pointer;" onclick="toggleSchoolAnnouncementsAll();return false;">' +
+            (SCHOOL_ANN_EXPANDED ? 'Show less' : 'View all ' + list.length + ' announcements') + ' <i class="fa-solid fa-arrow-right"></i></a></div>'
+          : '');
+    }
   }
   if (newCount > 0) {
     showToast(newCount + ' new school announcement' + (newCount>1?'s':'') + ' from the Principal.', 'success');
     logStudentActivity('There are '+newCount+' new school announcement(s) from the Principal', 'announce');
   }
 }
-function switchSchoolAnnTab(){
-  const first=(typeof SUBJECTS!=='undefined'&&SUBJECTS.length)?SUBJECTS[0]:null;
-  if(!first){ showView('subjects'); return; }
-  openSubject(first.title, first.teacher, first.sub, first.color, first.grade);
-  const tabs=Array.prototype.slice.call(document.querySelectorAll('#view-subject .tab-btn'));
-  const annTab=tabs.find(b=>/announcements/i.test(b.textContent));
-  setTimeout(function(){ if(annTab) annTab.click(); if(typeof renderSchoolAnnouncements==='function')renderSchoolAnnouncements(); },60);
+function toggleSchoolAnnouncementsAll(){
+  SCHOOL_ANN_EXPANDED = !SCHOOL_ANN_EXPANDED;
+  renderSchoolAnnouncements();
+}
+// School announcements live on the dashboard, so anything that used to deep
+// link into a classroom's Announcements tab now goes to the dashboard card and
+// expands the full list there.
+function goToSchoolAnnouncements(){
+  showView('dashboard');
+  SCHOOL_ANN_EXPANDED = true;
+  renderSchoolAnnouncements();
+  setTimeout(function(){
+    const el = document.getElementById('dashRecentAnnouncements');
+    if (el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 80);
 }
 function markSchoolAnnouncementsRead(silent){
   const ids = getSchoolAnnouncements().map(a => a.id);
   const readIds = getReadAnnIds();
   ids.forEach(id => { if (!readIds.includes(id)) readIds.push(id); });
   writeStore(schoolAnnKey, readIds);
-  const listEl = document.getElementById('schoolAnnounceList');
-  if (listEl) listEl.querySelectorAll('.ann-item [style*="border-radius:50%"]').forEach(d => d.remove());
+  // Unread dots live on the dashboard card now, so re-render it rather than
+  // reaching into a classroom view that no longer holds school announcements.
+  renderSchoolAnnouncements();
   if (silent) showToast('School announcements marked as read.', 'success');
 }
 (function restoreStudentState(){
@@ -2155,7 +2488,7 @@ renderSchoolAnnouncements();
       {title:'ESP 9', teacher:'Ms. Gina Aguilar', sub:'9 – Section C', color:'#14b8a6', grade:9}
     ];
     grid.innerHTML=subjects.map(s=>
-      '<div class="subject-card" onclick="openSubject(\''+s.title+'\',\''+s.teacher+'\',\''+s.sub+'\',\''+s.color+'\','+s.grade+')">'
+      '<div class="subject-card" onclick="openSubject(\''+s.title+'\',\''+s.teacher+'\',\''+s.sub+'\',\''+s.color+'\','+s.grade+','+s.id+','+s.teacher_id+')">'
       +'<div style="height:4px;background:linear-gradient(135deg,'+s.color+' 0%,'+s.color+'99 100%);"></div>'
       +'<div class="card-body" style="padding:16px;"><div style="font-size:15px;font-weight:700;color:var(--navy);">'+s.title+'</div>'
       +'<div style="font-size:12px;color:var(--text-muted);margin-top:4px;"><i class="fa-solid fa-chalkboard-user" style="margin-right:4px;"></i>'+s.teacher+'</div>'
@@ -2168,106 +2501,20 @@ renderSchoolAnnouncements();
 // ════════════════════════════════════════════════
 // STUDENT DATA + FRONT-END RENDERING (FR UI only)
 // ════════════════════════════════════════════════
-const SUBJECTS=[
-  {title:'Science 9', teacher:'Ms. Lovelyn C. Malanot', sub:'9 – Section C', color:'#1e5faf', grade:9, year:'S.Y. 2025-2026'},
-  {title:'Mathematics 9', teacher:'Mr. Jose Ramirez', sub:'9 – Section C', color:'#16a34a', grade:9, year:'S.Y. 2025-2026'},
-  {title:'English 9', teacher:'Ms. Gina Aguilar', sub:'9 – Section C', color:'#e11d48', grade:9, year:'S.Y. 2025-2026'},
-  {title:'Filipino 9', teacher:'Ms. Norma Villanueva', sub:'9 – Section C', color:'#f59e0b', grade:9, year:'S.Y. 2025-2026'},
-  {title:'Araling Panlipunan 9', teacher:'Ms. Elena Santiago', sub:'9 – Section C', color:'#7c3aed', grade:9, year:'S.Y. 2025-2026'},
-  {title:'MAPEH 9', teacher:'Mr. Ben Castillo', sub:'9 – Section C', color:'#0891b2', grade:9, year:'S.Y. 2025-2026'},
-  {title:'ESP 9', teacher:'Ms. Gina Aguilar', sub:'9 – Section C', color:'#14b8a6', grade:9, year:'S.Y. 2025-2026'}
-];
+const SUBJECTS=[];  // real enrolments, filled from the bridge
 
-const STUDENT_ASSESSMENTS=[
-  {key:'quiz-1-cell-structure-function',title:'Quiz 1: Cell Structure & Function',subject:'Science 9',type:'quiz',pts:50,deadline:'Apr 12, 2026 · 11:59 PM',status:'closed',period:'Quarter 1',instr:'Answer the 5 multiple-choice items. Passing is 60%.'},
-  {key:'seatwork-cell-organelle-identification',title:'Seatwork: Cell Organelle Identification',subject:'Science 9',type:'upload',pts:25,deadline:'Apr 15, 2026 · 11:59 PM',status:'closed',period:'Quarter 1',instr:'Upload your labeled diagram of the cell organelles as a PDF or image.'},
-  {key:'quarterly-examination-science-9',title:'Quarterly Examination – Science 9',subject:'Science 9',type:'quiz',pts:100,deadline:'Apr 28, 2026 · 11:59 PM',status:'scheduled',period:'Quarter 2',instr:'Comprehensive exam covering all lessons this quarter. Make sure to prepare!'},
-  {key:'lab-worksheet-microscope-activity',title:'Lab Worksheet: Microscope Activity',subject:'Science 9',type:'upload',pts:20,deadline:'Apr 8, 2026 · 11:59 PM',status:'overdue',period:'Quarter 1',instr:'Submit your completed worksheet on the microscope lab activity.'},
-  {key:'hw-quadratic-equations',title:'HW: Quadratic Equations',subject:'Mathematics 9',type:'upload',pts:30,deadline:'Apr 18, 2026 · 11:59 PM',status:'closed',period:'Quarter 1',instr:'Solve all items in the handout and upload your answers.'},
-  {key:'quiz-linear-functions',title:'Quiz: Linear Functions',subject:'Mathematics 9',type:'quiz',pts:50,deadline:'Apr 10, 2026 · 11:59 PM',status:'closed',period:'Quarter 1',instr:'Take the 5-item quiz on linear functions.'},
-  {key:'essay-my-culture',title:'Essay: My Culture',subject:'English 9',type:'upload',pts:50,deadline:'Apr 9, 2026 · 11:59 PM',status:'closed',period:'Quarter 1',instr:'Write a 250-word essay about your culture. Submit as PDF or DOCX.'},
-  {key:'midterm-exam-respiratory-system',title:'Midterm Exam: Respiratory System',subject:'Science 9',type:'quiz',pts:80,deadline:'May 15, 2026 · 11:59 PM',status:'closed',period:'Quarter 2',instr:'Long quiz on the respiratory system.'},
-  {key:'group-report-contemporary-issues',title:'Group Report: Contemporary Issues',subject:'Araling Panlipunan 9',type:'upload',pts:40,deadline:'Apr 25, 2026 · 11:59 PM',status:'open',period:'Quarter 2',instr:'Upload your group report slides (PDF or PPTX).'}
-];
+const STUDENT_ASSESSMENTS=[];  // real Assessment rows for this student
 
-const QUIZ_BANKS={
-  'quiz-1-cell-structure-function':[
-    {type:'mc',text:'Which of the following is the basic unit of life?',options:['Tissue','Cell','Organ','Organ System'],correct:1,pts:10},
-    {type:'mc',text:'What is the powerhouse of the cell?',options:['Nucleus','Ribosome','Mitochondria','Golgi Body'],correct:2,pts:10},
-    {type:'mc',text:'The process by which plants make their own food is called:',options:['Respiration','Photosynthesis','Transpiration','Digestion'],correct:1,pts:10},
-    {type:'mc',text:'Which gas do plants absorb for photosynthesis?',options:['Oxygen','Nitrogen','Carbon Dioxide','Hydrogen'],correct:2,pts:10},
-    {type:'mc',text:'How many chromosomes are in a normal human body cell?',options:['23','46','48','44'],correct:1,pts:10}
-  ],
-  'quiz-linear-functions':[
-    {type:'mc',text:'What is the slope of the line y = 3x + 2?',options:['2','3','5','-3'],correct:1,pts:10},
-    {type:'mc',text:'Which equation represents a linear function?',options:['y = x²','y = 2ˣ','y = 2x + 1','y = 1/x'],correct:2,pts:10},
-    {type:'mc',text:'The graph of a linear function is a:',options:['Parabola','Circle','Straight line','Hyperbola'],correct:2,pts:10},
-    {type:'mc',text:'What is the y-intercept of y = -4x + 7?',options:['-4','4','7','-7'],correct:2,pts:10},
-    {type:'mc',text:'If f(x) = 2x + 1, what is f(3)?',options:['5','6','7','9'],correct:2,pts:10}
-  ],
-  'quarterly-examination-science-9':[
-    {type:'mc',text:'Which organelle controls the activities of the cell?',options:['Nucleus','Cell membrane','Ribosome','Vacuole'],correct:0,pts:20},
-    {type:'mc',text:'The organ system responsible for gas exchange is the:',options:['Digestive system','Respiratory system','Circulatory system','Nervous system'],correct:1,pts:20},
-    {type:'mc',text:'Which process produces two identical daughter cells?',options:['Meiosis','Mitosis','Fertilization','Osmosis'],correct:1,pts:20},
-    {type:'tf',text:'Photosynthesis occurs in the mitochondria of plant cells.',options:['True','False'],correct:'false',pts:20},
-    {type:'sa',text:'Name one function of the cell membrane.',options:[],correct:null,pts:20}
-  ],
-  'midterm-exam-respiratory-system':[
-    {type:'mc',text:'The main organ of the respiratory system is the:',options:['Heart','Lungs','Liver','Kidney'],correct:1,pts:15},
-    {type:'mc',text:'Gas exchange in the lungs happens in the:',options:['Bronchi','Trachea','Alveoli','Larynx'],correct:2,pts:15},
-    {type:'mc',text:'Which gas is exhaled as a waste product of respiration?',options:['Oxygen','Nitrogen','Carbon Dioxide','Hydrogen'],correct:2,pts:15},
-    {type:'mc',text:'The windpipe is also known as the:',options:['Esophagus','Trachea','Bronchiole','Diaphragm'],correct:1,pts:15},
-    {type:'tf',text:'The diaphragm helps in breathing by contracting and relaxing.',options:['True','False'],correct:'true',pts:20}
-  ],
-  default:[
-    {type:'mc',text:'Which of the following is the basic unit of life?',options:['Tissue','Cell','Organ','Organ System'],correct:1,pts:10},
-    {type:'mc',text:'What is the powerhouse of the cell?',options:['Nucleus','Ribosome','Mitochondria','Golgi Body'],correct:2,pts:10},
-    {type:'mc',text:'The process by which plants make their own food is called:',options:['Respiration','Photosynthesis','Transpiration','Digestion'],correct:1,pts:10},
-    {type:'mc',text:'Which gas do plants absorb for photosynthesis?',options:['Oxygen','Nitrogen','Carbon Dioxide','Hydrogen'],correct:2,pts:10},
-    {type:'mc',text:'How many chromosomes are in a normal human body cell?',options:['23','46','48','44'],correct:1,pts:10}
-  ]
-};
+const QUIZ_BANKS={};  // real QuestionBank items, keyed by assessment
 
-const STUDENT_SCORES=[
-  {key:'quiz-1-cell-structure-function',title:'Quiz 1: Cell Structure & Function',subject:'Science 9',period:'Quarter 1',score:42,pts:50,pct:84},
-  {key:'seatwork-cell-organelle-identification',title:'Seatwork: Cell Organelle Identification',subject:'Science 9',period:'Quarter 1',score:18,pts:25,pct:72},
-  {key:'hw-quadratic-equations',title:'HW: Quadratic Equations',subject:'Mathematics 9',period:'Quarter 1',score:24,pts:30,pct:80},
-  {key:'quiz-linear-functions',title:'Quiz: Linear Functions',subject:'Mathematics 9',period:'Quarter 1',score:22,pts:50,pct:44,failed:true},
-  {key:'essay-my-culture',title:'Essay: My Culture',subject:'English 9',period:'Quarter 1',score:45,pts:50,pct:90},
-  {key:'midterm-exam-respiratory-system',title:'Midterm Exam: Respiratory System',subject:'Science 9',period:'Quarter 2',score:61,pts:80,pct:76}
-];
+const STUDENT_SCORES=[];  // real recorded scores
 
-const STUDENT_MATERIALS={
-  'Science 9':[{name:'Cell Structure Lesson Plan.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'1.2 MB'},{name:'Plant vs Animal Cell Diagram.pptx',icon:'fa-file-powerpoint',color:'#d97706',size:'2.8 MB'},{name:'Mitosis Visual Guide.mp4',icon:'fa-film',color:'#7c3aed',size:'18 MB'}],
-  'Mathematics 9':[{name:'Quadratic Equations Handout.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'920 KB'},{name:'Factoring Practice Set.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'640 KB'}],
-  'English 9':[{name:'Figurative Language Notes.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'780 KB'}],
-  'Filipino 9':[{name:'Tula at Awit Handout.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'700 KB'}],
-  'Araling Panlipunan 9':[{name:'Kontemporaryong Isyu Module.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'1.1 MB'}],
-  'MAPEH 9':[{name:'First Aid Video Tutorial.mp4',icon:'fa-film',color:'#7c3aed',size:'24 MB'}],
-  'ESP 9':[{name:'Modyul: Kagandahang-Loob.pdf',icon:'fa-file-pdf',color:'#dc2626',size:'850 KB'}]
-};
+const STUDENT_MATERIALS={};  // real uploaded Learning Resources
 
-const CLASS_ANNOUNCEMENTS=[
-  {subject:'Science 9',title:'Quiz 1 this Friday',body:'Don\'t forget to review Lessons 1–3. The quiz covers cell structure and function. Bring a pen and eraser.',by:'Ms. Lovelyn C. Malanot',date:'Apr 8, 2026'},
-  {subject:'Science 9',title:'Bring printed worksheets',body:'Kindly submit the printed lab worksheet by Thursday for checking. Late submissions will be marked accordingly.',by:'Ms. Lovelyn C. Malanot',date:'Apr 6, 2026'},
-  {subject:'Mathematics 9',title:'Practice set due Monday',body:'Answer all items in the practice set for factoring. We will discuss the solutions on Monday.',by:'Mr. Jose Ramirez',date:'Apr 7, 2026'},
-  {subject:'English 9',title:'Essay outline submission',body:'Submit your essay outline before the class discussion on Friday.',by:'Ms. Gina Aguilar',date:'Apr 5, 2026'}
-];
+const CLASS_ANNOUNCEMENTS=[];  // real Announcement rows
+const STUDENT_CLASS_ANN={};   // per-virtual-classroom announcements, keyed by classroom id
 
-const STUDENT_ATTENDANCE=[
-  {date:'2026-04-10',status:'Present',remark:'—'},
-  {date:'2026-04-09',status:'Present',remark:'—'},
-  {date:'2026-04-08',status:'Late',remark:'Traffic'},
-  {date:'2026-04-07',status:'Present',remark:'—'},
-  {date:'2026-04-06',status:'Absent',remark:'Excused — family emergency'},
-  {date:'2026-04-03',status:'Present',remark:'—'},
-  {date:'2026-04-02',status:'Present',remark:'—'},
-  {date:'2026-04-01',status:'Present',remark:'—'},
-  {date:'2026-03-31',status:'Present',remark:'—'},
-  {date:'2026-03-30',status:'Late',remark:'Long queue at the gate'},
-  {date:'2026-03-27',status:'Present',remark:'—'},
-  {date:'2026-03-26',status:'Absent',remark:'Medical certificate submitted'}
-];
+const STUDENT_ATTENDANCE=[];  // real Attendance rows for this student
 const ATTENDANCE_KEY='tass_student_attendance_v2';
 function getStudentAttendance(){
   let rec=readStore(ATTENDANCE_KEY, null);
@@ -2308,19 +2555,29 @@ function studentAssessCard(a){
 }
 function renderAssessments(subject){
   const list=(STUDENT_ASSESSMENTS||[]).filter(a=>a.subject===subject);
+  const cid=currentSVCId;
+  const scoped=(cid==null?list:list.filter(a=>a.classroom_id==cid||String(a.classroom_id)===String(cid)));
   const done=studentDoneSet();
   const pend=document.getElementById('pendingAssessList');
   const ovd=document.getElementById('overdueAssessList');
   const all=document.getElementById('allAssessList');
-  if(pend){ const items=list.filter(a=>!done[a.key]&&(a.status==='open'||a.status==='scheduled'));
+  const use=scoped;
+  if(pend){ const items=use.filter(a=>!done[a.key]&&(a.status==='open'||a.status==='scheduled'));
     pend.innerHTML=items.length?items.map(studentAssessCard).join(''):'<div style="text-align:center;padding:18px 12px;color:var(--text-muted);font-size:13px;">Nothing pending — you\'re all caught up!</div>'; }
-  if(ovd){ const items=list.filter(a=>!done[a.key]&&a.status==='overdue');
+  if(ovd){ const items=use.filter(a=>!done[a.key]&&a.status==='overdue');
     ovd.innerHTML=items.length?items.map(studentAssessCard).join(''):'<div style="text-align:center;padding:18px 12px;color:var(--text-muted);font-size:13px;">No overdue assessments.</div>'; }
-  if(all){ all.innerHTML=list.length?list.map(studentAssessCard).join(''):'<div style="text-align:center;padding:18px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:26px;margin-bottom:8px;display:block;opacity:.5;"></i>No data yet.</div>'; }
+  if(all){ all.innerHTML=use.length?use.map(studentAssessCard).join(''):'<div style="text-align:center;padding:18px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:26px;margin-bottom:8px;display:block;opacity:.5;"></i>No data yet.</div>'; }
+}
+// Materials are keyed by virtual classroom id, not by subject name: a student
+// taking the same subject in two sections must not see the other section's
+// files. The subject argument is kept as a fallback for older payloads.
+function materialsKey(subject){
+  if (typeof currentSVCId !== 'undefined' && currentSVCId != null) return String(currentSVCId);
+  return subject;
 }
 function renderMaterials(subject){
   const el=document.getElementById('materialsList'); if(!el) return;
-  const items=(STUDENT_MATERIALS&&STUDENT_MATERIALS[subject])||[];
+  const items=(STUDENT_MATERIALS&&STUDENT_MATERIALS[materialsKey(subject)])||[];
   el.innerHTML='';
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>'; return; }
   el.innerHTML=items.map(m=>
@@ -2332,22 +2589,43 @@ function renderMaterials(subject){
     '<button class="btn btn-outline btn-sm" onclick="downloadResource(\''+m.name+'\')"><i class="fa-solid fa-download"></i> Download</button>'+
     '</div></div>').join('');
 }
+// Scoped to the OPEN virtual classroom by id, not by subject name: the same
+// subject runs in several sections, so a name match would show one section's
+// teacher's announcements inside another section. Falls back to the subject
+// label only for rows that predate the classroom id.
+function classAnnouncementsForClassroom(){
+  const all = CLASS_ANNOUNCEMENTS || [];
+  const vc = (typeof currentSVCId !== 'undefined' && currentSVCId) ? String(currentSVCId) : '';
+  if (vc) {
+    // Authoritative per-classroom list from the server when present.
+    const bucket = (typeof STUDENT_CLASS_ANN !== 'undefined') ? STUDENT_CLASS_ANN[vc] : null;
+    if (Array.isArray(bucket)) return bucket;
+    // Otherwise derive it from the flat payload by classroom id. Falling back
+    // to the subject label would be wrong: one subject runs in many sections.
+    if (all.some(a => a && a.classroom_id != null)) {
+      return all.filter(a => a && a.classroom_id != null && String(a.classroom_id) === vc);
+    }
+  }
+  const subject = (typeof currentSubject !== 'undefined') ? currentSubject : '';
+  return all.filter(a => a && a.subject === subject);
+}
 function renderClassAnnouncements(subject){
   const el=document.getElementById('classAnnounceList'); if(!el) return;
-  const items=(CLASS_ANNOUNCEMENTS||[]).filter(a=>a.subject===subject);
+  const items=classAnnouncementsForClassroom();
   el.innerHTML='';
-  if(!items.length){ el.innerHTML='<div style="text-align:center;padding:24px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>'; return; }
+  if(!items.length){ el.innerHTML='<div style="text-align:center;padding:24px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>'+(subject?'No announcements posted in this virtual classroom yet.':'No data yet.')+'</div>'; return; }
   const read=readStore(STORAGE.classAnnRead, []);
   el.innerHTML=items.map(a=>{
     const key=(a.subject||'')+'|'+(a.title||'');
     const isNew=!read.includes(key);
     return '<div class="announce-item" style="border-left-color:'+(isNew?'var(--blue)':'#e2e8f0')+';">'
       +(isNew?'<span style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:.5px;color:#fff;background:var(--blue);border-radius:20px;padding:2px 8px;margin-bottom:6px;">NEW</span>':'')
-      +'<div class="title">'+escHtml(a.title)+'</div><div class="body">'+escHtml(a.body)+'</div><div class="meta"><span><i class="fa-regular fa-calendar"></i> '+a.date+'</span><span>'+escHtml(a.by)+'</span></div></div>';
+      +'<div class="title">'+escHtml(a.title)+'</div><div class="body">'+escHtml(a.body)+'</div>'
+      +'<div class="meta"><span><i class="fa-regular fa-calendar"></i> '+escHtml(a.date||'')+'</span><span><i class="fa-solid fa-chalkboard-user"></i> '+escHtml(a.by||'Teacher')+'</span></div></div>';
   }).join('');
 }
 function markClassAnnouncementsRead(){
-  const keys=(CLASS_ANNOUNCEMENTS||[]).filter(a=>!currentSubject||a.subject===currentSubject).map(a=>(a.subject||'')+'|'+(a.title||''));
+  const keys=classAnnouncementsForClassroom().map(a=>(a.subject||'')+'|'+(a.title||''));
   const read=readStore(STORAGE.classAnnRead, []);
   keys.forEach(k=>{ if(!read.includes(k)) read.push(k); });
   writeStore(STORAGE.classAnnRead, read);
@@ -2444,7 +2722,7 @@ function refreshStudentStats(){
 function renderSubjectGrid(){
   const grid=document.getElementById('subjectGrid'); if(!grid) return;
   grid.innerHTML=SUBJECTS.map(s=>
-    '<div class="subject-card" onclick="openSubject(\''+s.title+'\',\''+s.teacher+'\',\''+s.sub+'\',\''+s.color+'\','+s.grade+')">'
+    '<div class="subject-card" onclick="openSubject(\''+s.title+'\',\''+s.teacher+'\',\''+s.sub+'\',\''+s.color+'\','+s.grade+','+s.id+','+s.teacher_id+')">'
     +'<div style="height:4px;background:linear-gradient(135deg,'+s.color+' 0%,'+s.color+'99 100%);"></div>'
     +'<div class="card-body" style="padding:16px;"><div style="font-size:15px;font-weight:700;color:var(--navy);">'+s.title+'</div>'
     +'<div style="font-size:12px;color:var(--text-muted);margin-top:4px;"><i class="fa-solid fa-chalkboard-user" style="margin-right:4px;"></i>'+s.teacher+'</div>'
@@ -2458,11 +2736,7 @@ function filterSubjectList(){
   if(!emp){ emp=document.createElement('div'); emp.id='subjectGridEmpty'; emp.style.cssText='text-align:center;color:var(--text-muted);font-size:13px;padding:24px 12px;display:none;grid-column:1/-1;'; emp.textContent='No matching classes. Try another name.'; document.getElementById('subjectGrid')?.after(emp); }
   emp.style.display=document.querySelector('#subjectGrid .subject-card:not([style*="display: none"])')?'none':'block';
 }
-const STUDENT_NOTIFS=[
-  {icon:'fa-bullhorn',type:'announce',msg:'There is 1 new school announcement from the Principal.',time:'2 hours ago'},
-  {icon:'fa-check-double',type:'grade',msg:'Your seatwork was graded by Ms. Malanot.',time:'Yesterday'},
-  {icon:'fa-hourglass-half',type:'deadline',msg:'"Quarterly Examination – Science 9" is coming up. Start reviewing!',time:'3 days ago'}
-];
+const STUDENT_NOTIFS=[];  // real Notification rows
 function renderStudentNotifs(){
   const el=document.getElementById('studentNotifList'); if(!el) return;
   const badge=document.querySelector('.header-right .icon-btn .badge');
@@ -2475,7 +2749,7 @@ function openStudentNotification(i){
   const n=(typeof STUDENT_NOTIFS!=='undefined')?STUDENT_NOTIFS[i]:null;
   closeAllPanels();
   if(!n) return;
-  if(n.type==='announce') switchSchoolAnnTab();
+  if(n.type==='announce') goToSchoolAnnouncements();
   else if(n.type==='grade') showView('performance');
   else if(n.type==='deadline') openStudentHub('assessments');
   logStudentActivity('You opened a notification','visit');
@@ -2548,7 +2822,7 @@ try{
   .grid-2,.grid-3,.grid-6535,.grid-3565,.grid-65-35,.dashboard-grid,.class-grid,.form-grid,.form-grid-3,.export-grid,.form-row,.form-row-2,.analytics-row{grid-template-columns:1fr !important}
 .analytics-row.three{grid-template-columns:1fr}
   .cal-grid{grid-template-columns:repeat(7,minmax(64px,1fr));overflow-x:auto}
-  .msg-layout{grid-template-columns:1fr;height:auto}
+  .msg-layout{grid-template-columns:minmax(0,1fr);height:auto}
   .msg-sidebar{max-height:200px;border-right:none;border-bottom:1px solid var(--card-border)}
   .welcome-stats{display:grid;grid-template-columns:repeat(2,1fr);width:100%}
 }
@@ -2926,16 +3200,77 @@ canvas{ max-width:100% !important; }
 // ── My Profile (avatar + contact info, per-dashboard storage) ──
 const PROFILE_KEY='tass_profile_student';
 const PROFILE_MODAL_ID='studentProfileModal';
-const PROFILE_DEFAULTS={name:'Student',email:'student@sanvicente.edu.ph',role:'Student',dept:'Grade 9 · Section C',contact:'0917 555 0100',avatar:''};
+const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Student" }}',dept:'',contact:'',avatar:'{{ user_avatar_url|default:"" }}'};
 let profileAvatarData=""
+let profilePhotoFile=null;
+let profileBusy=false;
 function profil_initials(n){return (n||"").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"..";}
-function getProfile(){try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(p)return p;}catch(e){}return JSON.parse(JSON.stringify(PROFILE_DEFAULTS));}
+function initialsAvatar(sz,fs){const ini=('{{ user_initials }}'||'..');return "data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 "+sz+" "+sz+"%22><circle cx=%22"+(sz/2)+"%22 cy=%22"+(sz/2)+"%22 r=%22"+(sz/2)+"%22 fill=%22%233a86d4%22/><text x=%22"+(sz/2)+"%22 y=%22"+Math.round(sz*0.675)+"%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%22"+fs+"%22>"+ini+"</text></svg>";}
+function getProfile(){
+  // Identity belongs to the server account, so a stale local edit can never
+  // rename the signed-in user. Only the optional extras persist locally.
+  const d=JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
+  const srv=window.__TASS_PROFILE__;
+  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
+    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar)d.avatar=p.avatar;}
+  }catch(e){}
+  return d;
+}
 function profileSet(id,v){const el=document.getElementById(id);if(el)el.value=(v==null?"":String(v));}
-function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
+function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src=initialsAvatar(40,16);}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src=initialsAvatar(80,30);}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
 function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
 function closeProfile(){if(typeof closeModal==="function")closeModal(PROFILE_MODAL_ID);}
-function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
-function saveProfile(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById("studentProfileModal")))return;const g=function(id){const el=document.getElementById(id);return el&&el.value?el.value.trim():"";};const name=g("profileName"),email=g("profileEmail");if(!name||!email){if(typeof showToast==="function")showToast("Name and email are required.","error");return;}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(typeof showToast==="function")showToast("Please enter a valid email address.","error");const _e=document.getElementById("profileEmail");if(_e){_e.classList.add("is-invalid");_e.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}const _ct=String(g("profileContact")).replace(/[^0-9]/g,"");if(_ct&&_ct.length<10){if(typeof showToast==="function")showToast("Contact number must have at least 10 digits.","error");const _c=document.getElementById("profileContact");if(_c){_c.classList.add("is-invalid");_c.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}const rec={name:name,email:email,role:g("profileRole")||PROFILE_DEFAULTS.role,dept:g("profileDept")||PROFILE_DEFAULTS.dept,contact:String(g("profileContact")).replace(/[^0-9+]/g,""),avatar:profileAvatarData};try{localStorage.setItem(PROFILE_KEY,JSON.stringify(rec));}catch(e){}const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=name;applyHeaderPhoto(profileAvatarData);const st=document.getElementById("profileStatus");if(st){st.style.display="block";st.textContent="Profile updated successfully!";}if(typeof showToast==="function")showToast("Profile updated successfully!","success");setTimeout(closeProfile,600);}
+function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;profilePhotoFile=f;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
+function saveProfile(){
+  if(profileBusy)return;
+  if(typeof tassValidate==="function"&&!tassValidate(document.getElementById(PROFILE_MODAL_ID)))return;
+  const g=function(id){const el=document.getElementById(id);return el&&el.value?el.value.trim():"";};
+  const name=g("profileName"),email=g("profileEmail");
+  if(!name||!email){if(typeof showToast==="function")showToast("Name and email are required.","error");return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(typeof showToast==="function")showToast("Please enter a valid email address.","error");const _e=document.getElementById("profileEmail");if(_e){_e.classList.add("is-invalid");_e.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}
+  const _ct=String(g("profileContact")).replace(/[^0-9]/g,"");
+  if(_ct&&_ct.length<10){if(typeof showToast==="function")showToast("Contact number must have at least 10 digits.","error");const _c=document.getElementById("profileContact");if(_c){_c.classList.add("is-invalid");_c.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}
+  profileBusy=true;
+  const fd=new FormData();
+  fd.append("name",name);
+  fd.append("email",email);
+  fd.append("contact",String(g("profileContact")).replace(/[^0-9+]/g,""));
+  if(profilePhotoFile)fd.append("avatar",profilePhotoFile);
+  fetch("/api/profile/",{
+    method:"POST",
+    credentials:"same-origin",
+    headers:{"X-CSRFToken":(typeof msgCsrf==="function")?msgCsrf():(window.csrfToken||"")},
+    body:fd
+  }).then(function(r){
+    return r.json().then(function(d){return {ok:r.ok,data:d};});
+  }).then(function(res){
+    profileBusy=false;
+    const d=res.data||{};
+    if(!res.ok){
+      const msg=(d&&d.message)||"Could not save your profile. Please try again.";
+      if(typeof showToast==="function")showToast(msg,"error");
+      const st=document.getElementById("profileStatus");
+      if(st){st.style.display="block";st.textContent=msg;st.style.color="var(--danger)";}
+      return;
+    }
+    if(d&&d.avatar){profileAvatarData=d.avatar;}
+    profilePhotoFile=null;
+    const rec={name:name,email:email,role:g("profileRole")||PROFILE_DEFAULTS.role,dept:g("profileDept")||PROFILE_DEFAULTS.dept,contact:String(g("profileContact")).replace(/[^0-9+]/g,""),avatar:profileAvatarData};
+    try{localStorage.setItem(PROFILE_KEY,JSON.stringify(rec));}catch(e){}
+    const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=name;
+    applyHeaderPhoto(profileAvatarData);
+    const st=document.getElementById("profileStatus");
+    if(st){st.style.display="block";st.textContent="Profile updated successfully!";st.style.color="";}
+    if(typeof showToast==="function")showToast("Profile updated successfully!","success");
+    setTimeout(closeProfile,600);
+  }).catch(function(){
+    profileBusy=false;
+    if(typeof showToast==="function")showToast("Network error — your profile was not saved.","error");
+    const st=document.getElementById("profileStatus");
+    if(st){st.style.display="block";st.textContent="Network error — your profile was not saved.";st.style.color="var(--danger)";}
+  });
+}
 if(window.openTeacherProfileModal)window.openTeacherProfileModal=window.openProfile;
 (function initHeaderProfile(){const p=getProfile();const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=p.name;if(p.avatar)applyHeaderPhoto(p.avatar);})();
 if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
@@ -3105,19 +3440,44 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   var el=document.getElementById('student-backend-data');
   if(!el) return;
   var D; try{ D=JSON.parse(el.textContent||'{}'); }catch(e){ D={}; }
-  if(!D || !D.subjects) return;
-  var firstSubject = D.subjects.length ? D.subjects[0].title : '';
+  if(!D) return;
+
+  // The signed-in user's own record, straight from the server.
+  window.__TASS_PROFILE__ = (D && D.profile) || null;  var firstSubject = (D.subjects&&D.subjects.length) ? D.subjects[0].title : '';
 
   function fill(target, items){
     if(!target) return;
     target.length = 0;
     (items||[]).forEach(function(x){ target.push(x); });
   }
+  function fillObj(target, obj){
+    if(!target) return;
+    Object.keys(target).forEach(function(k){ delete target[k]; });
+    Object.keys(obj||{}).forEach(function(k){ target[k]=obj[k]; });
+  }
   fill(SUBJECTS, D.subjects || []);
+  if(D.grade){ STUDENT_GRADE = parseInt(D.grade, 10); }
+  else if(D.subjects && D.subjects.length && D.subjects[0].grade){ STUDENT_GRADE = parseInt(D.subjects[0].grade, 10); }
   fill(STUDENT_ASSESSMENTS, D.assessments || []);
   fill(STUDENT_SCORES, D.scores || []);
   fill(CLASS_ANNOUNCEMENTS, D.announcements || []);
+  fillObj(STUDENT_CLASS_ANN, D.announcements_by_classroom || null);
   fill(STUDENT_NOTIFS, D.notifs || []);
+  fillObj(QUIZ_BANKS, D.quizBanks);
+  fillObj(STUDENT_MATERIALS, D.materials_by_classroom || D.materials);
+  // Welcome tiles and dashboard stat cards stay a dash until a real count exists.
+  var num=function(v){ return v==null?'—':String(v); };
+  if(D.stats){
+    var wels=document.querySelectorAll('.welcome-stat .val');
+    if(wels.length>=4){
+      wels[0].textContent=num(D.stats.subjects); wels[0].classList.toggle('tass-empty-val', D.stats.subjects==null);
+      wels[1].textContent=num(D.stats.submitted); wels[1].classList.toggle('tass-empty-val', D.stats.submitted==null);
+      wels[2].textContent=num(D.stats.pending);  wels[2].classList.toggle('tass-empty-val', D.stats.pending==null);
+      wels[3].textContent=num(D.stats.overdue);  wels[3].classList.toggle('tass-empty-val', D.stats.overdue==null);
+    }
+    var setStat=function(idx,v){var el=document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child('+idx+') .stat-val');if(el){el.textContent=num(v);el.classList.toggle('tass-empty-val',v==null);}};
+    setStat(1,D.stats.subjects); setStat(2,D.stats.submitted); setStat(3,D.stats.overdue); setStat(4,D.stats.pending);
+  }
   if(D.schoolAnnouncements && D.schoolAnnouncements.length){
     try{ localStorage.setItem(PRINCIPAL_KEY, JSON.stringify(D.schoolAnnouncements)); }catch(e){}
   }
@@ -3137,5 +3497,35 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   try{ initPerfDetailChart(); }catch(e){}
 })();
 </script>
+<script>
+/* The shared calendar (and the backup runner) post JSON, which Django
+   rejects without a CSRF token in the header. This template is standalone,
+   so base.html does not set it. */
+window.csrfToken = (function () {
+  var el = document.querySelector('#logoutForm input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+})();
+</script>
+<script src="{% static 'js/calendar.js' %}"></script>
+<script>
+/* Activity calendar — the payload arrives inside the same json_script blob the
+   rest of this dashboard reads, so the first month paints with no request.
+   Controls are rendered only when the backend says canEdit (System
+   Administrator / Principal). */
+(function () {
+  if (!window.TASS || !TASS.calendar) return;
+  var el = document.getElementById('student-backend-data');
+  if (!el) return;
+  var payload;
+  try { payload = JSON.parse(el.textContent); } catch (e) { return; }
+  var cal = payload && payload.calendar;
+  if (!cal) return;
+  TASS.calendar.mount('calRoot', { data: cal });
+})();
+</script>
+
+<script src="/static/js/profile_bridge.js"></script>
+<script src="{% static 'js/tass_live.js' %}"></script>
+<script src="/static/js/pilot_guard.js"></script>
 </body>
 </html>

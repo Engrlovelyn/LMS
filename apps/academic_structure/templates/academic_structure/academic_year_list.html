@@ -90,8 +90,9 @@
               </a>
               {% endif %}
               {% endif %}
-              {% if perms.academic_structure.rollover_academic_year and y.status == "ACTIVE" %}
-              <a class="btn btn-outline btn-sm" href="{% url 'academic:year_rollover' y.pk %}">
+              {% if perms.academic_structure.rollover_academic_year and y.status != "ACTIVE" %}
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:year_rollover' y.pk %}"
+                 title="Copy this year's sections, subjects and virtual classrooms into the active school year">
                 <i class="fa-solid fa-copy"></i> Rollover
               </a>
               {% endif %}

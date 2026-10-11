@@ -7,6 +7,15 @@
 <title>SVI LMS – Principal Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/calendar.css' %}">
+<link rel="stylesheet" href="{% static 'css/empty_state.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+<!-- Defines window.TASS / TASS.empty.* . Must load before any inline script on
+     this page: the renderers below call TASS.empty.list/table/stats/chart, and
+     a bare "TASS.page = '...'" throws ReferenceError (TASS undefined), which
+     aborts the rest of that block and blanks the view. -->
+<script src="{% static 'js/empty_state.js' %}"></script>
+<script src="{% static 'js/demographics.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root {
@@ -74,7 +83,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
 .sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:10px 10px 5px; white-space:nowrap; opacity:0; transition:opacity 0.15s; }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label { opacity:1; transition-delay:0.07s; }
-.nav-item { display:flex; align-items:center; gap:0; padding:10px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
+.nav-item { display:flex; align-items:center; gap:0; padding:5px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
 .nav-item-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; font-size:15.5px; flex-shrink:0; transition:color .18s; }
 .nav-item-label { opacity:0; transition:opacity 0.15s; padding-right:12px; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
@@ -396,6 +405,19 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .student-avatar-sm{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
 
 /* ── TLA IMPROVED ── */
+/* REPOSITORY ITEMS (Learning Material / Assessment repositories) */
+.repository-item{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--card-border);border-radius:9px;margin-bottom:8px;background:var(--card-bg)}
+.repository-item .repo-main{display:flex;gap:12px;align-items:center;flex:1;min-width:200px}
+.repository-item .repo-body{flex:1;min-width:0}
+.repository-item .repo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
+@media(max-width:600px){
+  .repository-item{gap:10px}
+  .repository-item .repo-main{min-width:100%}
+}
+.repo-detail-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--gray-100);font-size:12.5px}
+.repo-detail-row:last-child{border-bottom:none}
+.repo-detail-row .rd-key{flex:0 0 130px;color:var(--gray-600);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding-top:1px}
+.repo-detail-row .rd-val{flex:1;min-width:0;color:var(--navy);font-weight:600;word-break:break-word}
 .material-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:10px;background:var(--card-bg);border:1px solid var(--card-border);transition:all .18s}
 .material-item.clickable{cursor:pointer}
 .material-item.clickable:hover{border-color:var(--blue);background:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
@@ -595,7 +617,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 .sidebar:hover, body.sidebar-expanded .sidebar{ width:var(--sidebar-w); box-shadow:4px 0 32px rgba(7,24,50,0.4); }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label{ opacity:1; transition-delay:0.07s; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label{ opacity:1; transition-delay:0.07s; }
-.sidebar-label{ font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--gray-400); text-transform: uppercase; padding: 12px 8px 6px; }
+.sidebar-label{ font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--gray-400); text-transform: uppercase; padding: 8px 8px 4px; }
 .nav-item i{ width: 18px; text-align: center; font-size: 14px; }
 .nav-item.active i{ color: var(--blue); }
 .view-only-notice{ margin: 12px; padding: 10px 12px; background: linear-gradient(135deg, #e8f0fc, #d6e8f7); border: 1px solid #fed7aa; border-radius: 10px; font-size: 11px; color: #0a2463; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -650,6 +672,21 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 .dtab-pane{ display: none; }
 .dtab-pane.active{ display: block; }
 .view-only-tag{ font-size:10px; background: #d6e8f7; color: #1e5faf; border-radius: 20px; padding: 2px 8px; font-weight: 700; margin-left: auto; }
+.level-cards{ display:flex; gap:12px; flex-wrap:wrap; margin:-8px 0 18px; }.student-level-card{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-radius:14px; border:1.5px solid var(--card-border); background:var(--card-bg); cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; text-align:left; transition:all .18s; min-width:200px; flex:1 1 200px; }
+.student-level-card i{ font-size:16px; color:var(--blue); width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:var(--light-blue); flex-shrink:0; }
+.student-level-card strong{ font-size:13.5px; font-weight:700; color:var(--navy); display:block; }
+.student-level-card span{ font-size:12px; color:var(--text-muted); }
+.student-level-card:hover{ border-color:var(--blue); transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+.student-level-card.active{ border-color:var(--blue); background:var(--light-blue); box-shadow:0 0 0 3px rgba(29,91,212,.12); }
+.student-level-card.active i{ background:var(--blue); color:#fff; }
+/* Same table chrome the System Administrator directory uses, so the read-only
+   roster reads identically on both dashboards. The "unified table polish"
+   block further down this file re-states th/td and last-child for .perm-table,
+   exactly as it does in system_admin.html. */
+.perm-table{ width:100%; border-collapse:collapse; }
+.perm-table th{ text-align:left; padding:10px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--gray-400); border-bottom:1px solid var(--gray-100); background:#fff; }
+.perm-table td{ padding:11px 12px; border-bottom:1px solid var(--gray-100); font-size:13px; background:#fff; }
+.perm-table tr:hover td{ background:var(--accent); }
 .assess-item{ display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; background: #fff; border: 1px solid var(--gray-200); margin-bottom: 10px; }
 .score-pill.mid{ background: #d6e8f7; color: #1e5faf; }
 .log-dot.upload{ background: #dbeafe; color: #2563eb; }
@@ -713,8 +750,8 @@ html,body{ width:100%; overflow-x:hidden; }
     <div class="header-right">
       <button class="icon-btn" onclick="toggleNotif()"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
       <button class="profile-btn" onclick="toggleProfile()">
-        <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>DH</text></svg>'">
-        <div><div class="profile-name">Dr. Helena V.</div><div class="profile-role">Principal</div></div>
+        <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+        <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label }}</div></div>
         <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i>
       </button>
     </div>
@@ -725,9 +762,9 @@ html,body{ width:100%; overflow-x:hidden; }
   </div>
   <div class="profile-panel" id="profilePanel">
     <div class="profile-panel-header">
-      <img src="{% static 'dashboards/img/profile-placeholder.jpg' %}" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>DH</text></svg>'">
-      <div class="profile-panel-name">Dr. Helena V.</div>
-      <div class="profile-panel-role">Principal · Administration</div>
+      <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials }}</text></svg>" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+      <div class="profile-panel-name">{{ user_display_name }}</div>
+      <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
@@ -739,19 +776,71 @@ html,body{ width:100%; overflow-x:hidden; }
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
-      <div class="sidebar-section-label">Main Menu</div>
-      <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
-      <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Activity</span></button>
-      <button class="nav-item" onclick="showView('classes')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
-      <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Learning Materials</span></button>
-      <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessments</span></button>
-      <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button>
-      <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Performance</span></button>
-      <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></button>
-      <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
-      <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
-      <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
-      <div class="sidebar-spacer"></div>
+    
+    <div class="sidebar-label">Main</div>
+    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+    <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
+    
+    <div class="sidebar-label">People</div>
+    {% if perms.accounts.view_employee_account %}
+    <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Activity</span></button>
+    {% endif %}
+    {% if perms.virtual_classrooms.view_virtual_classroom %}
+    <button class="nav-item" onclick="showView('classes')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+    {% endif %}
+    {% if perms.accounts.view_student_record %}
+    <button class="nav-item" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Students</span></button>
+    {% endif %}
+    {% if perms.assessments.view_student_performance_tracking %}
+    <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></button>
+    {% endif %}
+    {% if perms.accounts.view_student_record %}
+    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></button>
+    {% endif %}
+    {% if perms.accounts.view_employee_account %}
+    <button class="nav-item" onclick="showView('staffdemographics')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Staff Demographics</span></button>
+    {% endif %}
+    
+    <div class="sidebar-label">Academic</div>
+    {% if perms.academic_structure.view_section_custom %}
+    <button class="nav-item" onclick="showView('sections')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sections</span></button>
+    {% endif %}
+    {% if perms.academic_structure.view_subject_custom %}
+    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button>
+    {% endif %}
+    {% if not is_quality_audit %}
+    {% if perms.teaching_learning.view_download_learning_resource or perms.teaching_learning.access_subject_level_repository %}
+    <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Material Repository</span></button>
+    {% endif %}
+    {% if perms.assessments.view_assessment_custom %}
+    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span></button>
+    {% endif %}
+    {% endif %}
+    {% if perms.assessments.view_student_performance_tracking %}
+    <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Performance</span></button>
+    {% endif %}
+    
+    <div class="sidebar-label">Insights</div>
+    {% if perms.attendance.view_attendance_records %}
+    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button>
+    {% endif %}
+    {% if perms.analytics.view_school_wide_analytics or perms.analytics.view_class_level_analytics %}
+    <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></button>
+    {% endif %}
+    
+    <div class="sidebar-label">Activity</div>
+    {% if perms.analytics.monitor_student_activity_logs %}
+    <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
+    {% endif %}
+    {% if not is_quality_audit %}
+    {% if perms.communication.view_announcements_custom %}
+    <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
+    {% endif %}
+    {% endif %}
+    
+    <div class="sidebar-label">Settings</div>
+    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
+    <div class="sidebar-spacer"></div>
     </div>
   </aside>
 
@@ -765,7 +854,16 @@ html,body{ width:100%; overflow-x:hidden; }
           <p>School-wide overview for San Vicente Institute — <span data-ay="S.Y. 2025-2026">S.Y. 2025-2026</span></p>
         </div>
         <span class="view-only-tag" style="font-size:12px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);color:#fff;padding:5px 10px;border-radius:20px;"><i class="fa-solid fa-eye"></i> View Only — analytics &amp; reports export is handled by the Registrar/System Administrator</span>
+        <span id="campusBadge" style="font-size:12px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);color:#fff;padding:5px 10px;border-radius:20px;"><i class="fa-solid fa-location-dot"></i> Loading campus…</span>
       </div>
+
+      <!-- ═════════════════════════ SCHOOL CALENDAR ═════════════════════════════ -->
+      <div class="card" style="margin-bottom:22px;">
+        <div class="card-body">
+          <div id="calRoot"></div>
+        </div>
+      </div>
+
 
       <div class="dash-filter-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:18px;">
         <span style="font-size:12.5px;font-weight:700;color:var(--navy);display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-filter" style="color:var(--blue);"></i>Filters</span>
@@ -782,16 +880,14 @@ html,body{ width:100%; overflow-x:hidden; }
 
       <!-- STATS -->
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-chalkboard-user"></i></div><div class="stat-val">—</div><div class="stat-label">Active Teachers</div></div>
-        <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-users"></i></div><div class="stat-val">—</div><div class="stat-label">Total Students</div></div>
-        <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-folder-open"></i></div><div class="stat-val">—</div><div class="stat-label">Materials Uploaded</div></div>
-        <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-file-pen"></i></div><div class="stat-val">—</div><div class="stat-label">Active Assessments</div></div>
+        <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-chalkboard-user"></i></div><div class="stat-val" id="dashStatTeachers">—</div><div class="stat-label">Active Teachers</div></div>
+        <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-users"></i></div><div class="stat-val" id="dashStatStudents">—</div><div class="stat-label">Total Students</div></div>
+        <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-folder-open"></i></div><div class="stat-val" id="dashStatMaterials">—</div><div class="stat-label">Materials Uploaded</div></div>
+        <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-file-pen"></i></div><div class="stat-val" id="dashStatAssessments">—</div><div class="stat-label">Active Assessments</div></div>
       </div>
       <div class="stats-grid" style="margin-top:-8px;">
-        <div class="stat-card"><div class="stat-icon gold"><i class="fa-solid fa-calendar-check"></i></div><div class="stat-val">—</div><div class="stat-label">School Avg. Attendance</div></div>
-        <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-paper-plane"></i></div><div class="stat-val">—</div><div class="stat-label">Avg. Submission Rate</div></div>
-        <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-chalkboard"></i></div><div class="stat-val">—</div><div class="stat-label">Active Classes</div></div>
-        <div class="stat-card" style="cursor:pointer;" onclick="showView('teachers')"><div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-val">—</div><div class="stat-label">Teachers — Low Activity</div></div>
+        <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-chalkboard"></i></div><div class="stat-val" id="dashStatClasses">—</div><div class="stat-label">Active Classes</div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="showView('teachers')"><div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-val" id="dashStatLowActivity">—</div><div class="stat-label">Teachers — Low Activity</div></div>
       </div>
 
       <div class="grid-65-35">
@@ -840,11 +936,39 @@ html,body{ width:100%; overflow-x:hidden; }
           <div class="card-header"><div class="card-title"><i class="fa-solid fa-gauge-high" style="color:var(--blue);margin-right:8px;"></i>School-wide Snapshot</div></div>
           <div class="card-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-              <div style="text-align:center;padding:18px 10px;background:var(--accent);border-radius:12px;"><div style="font-size:26px;font-weight:800;color:var(--navy);" id="perfAvgScore">—</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">Average Score</div></div>
+              <div style="text-align:center;padding:18px 10px;background:var(--accent);border-radius:12px;"><div style="font-size:26px;font-weight:800;color:var(--navy);" id="perfStandingGraded">—</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">Learners Graded</div></div>
               <div style="text-align:center;padding:18px 10px;background:var(--accent);border-radius:12px;"><div style="font-size:26px;font-weight:800;color:var(--navy);" id="perfPassRate">—</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">Pass Rate (≥75)</div></div>
-              <div style="text-align:center;padding:18px 10px;background:var(--accent);border-radius:12px;"><div style="font-size:26px;font-weight:800;color:var(--navy);" id="perfAttRate">—</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">Attendance Rate</div></div>
+              <div style="text-align:center;padding:18px 10px;background:var(--accent);border-radius:12px;"><div style="font-size:26px;font-weight:800;color:#dc2626;" id="perfAtRiskCount">—</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">At-Risk Learners</div></div>
               <div style="text-align:center;padding:18px 10px;background:var(--accent);border-radius:12px;"><div style="font-size:26px;font-weight:800;color:var(--navy);" id="perfSubRate">—</div><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">Submission Rate</div></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);margin-right:8px;"></i>Academic Standing per Grade &amp; Section</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label class="form-label" style="margin:0;white-space:nowrap;" for="standGradeSel">Grade Level</label>
+            <select id="standGradeSel" class="form-select" style="width:140px;" onchange="renderPrincipalStanding()"></select>
+            <label class="form-label" style="margin:0;white-space:nowrap;" for="standRiskSel">Standing</label>
+            <select id="standRiskSel" class="form-select" style="width:160px;" onchange="renderPrincipalStanding()">
+              <option value="">All Learners</option>
+              <option value="risk">At-Risk Only (&lt; 75)</option>
+              <option value="pass">Passing Only (&ge; 75)</option>
+              <option value="ungraded">Ungraded</option>
+            </select>
+            <input id="standSearch" class="form-control" type="search" placeholder="Search learner..." style="width:190px;" oninput="renderPrincipalStanding()">
+          </div>
+        </div>
+        <div class="card-body" style="padding:10px 16px 14px;">
+          <div class="stats-grid" style="margin-bottom:14px;" id="standSummary"></div>
+          <div id="standAtRiskBanner"></div>
+          <div style="overflow-x:auto;">
+            <table class="attend-table">
+              <thead><tr><th>Grade</th><th>Section</th><th>Learner</th><th style="text-align:center;">Subjects</th><th style="text-align:center;">General Average</th><th style="text-align:center;">Academic Standing</th><th style="text-align:center;">Status</th></tr></thead>
+              <tbody id="standRows"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -994,49 +1118,237 @@ html,body{ width:100%; overflow-x:hidden; }
       </div>
     </div>
 
-    <!-- ══ LEARNING MATERIALS VIEW ══ -->
+    {% if not is_quality_audit %}
+    <!-- ══ LEARNING MATERIAL REPOSITORY VIEW ══ -->
     <div class="view" id="view-materials">
       <div class="page-header">
-        <div><div class="page-title">Learning Materials</div><div class="page-sub">All materials uploaded by teachers across all classes — view only</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-          <select class="form-control" style="width:160px;max-width:100%;" id="materialTypeFilter" onchange="filterMaterials(this.value)">
-            <option value="all">All Types</option><option value="pdf">PDF</option><option value="vid">Video</option><option value="doc">Word Doc</option><option value="img">Image</option><option value="aud">Audio</option>
-          </select>
-          <select class="form-control" style="width:180px;" id="materialTeacherFilter" onchange="filterMaterialsByTeacher(this.value)">
-            <option value="all">All Teachers</option>
-          </select>
-          <span class="view-only-tag" style="align-self:center;"><i class="fa-solid fa-eye"></i> View Only</span>
+        <div><div class="page-title">Learning Material Repository</div><div class="page-sub">Every learning resource shared across the school — browse, preview and download. Teachers manage their own uploads.</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title">All Uploaded Materials</div><span class="view-only-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> View Only — Teachers manage their own materials</span></div>
-        <div class="card-body" id="allMaterialsList"></div>
+        <div class="card-body">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="repoSubjectPage" style="width:170px;max-width:100%;" onchange="renderMaterials()"><option value="">All Subjects</option></select>
+            <select class="form-control" id="repoTypePage" style="width:150px;max-width:100%;" onchange="renderMaterials()">
+              <option value="all">All Types</option><option value="pdf">PDF</option><option value="ppt">Presentation</option><option value="doc">Word Doc</option><option value="vid">Video</option><option value="img">Image</option><option value="aud">Audio</option><option value="lnk">Link</option>
+            </select>
+            <input class="form-control" id="repoSearchPage" placeholder="Search resource..." style="flex:1;min-width:220px" oninput="renderMaterials()">
+            <button class="btn btn-outline" onclick="downloadRepoResourceReport()"><i class="fa-solid fa-file-export"></i> Export List</button>
+          </div>
+          <div class="repository-grid" id="resourceLibraryGrid"></div>
+          <div id="resourceLibraryStatus" class="invite-status" style="display:none;margin-top:12px"></div>
+        </div>
       </div>
     </div>
 
-    <!-- ══ ASSESSMENTS VIEW ══ -->
+    <!-- ══ ASSESSMENT REPOSITORY VIEW ══ -->
     <div class="view" id="view-assessments">
       <div class="page-header">
-        <div><div class="page-title">Assessments</div><div class="page-sub">Completed assessments and results — view only for Principal</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-          <select class="form-control" style="width:160px;max-width:100%;"><option>Completed Assessments</option><option>Closed</option></select>
-          <span class="view-only-tag" style="align-self:center;"><i class="fa-solid fa-eye"></i> View Only</span>
+        <div><div class="page-title">Assessment Repository</div><div class="page-sub">Every assessment released school-wide with its submission and score summary — browse and preview</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title">All Assessments</div><span class="view-only-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> View Only</span></div>
         <div class="card-body">
-          <table class="attend-table">
-            <thead><tr><th>Title</th><th>Type</th><th>Teacher</th><th>Class</th><th>Deadline</th><th>Submissions</th><th>Avg. Score</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td colspan="8" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>
-            </tbody>
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="assessRepoTypePage" style="width:170px;max-width:100%;" onchange="renderAssessments()"><option value="">All Types</option></select>
+            <select class="form-control" id="assessRepoStatusPage" style="width:140px;max-width:100%;" onchange="renderAssessments()"><option value="">All Status</option><option>Graded</option><option>Pending</option></select>
+            <input class="form-control" id="assessRepoSearchPage" placeholder="Search assessment..." style="flex:1;min-width:220px" oninput="renderAssessments()">
+            <button class="btn btn-outline" onclick="downloadRepoAssessmentReport()"><i class="fa-solid fa-file-export"></i> Export List</button>
+          </div>
+          <div class="repository-grid" id="assessmentLibraryGrid"></div>
+          <div id="assessmentLibraryStatus" class="invite-status" style="display:none;margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ══ STUDENTS VIEW ══ -->
+    <div class="view" id="view-students">
+      <div class="page-header">
+        <div><div class="page-title">Students</div><div class="page-sub" id="studentsSub">Every learner record in the system, with their active-year section and account status</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <label class="form-label" style="margin:0;white-space:nowrap;">School Year</label>
+          <select id="studentsYear" class="form-select" style="width:150px;" onchange="renderStudents()"></select>
+          <input id="studentsSearch" class="form-control" type="search" placeholder="Search by name or LRN..." style="width:220px;" oninput="renderStudents()">
+        </div>
+      </div>
+      <div class="level-cards" id="studentsLevelCards"></div>
+      <div class="stats-grid" id="studentsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-user-graduate" style="color:var(--blue);margin-right:8px;"></i><span id="studentsTableTitle">All Students</span></div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="perm-table">
+            <thead><tr><th>Student</th><th>LRN</th><th>Grade / Section</th><th>Sex</th><th>LMS Account</th><th>Status</th></tr></thead>
+            <tbody id="studentsRows"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ══ ATTENDANCE OVERVIEW ══ -->
+    <!-- ══ ENROLLMENT STATUS ══ -->
+    <div class="view" id="view-enrollment">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Enrollment Status</div>
+          <div class="page-sub">Enrollment counts by grade level and section for <span data-ay>this school year</span>.</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="tassEXEnrollReport()"><i class="fa-solid fa-download"></i> Export</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-user-plus"></i></div><div class="stat-val" id="enTotal">—</div><div class="stat-label">Total Enrolled</div></div>
+        <div class="stat-card teal" id="enElemCard"><div class="stat-icon teal"><i class="fa-solid fa-school"></i></div><div class="stat-val" id="enElem">—</div><div class="stat-label">Elementary</div></div>
+        <div class="stat-card green" id="enJHSCard"><div class="stat-icon green"><i class="fa-solid fa-graduation-cap"></i></div><div class="stat-val" id="enJHS">—</div><div class="stat-label">Junior High School</div></div>
+        <div class="stat-card orange" id="enSHSCard"><div class="stat-icon orange"><i class="fa-solid fa-user-graduate"></i></div><div class="stat-val" id="enSHS">—</div><div class="stat-label">Senior High School</div></div>
+        <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-school"></i></div><div class="stat-val" id="enSections">—</div><div class="stat-label">Active Sections</div></div>
+      </div>
+      <div class="analytics-row">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Enrollment by Grade Level</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:260px;"><canvas id="enGradeChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--warning)"></i> School Level Composition</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:200px;"><canvas id="enLevelChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-people-roof" style="color:var(--blue)"></i> Sections Overview</div></div>
+        <div class="card-body" style="padding:8px 16px 12px;"><table class="score-table"><thead><tr><th>Grade Level</th><th>Section</th><th>Class Adviser</th><th style="text-align:center;">Enrolled</th><th style="text-align:center;">Status</th></tr></thead><tbody id="enSectionTable"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ══ STUDENT DEMOGRAPHICS ══ -->
+    <div class="view" id="view-demographics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Student Demographics</div>
+          <div class="page-sub">Age and grade-level distribution, plus the full learner list with status.</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-person"></i></div><div class="stat-val" id="dmMale">—</div><div class="stat-label">Male</div></div>
+        <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-person-dress"></i></div><div class="stat-val" id="dmFemale">—</div><div class="stat-label">Female</div></div>
+        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-cake-candles"></i></div><div class="stat-val" id="dmAvgAge">—</div><div class="stat-label">Average Age</div></div>
+        <div class="stat-card blue" id="dmElemCard"><div class="stat-icon blue"><i class="fa-solid fa-school"></i></div><div class="stat-val" id="dmElem">—</div><div class="stat-label">Elementary</div></div>
+        <div class="stat-card purple" id="dmJHSCard"><div class="stat-icon purple"><i class="fa-solid fa-school"></i></div><div class="stat-val" id="dmJHS">—</div><div class="stat-label">Junior High School</div></div>
+        <div class="stat-card green" id="dmSHSCard"><div class="stat-icon green"><i class="fa-solid fa-school"></i></div><div class="stat-val" id="dmSHS">—</div><div class="stat-label">Senior High School</div></div>
+      </div>
+      <div class="analytics-row">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Age Distribution</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="dmAgeChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--warning)"></i> Grade Level Split</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:200px;"><canvas id="dmLevelChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title"><i class="fa-solid fa-users-viewfinder" style="color:var(--blue)"></i> Learner List</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input class="form-control" id="dmSearch" placeholder="Search learner, LRN…" style="width:200px;" oninput="renderDemographicList()">
+            <div class="btn-group" role="group" id="dmLevelFilter">
+              <button class="btn btn-outline btn-sm t-filter-btn active" data-lv="all" onclick="dmFilter('all',this)">All</button>
+              <button class="btn btn-outline btn-sm t-filter-btn" data-lv="elem" onclick="dmFilter('elem',this)" id="dmFilterElem">Elem</button>
+              <button class="btn btn-outline btn-sm t-filter-btn" data-lv="jhs" onclick="dmFilter('jhs',this)" id="dmFilterJHS">JHS</button>
+              <button class="btn btn-outline btn-sm t-filter-btn" data-lv="shs" onclick="dmFilter('shs',this)" id="dmFilterSHS">SHS</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:8px 16px 12px;overflow-x:auto;">
+          <table class="student-table"><thead><tr><th>Learner</th><th>LRN</th><th style="text-align:center;">Age</th><th style="text-align:center;">Level</th><th>Grade Level</th><th>Section</th><th style="text-align:center;">Gender</th><th style="text-align:center;">Status</th></tr></thead><tbody id="dmStudentTable"></tbody></table>
+        </div>
+      </div>
+      </div>
+
+    <!-- ══ STAFF DEMOGRAPHICS (SA-style) ══ -->
+    <div class="view" id="view-staffdemographics">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Staff Demographics</div>
+          <div class="page-sub">Age and sex distribution across every employee account on file</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-person"></i></div><div class="stat-val" id="sdmMale">&#8212;</div><div class="stat-label">Male</div></div>
+        <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-person-dress"></i></div><div class="stat-val" id="sdmFemale">&#8212;</div><div class="stat-label">Female</div></div>
+        <div class="stat-card orange"><div class="stat-icon orange"><i class="fa-solid fa-cake-candles"></i></div><div class="stat-val" id="sdmAvgAge">&#8212;</div><div class="stat-label">Average Age</div></div>
+        <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-users"></i></div><div class="stat-val" id="sdmTotal">&#8212;</div><div class="stat-label">Staff</div></div>
+      </div>
+      <div class="analytics-row">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Age Distribution</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="sdmAgeChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--warning)"></i> Sex Split</div></div>
+          <div class="card-body"><div class="chart-wrap" style="height:240px;"><canvas id="sdmGenderChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-users-viewfinder" style="color:var(--blue)"></i> Staff List</div>
+          <input class="form-control" id="sdmSearch" placeholder="Search name, employee no..." style="width:220px;" oninput="TASS.demo.render({prefix:'sdm', rows: window.__prinStaffDemo || []})">
+        </div>
+        <div class="card-body" style="padding:8px 16px 12px;overflow-x:auto;">
+          <table class="student-table">
+            <thead><tr><th>Name</th><th>Employee No.</th><th style="text-align:center;">Age</th><th>Role</th><th style="text-align:center;">Gender</th></tr></thead>
+            <tbody id="sdmTable"><tr class="tass-empty-row"><td colspan="5" style="text-align:center;padding:24px 12px;color:var(--text-muted);">No data yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-sections">
+      <div class="page-header">
+        <div><div class="page-title">Sections</div><div class="page-sub" id="sectionsSub">Every section in the active school year</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <label class="form-label" style="margin:0;white-space:nowrap;">School Year</label>
+          <select id="sectionsYear" class="form-select" style="width:150px;" onchange="renderSections()"></select>
+          <input id="sectionsSearch" class="form-control" type="search" placeholder="Search sections..." style="width:220px;" oninput="renderSections()">
+        </div>
+      </div>
+      <div class="stats-grid" id="sectionsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);margin-right:8px;"></i>All Sections</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="perm-table">
+            <thead><tr><th>Section</th><th>Grade Level</th><th>Adviser</th><th>Classrooms</th><th>Students</th><th>Status</th></tr></thead>
+            <tbody id="sectionsRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-subjects">
+      <div class="page-header">
+        <div><div class="page-title">Subjects</div><div class="page-sub" id="subjectsSub">Every subject in the active school year</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="view-only-tag" style="font-size:12px;margin-left:0;"><i class="fa-solid fa-eye"></i> View Only</span>
+          <label class="form-label" style="margin:0;white-space:nowrap;">School Year</label>
+          <select id="subjectsYear" class="form-select" style="width:150px;" onchange="renderSubjects()"></select>
+          <input id="subjectsSearch" class="form-control" type="search" placeholder="Search subjects..." style="width:220px;" oninput="renderSubjects()">
+        </div>
+      </div>
+      <div class="stats-grid" id="subjectsStats"></div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-book" style="color:var(--blue);margin-right:8px;"></i>All Subjects</div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="perm-table">
+            <thead><tr><th>Subject</th><th>Grade Level</th><th>Type</th><th>Grading Period</th><th>Classrooms</th><th>Assessments</th><th>Status</th></tr></thead>
+            <tbody id="subjectsRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div class="view" id="view-attendance">
       <div class="page-header">
         <div><div class="page-title">Attendance Overview</div><div class="page-sub">School-wide attendance summary — view only</div></div>
@@ -1089,17 +1401,18 @@ html,body{ width:100%; overflow-x:hidden; }
       </div>
       <div class="card">
         <div class="card-header"><div class="card-title"><i class="fa-solid fa-star" style="color:var(--gold,#c9a84c);margin-right:8px;"></i>Student Performance Overview — School-wide</div><span class="view-only-tag" style="font-size:12px;"><i class="fa-solid fa-eye"></i> View Only</span></div>
-        <div class="card-body">
+        <div class="card-body" id="schoolPerfOverviewBody">
           <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>
           <div style="font-size:11px;color:var(--gray-400);margin-top:10px;"><i class="fa-regular fa-circle-question"></i> Select a class in Teacher Activity for a per-student breakdown, grade trend, and attendance summary.</div>
         </div>
       </div>
     </div>
 
+    {% if not is_quality_audit %}
     <!-- ══ ANNOUNCEMENTS (COMMUNICATION MODULE) VIEW ══ -->
     <div class="view" id="view-announcements">
       <div class="page-header">
-        <div><div class="page-title">Announcements</div><div class="page-sub">Post school-wide announcements visible to every student and teacher account</div></div>
+        <div><div class="page-title">Announcements</div><div class="page-sub">Post school announcements; campus-scoped posts reach only that campus</div></div>
         <button class="btn btn-gold" onclick="openAnnouncementComposer()"><i class="fa-solid fa-bullhorn"></i> Post School-Wide Announcement</button>
       </div>
 
@@ -1125,19 +1438,24 @@ html,body{ width:100%; overflow-x:hidden; }
           <label class="form-label">Announcement Content</label>
           <textarea class="form-control" id="annContentInput" rows="5" placeholder="Write the announcement details here..." data-required data-minlen="10" data-maxlength="2000"></textarea>
         </div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:6px;"><i class="fa-solid fa-circle-info"></i> This will be tagged as a <strong>School Announcement</strong> and shown to all student and teacher accounts, independent of Virtual Classroom membership.</div>
+        <div class="form-group" style="margin-top:12px;">
+          <label class="form-label">Audience</label>
+          <select class="form-control" id="annAudienceSel"></select>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:6px;"><i class="fa-solid fa-circle-info"></i> Choose who sees this announcement. Campus-scoped posts are visible only to that campus; <strong>Whole School</strong> reaches everyone.</div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:6px;"><i class="fa-solid fa-circle-info"></i> This will be tagged as a <strong>School Announcement</strong> and shown to the chosen audience independent of Virtual Classroom membership.</div>
         <div class="confirm-actions" style="margin-top:18px;">
           <button class="btn btn-outline" onclick="closeModal('announcementModal')">Cancel</button>
           <button class="btn btn-primary" id="annSaveBtn" onclick="saveAnnouncement()"><i class="fa-solid fa-paper-plane"></i> Post Announcement</button>
         </div>
       </div>
     </div>
+    {% endif %}
 
     <!-- ══ ACTIVITY LOG VIEW ══ -->
     <div class="view" id="view-activitylog">
       <div class="page-header">
-        <div><div class="page-title">Activity Log</div><div class="page-sub">All teacher actions across all classes — uploaded, posted, and assessed</div></div>
-        <select class="form-control" style="width:200px;" onchange="filterActivityLog(this.value)"><option value="all">All Teachers</option></select>
+        <div><div class="page-title">My Recent Activity</div><div class="page-sub">Your own sign-ins and actions inside SVI LMS</div></div>
       </div>
       <div class="card">
         <div class="card-body" id="activityLogList">
@@ -1227,10 +1545,61 @@ let currentTeacherId = 'lm';
 let chartsInit = {};
 
 // ── SCHOOL-WIDE ANNOUNCEMENTS (Communication Module) ──
-let announcementData = JSON.parse(localStorage.getItem('tassPrincipalAnnouncements') || 'null') || [];
+// Announcements come from the backend feed (principal-backend-data), never from
+// the browser: the old localStorage cache could hold rows invented by the
+// removed demo seeder. Clear the stale key so the write bridge cannot replay it
+// to the server; the backend payload repopulates the list below.
+let announcementData = [];
+try { localStorage.removeItem('tassPrincipalAnnouncements'); } catch (e) {}
 let annComposerMode = 'create';
 let annEditingId = null;
 let currentAnnTab = 'active';
+
+// ── CAMPUS SCOPE (Elementary vs. High School Principal) ──
+// Read from the backend dashboard payload (`dashboard_json.campus`), which
+// `principal_context` builds from the signed-in user's role assignments. A
+// High School Principal gets {code:'high_school'}, the Elementary Principal
+// {code:'elementary'}; a Whole School user gets {code:'whole_school'}.
+function principalCampus() {
+  return window.__prinCampus || {
+    code: 'whole_school',
+    label: 'Whole School',
+    scopes: ['whole_school'],
+    postAudiences: [{ code: 'whole_school', label: 'Whole School' }],
+  };
+}
+
+function annAudienceLabel(code) {
+  const map = { elementary: 'Elementary', high_school: 'High School', whole_school: 'Whole School' };
+  return map[code] || 'Whole School';
+}
+
+function defaultAnnAudience() {
+  const c = principalCampus();
+  if (c.scopes && c.scopes.length === 1 && c.scopes[0] !== 'whole_school') return c.scopes[0];
+  return 'whole_school';
+}
+
+function populateAnnAudience() {
+  const sel = document.getElementById('annAudienceSel');
+  if (!sel) return;
+  const c = principalCampus();
+  const opts = (c.postAudiences && c.postAudiences.length) ? c.postAudiences : [{ code: 'whole_school', label: 'Whole School' }];
+  sel.innerHTML = '';
+  opts.forEach(function (p) {
+    const opt = document.createElement('option');
+    opt.value = p.code;
+    opt.textContent = p.label;
+    sel.appendChild(opt);
+  });
+}
+
+function campusHeaderBadge() {
+  const el = document.getElementById('campusBadge');
+  if (!el) return;
+  const c = principalCampus();
+  el.innerHTML = '<i class="fa-solid fa-location-dot"></i> ' + c.label + ' Campus';
+}
 
 function switchAnnTab(tab, btn) {
   currentAnnTab = tab;
@@ -1242,11 +1611,13 @@ function switchAnnTab(tab, btn) {
 function renderAnnouncements() {
   const active = announcementData.filter(a => !a.archived);
   const archived = announcementData.filter(a => a.archived);
-  document.getElementById('annActiveCount').textContent = active.length;
-  document.getElementById('annArchivedCount').textContent = archived.length;
+  const ac = document.getElementById('annActiveCount'), arch = document.getElementById('annArchivedCount');
+  if (ac) ac.textContent = active.length;
+  if (arch) arch.textContent = archived.length;
 
   const list = currentAnnTab === 'active' ? active : archived;
   const container = document.getElementById('announcementList');
+  if (!container) return;
   if (!list.length) {
     container.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--gray-400);"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;"></i>No ${currentAnnTab} announcements.</div>`;
     return;
@@ -1258,6 +1629,7 @@ function renderAnnouncements() {
         <div class="ann-top">
           <span class="ann-title">${a.title}</span>
           <span class="ann-tag ${a.archived ? 'archived-tag' : ''}">${a.archived ? 'Archived · School Announcement' : 'School Announcement'}</span>
+          ${a.audience ? `<span class="ann-tag" style="background:rgba(255,255,255,.16)">${annAudienceLabel(a.audience)}</span>` : ''}
         </div>
         <div class="ann-content">${a.content}</div>
         <div class="ann-meta"><i class="fa-regular fa-clock"></i> Posted ${a.date}${a.updated ? ` · <i class="fa-solid fa-pen"></i> Edited ${a.updated}` : ''}</div>
@@ -1278,6 +1650,8 @@ function openAnnouncementComposer() {
   document.getElementById('annModalTitle').innerHTML = '<i class="fa-solid fa-bullhorn" style="color:var(--blue);margin-right:8px;"></i>Post School-Wide Announcement';
   document.getElementById('annTitleInput').value = '';
   document.getElementById('annContentInput').value = '';
+  populateAnnAudience();
+  document.getElementById('annAudienceSel').value = defaultAnnAudience();
   document.getElementById('annSaveBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Post Announcement';
   document.getElementById('announcementModal').classList.add('open');
 }
@@ -1290,6 +1664,8 @@ function openEditAnnouncement(id) {
   document.getElementById('annModalTitle').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--blue);margin-right:8px;"></i>Edit School-Wide Announcement';
   document.getElementById('annTitleInput').value = a.title;
   document.getElementById('annContentInput').value = a.content;
+  populateAnnAudience();
+  document.getElementById('annAudienceSel').value = a.audience || 'whole_school';
   document.getElementById('annSaveBtn').innerHTML = '<i class="fa-solid fa-check"></i> Save Changes';
   document.getElementById('announcementModal').classList.add('open');
 }
@@ -1298,12 +1674,13 @@ function saveAnnouncement() {
   if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('announcementModal')))return;
   const title = document.getElementById('annTitleInput').value.trim();
   const content = document.getElementById('annContentInput').value.trim();
+  const audience = document.getElementById('annAudienceSel') ? document.getElementById('annAudienceSel').value : 'whole_school';
   if (!title || !content) { showToast('Please fill in both the title and content.', 'error'); return; }
 
   if (annComposerMode === 'create') {
     announcementData.unshift({
       id: 'a' + Date.now(),
-      title, content,
+      title, content, audience,
       date: 'Just now', updated: null, archived: false
     });
     closeModal('announcementModal');
@@ -1313,7 +1690,7 @@ function saveAnnouncement() {
   } else {
     if (!confirm('Are you sure you want to save these changes to the announcement?')) return;
     const a = announcementData.find(x => x.id === annEditingId);
-    if (a) { a.title = title; a.content = content; a.updated = 'Just now'; }
+    if (a) { a.title = title; a.content = content; a.audience = audience; a.updated = 'Just now'; }
     closeModal('announcementModal');
     showToast('School Announcement Successfully Updated.', 'success');
     localStorage.setItem('tassPrincipalAnnouncements', JSON.stringify(announcementData));
@@ -1332,9 +1709,11 @@ function archiveAnnouncement(id) {
 
 // ── VIEW NAVIGATION ──
 function showView(id) {
+  const target = document.getElementById('view-' + id);
+  if (!target) { showView('dashboard'); return; }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-' + id).classList.add('active');
+  target.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(btn => {
     if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + id + "'")) btn.classList.add('active');
   });
@@ -1342,13 +1721,19 @@ function showView(id) {
   if (id === 'dashboard') initDashboardCharts();
   if (id === 'teachers') { renderTeacherList(); renderHeatmap(); }
   if (id === 'classes') renderClasses();
-  if (id === 'materials') renderMaterials('all');
-  if (id === 'assessments') renderAssessments();
   if (id === 'attendance') initAttendanceCharts();
   if (id === 'reports') initReportCharts();
-  if (id === 'performance') initPrincipalPerformanceChart();
+  if (id === 'performance') { initPrincipalPerformanceChart(); renderPrincipalStanding(); }
+  if (id === 'materials') renderMaterials();
+  if (id === 'assessments') renderAssessments();
   if (id === 'announcements') renderAnnouncements();
-  if (id === 'activitylog') renderActivityLog('all');
+  if (id === 'activitylog') renderActivityLog();
+  if (id === 'students') renderStudents();
+  if (id === 'sections') renderSections();
+  if (id === 'subjects') renderSubjects();
+  if (id === 'enrollment') renderEnrollment();
+  if (id === 'demographics') renderDemographics();
+  if (id === 'staffdemographics') renderStaffDemographics();
 }
 
 function openTeacherDetail(tid) {
@@ -1487,99 +1872,994 @@ function renderClasses(teacher) {
   `).join('');
 }
 
+/* ── LEARNING MATERIAL REPOSITORY ────────────────────────────────────────
+   The shared-repository endpoint is the same one the Teacher and System
+   Administrator dashboards read. It returns every resource flagged
+   share_to_repository, which is exactly what oversight needs to see. There is
+   no "Copy to Builder" here: the Principal has no builder, so each row gets a
+   read-only View action plus a download when a file is actually attached. */
+const REPO_RESOURCES = [];
+let repoResourcesLoaded = false;
+
+function repoResourceSource() { return REPO_RESOURCES.length ? REPO_RESOURCES : []; }
+
+function loadRepoResources(silent) {
+  return fetch('/api/learning-resources/', { credentials: 'same-origin' })
+    .then(r => r.json())
+    .then(function (d) {
+      if (d && d.ok && Array.isArray(d.resources)) {
+        REPO_RESOURCES.length = 0;
+        d.resources.forEach(function (x) { REPO_RESOURCES.push(x); });
+      }
+      repoResourcesLoaded = true;
+      populateRepoSubjects();
+      if (!silent) renderMaterials();
+      return REPO_RESOURCES;
+    })
+    .catch(function () {
+      repoResourcesLoaded = true;
+      populateRepoSubjects();
+      renderMaterials();
+      return REPO_RESOURCES;
+    });
+}
+
+function populateRepoSubjects() {
+  const sel = document.getElementById('repoSubjectPage');
+  if (!sel) return;
+  const subs = [...new Set(repoResourceSource().map(r => r.subject).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Subjects</option>' + subs.map(s => '<option>' + escHtml(s) + '</option>').join('');
+  if (cur && subs.indexOf(cur) >= 0) sel.value = cur;
+}
+
+function repoDownloadBtn(r) {
+  const url = String((r && r.url) || '').trim();
+  if (url) return '<a class="btn btn-outline btn-sm" href="' + escHtml(url) + '" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download</a>';
+  return '<span class="status-pill" style="background:var(--gray-100);color:var(--gray-600)">No file</span>';
+}
+
 function renderMaterials(filter) {
-  if (filter !== undefined) window._materialType = filter === 'all' ? 'all' : filter;
-  const type = window._materialType || 'all';
-  const teacher = window._materialTeacher || 'all';
-  const list = document.getElementById('allMaterialsList');
-  const filtered = allMaterials.filter(m => (type === 'all' || m.type === type) && (teacher === 'all' || m.teacher === teacher));
-  if (!filtered.length) {
-    list.innerHTML = `<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>`;
+  if (filter !== undefined) {
+    const sel = document.getElementById('repoTypePage');
+    if (sel) sel.value = filter === 'all' ? 'all' : filter;
+  }
+  const grid = document.getElementById('resourceLibraryGrid');
+  if (!grid) return;
+
+  if (!repoResourcesLoaded && !REPO_RESOURCES.length) loadRepoResources(true);
+
+  const q = (document.getElementById('repoSearchPage')?.value || '').toLowerCase();
+  const subject = document.getElementById('repoSubjectPage')?.value || '';
+  const type = document.getElementById('repoTypePage')?.value || 'all';
+
+  const all = repoResourceSource();
+  if (!all.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block;opacity:.5"></i>No learning materials have been shared to the repository yet.</div>';
     return;
   }
-  list.innerHTML = filtered.map(m => `
-    <div class="material-item">
-      <div class="material-icon ${m.type}"><i class="fa-solid ${m.icon}"></i></div>
-      <div style="flex:1;min-width:0;">
-        <div class="material-name">${m.name}</div>
-        <div class="material-meta">${m.meta} · ${m.teacher} · ${m.cls} · ${m.date}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:11px;background:#dbeafe;color:#2563eb;border-radius:20px;padding:2px 8px;font-weight:700;"><i class="fa-solid fa-download"></i> ${m.dl}</span>
-        <span class="view-only-tag"><i class="fa-solid fa-eye"></i> View Only</span>
-      </div>
-    </div>
-  `).join('');
+
+  const items = all.filter(r =>
+    (!subject || r.subject === subject) &&
+    (type === 'all' || !type || r.type === type) &&
+    (!q || [r.title, r.topic, r.subject, r.meta, r.uploaded_by].join(' ').toLowerCase().includes(q))
+  );
+
+  if (!items.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-magnifying-glass" style="font-size:30px;margin-bottom:10px;display:block;opacity:.5"></i>No resources match the selected filters.</div>';
+    return;
+  }
+
+  const heading = (subject || 'All Subjects') + ' — ' + items.length + ' Resource' + (items.length === 1 ? '' : 's');
+  grid.innerHTML = '<h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px"><i class="fa-solid fa-book-open" style="color:var(--blue)"></i> ' + escHtml(heading) + '</h4>' +
+    items.map(r =>
+      '<div class="repository-item">' +
+        '<div class="repo-main">' +
+          '<i class="' + escHtml(r.icon || 'fa-solid fa-file') + '" style="font-size:22px;color:' + escHtml(r.color || '#3a86d4') + '"></i>' +
+          '<div class="repo-body"><strong>' + escHtml(r.title) + '</strong>' +
+          '<div style="font-size:11px;color:var(--text-muted)">' + [escHtml(r.subject), escHtml(r.topic), escHtml(r.meta)].filter(Boolean).join(' · ') + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-user"></i> ' + escHtml(r.uploaded_by || 'Faculty') + ' · <i class="fa-solid fa-calendar"></i> ' + escHtml(r.created_at || '—') + '</div></div>' +
+        '</div>' +
+        '<div class="repo-actions">' +
+          '<button class="btn btn-outline btn-sm" onclick="viewRepoResource(' + escHtml(String(r.id)) + ')"><i class="fa-solid fa-eye"></i> View</button>' +
+          repoDownloadBtn(r) +
+        '</div>' +
+      '</div>'
+    ).join('');
+}
+
+/* Read-only resource detail. No destination picker and no POST — the
+   oversight roles review what teachers published, they never republish it. */
+function viewRepoResource(id) {
+  const r = repoResourceSource().find(x => String(x.id) === String(id));
+  if (!r) { showToast('This resource is no longer in the repository.', 'error'); return; }
+  const row = (k, v) => '<div class="repo-detail-row"><div class="rd-key">' + k + '</div><div class="rd-val">' + (v || '—') + '</div></div>';
+  const html =
+    '<div class="modal-overlay open" id="prinRepoViewModal" onclick="if(event.target===this)document.getElementById(\'prinRepoViewModal\').remove()"><div class="modal-box">' +
+      '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>Learning Material Details</div>' +
+      '<div class="modal-sub">Read-only preview of a resource shared to the school repository.</div>' +
+      '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin:14px 0 6px;">' +
+        '<i class="' + escHtml(r.icon || 'fa-solid fa-file') + '" style="font-size:22px;color:' + escHtml(r.color || '#3a86d4') + '"></i>' +
+        '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">' + escHtml(r.title) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);">' + escHtml(r.meta || '') + '</div></div>' +
+        '<span class="view-only-tag" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Only</span>' +
+      '</div>' +
+      row('Subject', escHtml(r.subject)) +
+      row('Topic', escHtml(r.topic)) +
+      row('File Type', escHtml(r.meta)) +
+      row('Uploaded By', escHtml(r.uploaded_by)) +
+      row('Date Uploaded', escHtml(r.created_at)) +
+      row('Repository ID', escHtml(String(r.id))) +
+      '<div class="modal-footer">' +
+        (String(r.url || '').trim() ? '<a class="btn btn-outline" href="' + escHtml(r.url) + '" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download</a>' : '') +
+        '<button class="btn btn-primary" onclick="document.getElementById(\'prinRepoViewModal\').remove()">Close</button>' +
+      '</div>' +
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function downloadRepoResourceReport() {
+  const rows = [['Resource', 'Subject', 'Topic', 'Type', 'Uploaded By', 'Date Uploaded']];
+  repoResourceSource().forEach(r => rows.push([r.title, r.subject, r.topic, r.meta, r.uploaded_by, r.created_at]));
+  downloadRepoCsv(rows, 'learning_material_repository.csv');
 }
 
 function filterMaterials(type) { renderMaterials(type); }
-function filterMaterialsByTeacher(t) { window._materialTeacher = t === 'all' ? 'all' : t; renderMaterials(window._materialType); }
+function filterMaterialsByTeacher(t) { window._materialTeacher = t === 'all' ? 'all' : t; renderMaterials(); }
 function filterClassesByTeacher(t) { renderClasses(t); }
 function applyTeacherPeriod(p) {
   window._tMult = p === 'This Week' ? 1 : p === 'This Month' ? 4 : 8;
   const hmTitle = document.querySelector('#view-teachers .card .card-header .card-title');
-  if (hmTitle) hmTitle.textContent = 'Posting Frequency Heatmap \u2014 ' + p;
+  if (hmTitle) hmTitle.textContent = 'Posting Frequency Heatmap — ' + p;
   renderTeacherList();
   renderHeatmap();
 }
 function populatePrincipalFilters() {
   const tSel = document.getElementById('classTeacherFilter');
-  const mSel = document.getElementById('materialTeacherFilter');
   const names = [];
   allClassData.forEach(c => { if (c.teacher && names.indexOf(c.teacher) < 0) names.push(c.teacher); });
   allMaterials.forEach(m => { if (m.teacher && names.indexOf(m.teacher) < 0) names.push(m.teacher); });
   names.sort();
-  const opts = '<option value="all">All Teachers</option>' + names.map(n => '<option>' + n + '</option>').join('');
+  const opts = '<option value="all">All Teachers</option>' + names.map(n => '<option>' + escHtml(n) + '</option>').join('');
   if (tSel) tSel.innerHTML = opts;
-  if (mSel) mSel.innerHTML = opts;
 }
 
-// ── SEED DATA (Principal view-only FR 4–10) ──
-const assessmentData = [
-  {title:'Midterm Exam',type:'Exam',teacher:'L. Malanot',cls:'G7-A',deadline:'Mar 15',subs:35,avg:84,status:'Graded'},
-  {title:'Quiz 1 – Equations',type:'Quiz',teacher:'J. Ramirez',cls:'G8-B',deadline:'Mar 18',subs:40,avg:79,status:'Graded'},
-  {title:'Essay – Literary Analysis',type:'Essay',teacher:'G. Aguilar',cls:'G9-C',deadline:'Mar 20',subs:32,avg:88,status:'Graded'},
-  {title:'Performance Task – Dance',type:'PT',teacher:'B. Castillo',cls:'G11-A',deadline:'Mar 22',subs:28,avg:91,status:'Graded'},
-  {title:'Final Exam',type:'Exam',teacher:'N. Villanueva',cls:'G10-D',deadline:'Mar 25',subs:30,avg:72,status:'Graded'},
-  {title:'Research Paper',type:'Project',teacher:'E. Santiago',cls:'G12-A',deadline:'Mar 28',subs:25,avg:89,status:'Graded'}
-];
-const attendanceRecords = [
-  {cls:'G7-A',teacher:'L. Malanot',students:35,avg:95,last:'Apr 10',status:'normal'},
-  {cls:'G8-B',teacher:'J. Ramirez',students:40,avg:92,last:'Apr 10',status:'normal'},
-  {cls:'G9-C',teacher:'G. Aguilar',students:32,avg:96,last:'Apr 10',status:'normal'},
-  {cls:'G10-B',teacher:'N. Villanueva',students:30,avg:88,last:'Apr 10',status:'at-risk'},
-  {cls:'G11-A',teacher:'B. Castillo',students:28,avg:94,last:'Apr 10',status:'normal'},
-  {cls:'G12-A',teacher:'E. Santiago',students:25,avg:91,last:'Apr 10',status:'normal'}
-];
-const activityLogData = [
-  {type:'upload',teacher:'L. Malanot',cls:'G7-A',detail:'Uploaded "Cell Division Worksheet"',time:'Today, 10:32 AM'},
-  {type:'assess',teacher:'J. Ramirez',cls:'G8-B',detail:'Created Quiz 2 – Quadratic Functions',time:'Today, 9:15 AM'},
-  {type:'attend',teacher:'G. Aguilar',cls:'G9-C',detail:'Recorded attendance — 31/32 present',time:'Today, 8:40 AM'},
-  {type:'upload',teacher:'B. Castillo',cls:'G11-A',detail:'Uploaded "Rhythm Exercises.mp4"',time:'Yesterday, 3:20 PM'},
-  {type:'assess',teacher:'N. Villanueva',cls:'G10-D',detail:'Closed Essay – Sino Ako Filipino',time:'Yesterday, 2:00 PM'},
-  {type:'upload',teacher:'E. Santiago',cls:'G12-A',detail:'Uploaded AP Filipino Heritage Slides',time:'Yesterday, 11:45 AM'},
-  {type:'attend',teacher:'L. Malanot',cls:'G7-A',detail:'Recorded attendance — 35/35 present',time:'Apr 8, 8:38 AM'},
-  {type:'assess',teacher:'G. Aguilar',cls:'G9-C',detail:'Graded 28 submissions for Literary Essay',time:'Apr 8, 1:12 PM'}
-];
+// ── DATA (Principal view-only FR 4–10) ──
+// Assessments, attendance rows and the activity feed come from the backend
+// bridge only. They were six / six / eight invented rows naming real-sounding
+// teachers and classes.
+const assessmentData = [];
+window.prinAssessRows = assessmentData;
+const attendanceRecords = [];
+window.prinAttendRows = attendanceRecords;
+const activityLogData = [];
+window.prinActivityRows = activityLogData;
+
+/* ── ASSESSMENT REPOSITORY ───────────────────────────────────────────────
+   Rows come from principal_context()'s `assessments` key, which aggregates real
+   AssessmentAssignment / Submission rows. Oversight gets the same read-only
+   treatment as the resource repository: View, never "Copy to Builder". */
+const REPO_ASSESS_TYPE_ICONS = {
+  'Quiz':'fa-clipboard-question','Seatwork':'fa-pen-to-square','Assignment':'fa-file-signature',
+  'Project':'fa-folder-tree','Examination':'fa-file-circle-question','Performance Task':'fa-clipboard-list'
+};
+function repoAssessIcon(t) { return REPO_ASSESS_TYPE_ICONS[t] || 'fa-clipboard-list'; }
+function repoAssessColor(t) {
+  const m = { 'Quiz':'#1e5faf','Seatwork':'#16a34a','Assignment':'#f59e0b','Project':'#7c3aed','Examination':'#e11d48' };
+  return m[t] || 'var(--blue)';
+}
+
+function populateAssessRepoTypes() {
+  const sel = document.getElementById('assessRepoTypePage');
+  if (!sel || sel.dataset.filled === '1') return;
+  const types = [...new Set(assessmentData.map(a => a.type).filter(Boolean))].sort();
+  if (!types.length) return;
+  sel.innerHTML = '<option value="">All Types</option>' + types.map(t => '<option>' + escHtml(t) + '</option>').join('');
+  sel.dataset.filled = '1';
+}
 
 function renderAssessments(){
-  const el=document.querySelector('#view-assessments .attend-table tbody');
-  if(!el)return;
-  el.innerHTML=assessmentData.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+r.title+'</td><td>'+r.type+'</td><td>'+r.teacher+'</td><td>'+r.cls+'</td><td>'+r.deadline+'</td><td>'+r.subs+'</td><td>'+r.avg+'%</td><td><span class="pill pill-active">'+r.status+'</span></td></tr>').join('');
+  const grid = document.getElementById('assessmentLibraryGrid');
+  if (!grid) return;
+  populateAssessRepoTypes();
+
+  const q = (document.getElementById('assessRepoSearchPage')?.value || '').toLowerCase();
+  const type = document.getElementById('assessRepoTypePage')?.value || '';
+  const status = document.getElementById('assessRepoStatusPage')?.value || '';
+
+  if (!assessmentData.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-file-circle-question" style="font-size:34px;margin-bottom:10px;display:block;opacity:.5"></i>No assessments have been released yet.</div>';
+    return;
+  }
+
+  const items = assessmentData.filter(a =>
+    (!type || a.type === type) &&
+    (!status || a.status === status) &&
+    (!q || [a.title, a.type, a.teacher, a.cls].join(' ').toLowerCase().includes(q))
+  );
+
+  if (!items.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-magnifying-glass" style="font-size:30px;margin-bottom:10px;display:block;opacity:.5"></i>No assessments match the selected filters.</div>';
+    return;
+  }
+
+  grid.innerHTML = items.map(a => {
+    const idx = assessmentData.indexOf(a);
+    return '<div class="repository-item">' +
+      '<div class="repo-main">' +
+        '<i class="fa-solid ' + repoAssessIcon(a.type) + '" style="font-size:22px;color:' + repoAssessColor(a.type) + '"></i>' +
+        '<div class="repo-body"><strong>' + escHtml(a.title) + '</strong>' +
+        '<div style="font-size:11px;color:var(--text-muted)">' + escHtml(a.type) + ' · ' + escHtml(a.cls) + ' · Due ' + escHtml(a.deadline) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-user"></i> ' + escHtml(a.teacher) + ' · <i class="fa-solid fa-paper-plane"></i> ' + escHtml(String(a.subs)) + ' submitted · <i class="fa-solid fa-star"></i> ' + escHtml(String(a.avg)) + '%</div></div>' +
+      '</div>' +
+      '<div class="repo-actions">' +
+        '<span class="status-pill" style="background:' + (a.status === 'Graded' ? '#dcfce7' : '#fef3c7') + ';color:' + (a.status === 'Graded' ? '#16a34a' : '#b45309') + '">' + escHtml(a.status) + '</span>' +
+        '<button class="btn btn-outline btn-sm" onclick="viewRepoAssessment(' + idx + ')"><i class="fa-solid fa-eye"></i> View</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
+function viewRepoAssessment(idx) {
+  const a = assessmentData[idx];
+  if (!a) { showToast('This assessment is no longer available.', 'error'); return; }
+  const row = (k, v) => '<div class="repo-detail-row"><div class="rd-key">' + k + '</div><div class="rd-val">' + (v || '—') + '</div></div>';
+  const html =
+    '<div class="modal-overlay open" id="prinAssessViewModal" onclick="if(event.target===this)document.getElementById(\'prinAssessViewModal\').remove()"><div class="modal-box">' +
+      '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>Assessment Details</div>' +
+      '<div class="modal-sub">Read-only preview of an assessment released school-wide.</div>' +
+      '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin:14px 0 6px;">' +
+        '<i class="fa-solid ' + repoAssessIcon(a.type) + '" style="font-size:22px;color:' + repoAssessColor(a.type) + '"></i>' +
+        '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">' + escHtml(a.title) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);">' + escHtml(a.type) + ' · ' + escHtml(a.cls) + '</div></div>' +
+        '<span class="view-only-tag" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Only</span>' +
+      '</div>' +
+      row('Assessment Type', escHtml(a.type)) +
+      row('Teacher', escHtml(a.teacher)) +
+      row('Class', escHtml(a.cls)) +
+      row('Deadline', escHtml(a.deadline)) +
+      row('Submissions', escHtml(String(a.subs))) +
+      row('Average Score', escHtml(String(a.avg)) + '%') +
+      row('Status', escHtml(a.status)) +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-primary" onclick="document.getElementById(\'prinAssessViewModal\').remove()">Close</button>' +
+      '</div>' +
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function downloadRepoAssessmentReport() {
+  const rows = [['Assessment', 'Type', 'Teacher', 'Class', 'Deadline', 'Submissions', 'Avg Score', 'Status']];
+  assessmentData.forEach(a => rows.push([a.title, a.type, a.teacher, a.cls, a.deadline, a.subs, a.avg, a.status]));
+  downloadRepoCsv(rows, 'assessment_repository.csv');
+}
+
+/* Shared CSV writer for both repository exports — the BOM keeps Excel from
+   mangling accented names. */
+function downloadRepoCsv(rows, filename) {
+  if (!rows.length) { showToast('Nothing to export.', 'error'); return; }
+  const csv = '\uFEFF' + rows.map(r => r.map(c => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Exported ' + filename, 'success');
+}
+
+// ── READ-ONLY ROSTER (Students / Sections / Subjects) ────────────────────
+// The Principal reviews the exact roster the System Administrator manages.
+// The Principal holds only the `view_*` codenames and none of the matching
+// write ones, so these three panels are the System Administrator's panels with
+// every write affordance removed: no Actions column, no inline edit handlers,
+// no Assign/Add/Archive buttons. Nothing here is writable from this page.
+function dirData(){ return window.__prinDirectory || { sections: [], subjects: [], academicYears: [], sectionsByYear: {}, subjectsByYear: {}, studentsByYear: {} }; }
+function rosterStudents(){ return window.__prinStudents || []; }
+
+// This page is standalone and never loads base.html's js/app.js, which is the
+// only place escHtml() is defined. Without it every renderer below throws
+// ReferenceError mid-build and leaves its view blank, so it is defined here —
+// same contract as the System Administrator's esc() at system_admin.html:2060.
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// Populate a School Year <select> once and return the currently selected year.
+function dirYearSelect(selId, years, preferred){
+  var sel = document.getElementById(selId);
+  if (!sel || !years || !years.length) return '';
+  if (sel.options.length !== years.length) {
+    var cur = sel.value || preferred || years[0];
+    sel.innerHTML = years.map(function (y) { return '<option value="' + escHtml(y) + '">' + escHtml(y) + '</option>'; }).join('');
+    sel.value = years.indexOf(cur) >= 0 ? cur : years[0];
+  }
+  return sel.value || years[0];
+}
+
+// A blank stored value prints as an em dash so a missing adviser or grading
+// period reads as "unset" rather than looking like a rendering fault.
+function dirDash(v){ return (v === null || v === undefined || v === '') ? '—' : escHtml(String(v)); }
+
+function dirPill(status){
+  var s = String(status == null ? '' : status);
+  var active = /^(active|open|enrolled)$/i.test(s);
+  return '<span class="pill" style="background:' + (active ? '#dcfce7;color:#16a34a' : '#f1f5f9;color:#64748b') + ';">' + escHtml(s || 'Unset') + '</span>';
+}
+
+function dirFilter(rows, query, fields){
+  var q = String(query || '').trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter(function (row) {
+    return fields.some(function (f) {
+      var v = row[f];
+      return v !== null && v !== undefined && String(v).toLowerCase().indexOf(q) !== -1;
+    });
+  });
+}
+
+function dirStat(label, value, icon){
+  return '<div class="stat-card"><div class="stat-label">' + escHtml(label) + '</div>' +
+         '<div class="stat-val">' + escHtml(String(value == null ? 0 : value)) + '</div>' +
+         '<div class="stat-ico"><i class="fa-solid ' + escHtml(icon) + '"></i></div></div>';
+}
+
+// ── Academic Standing per Grade / Section ──
+// Driven by window.__prinStanding, which principal_context() computes from the
+// stored StudentGrade rows. A learner with no recorded grade is reported as
+// "Ungraded" rather than averaged in as a zero, so one missing grade cannot drag
+// a section down. The same 75 cut-off marks At-Risk as the Quality Assurance
+// dashboard uses, so both dashboards flag exactly the same learners.
+var STANDING_ORDER = ['Outstanding', 'Very Good', 'Good', 'Fair', 'Needs Improvement', 'Failed', 'Ungraded'];
+function standingRows(){ return window.__prinStanding || []; }
+function standingGradeLabel(row){
+  var g = row && row.grade;
+  if (g === null || g === undefined || g === '') return '—';
+  var s = String(g);
+  return s.indexOf('Grade') === 0 ? s : 'Grade ' + s;
+}
+function standingPill(label){
+  var cls = (label === 'Outstanding' || label === 'Very Good') ? 'good' : ((label === 'Good' || label === 'Fair') ? 'ok' : 'bad');
+  return '<span class="status-pill ' + cls + '">' + escHtml(label) + '</span>';
+}
+function standingFiltersReady(){
+  var sel = document.getElementById('standGradeSel');
+  if (!sel || sel.dataset.ready) return;
+  var seen = [];
+  standingRows().forEach(function (r) {
+    var g = standingGradeLabel(r);
+    if (g !== '—' && seen.indexOf(g) < 0) seen.push(g);
+  });
+  seen.sort(function (a, b) { return (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0); });
+  sel.innerHTML = '<option value="">All Grade Levels</option>' +
+    seen.map(function (g) { return '<option value="' + escHtml(g) + '">' + escHtml(g) + '</option>'; }).join('');
+  sel.dataset.ready = '1';
+}
+function renderPrincipalStanding(){
+  var box = document.getElementById('standRows');
+  if (!box) return;
+  standingFiltersReady();
+  var gSel = document.getElementById('standGradeSel');
+  var rSel = document.getElementById('standRiskSel');
+  var q = document.getElementById('standSearch');
+  var grade = gSel ? gSel.value : '';
+  var risk = rSel ? rSel.value : '';
+  var term = ((q && q.value) || '').trim().toLowerCase();
+
+  var all = standingRows();
+  var rows = all.slice();
+  if (grade) rows = rows.filter(function (r) { return standingGradeLabel(r) === grade; });
+  if (risk === 'risk') rows = rows.filter(function (r) { return r.at_risk; });
+  else if (risk === 'pass') rows = rows.filter(function (r) { return r.average != null && !r.at_risk; });
+  else if (risk === 'ungraded') rows = rows.filter(function (r) { return r.average == null; });
+  if (term) rows = rows.filter(function (r) {
+    return String(r.name || '').toLowerCase().indexOf(term) >= 0 ||
+           String(r.lrn || '').toLowerCase().indexOf(term) >= 0;
+  });
+
+  var grid = document.getElementById('standSummary');
+  if (grid) {
+    var sections = {};
+    rows.forEach(function (r) { sections[standingGradeLabel(r) + ' · ' + (r.section || '—')] = true; });
+    var atRisk = rows.filter(function (r) { return r.at_risk; }).length;
+    var passing = rows.filter(function (r) { return r.average != null && !r.at_risk; }).length;
+    grid.innerHTML =
+      dirStat('Learners Listed', rows.length, 'fa-users') +
+      dirStat('Grade / Sections', Object.keys(sections).length, 'fa-layer-group') +
+      dirStat('At-Risk (< 75)', atRisk, 'fa-triangle-exclamation') +
+      dirStat('Passing (≥ 75)', passing, 'fa-circle-check') +
+      dirStat('Ungraded', rows.filter(function (r) { return r.average == null; }).length, 'fa-circle-question');
+  }
+
+  var banner = document.getElementById('standAtRiskBanner');
+  if (banner) {
+    var flagged = rows.filter(function (r) { return r.at_risk; });
+    banner.innerHTML = flagged.length
+      ? '<div class="at-risk-banner" style="margin:0 0 14px;"><span class="at-risk-icon" style="font-size:18px;">⚠️</span><div>' +
+        '<div class="at-risk-title">' + flagged.length + ' learner' + (flagged.length > 1 ? 's' : '') + ' below the passing mark of 75</div>' +
+        '<div class="at-risk-sub">Highlighted in red below. Recommended intervention: remediation, peer tutoring and regular progress tracking by the Academic Coordinator.</div>' +
+        '</div></div>'
+      : '';
+  }
+
+  // Keep the two snapshot tiles in step with the same rows.
+  var gradedTile = document.getElementById('perfStandingGraded');
+  if (gradedTile) gradedTile.textContent = all.filter(function (r) { return r.average != null; }).length;
+  var riskTile = document.getElementById('perfAtRiskCount');
+  if (riskTile) riskTile.textContent = all.filter(function (r) { return r.at_risk; }).length;
+  var passTile = document.getElementById('perfPassRate');
+  if (passTile) {
+    var gradedCount = all.filter(function (r) { return r.average != null; }).length;
+    passTile.textContent = gradedCount
+      ? Math.round((all.filter(function (r) { return r.average != null && !r.at_risk; }).length / gradedCount) * 100) + '%'
+      : '—';
+  }
+  var subTile = document.getElementById('perfSubRate');
+  if (subTile) {
+    var sr = window.__prinSubmissionRate;
+    subTile.textContent = (sr === null || sr === undefined || isNaN(sr)) ? '—' : sr + '%';
+  }
+
+  if (!rows.length) {
+    box.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px 12px;color:var(--text-muted);font-size:13px;">No learners match the selected filters.</td></tr>';
+    return;
+  }
+  var lastKey = {};
+  box.innerHTML = rows.map(function (r) {
+    var key = standingGradeLabel(r) + ' · ' + (r.section || '—');
+    var showHead = lastKey[key] !== true;
+    lastKey[key] = true;
+    var head = '<tr style="background:var(--accent);"><td colspan="7" style="padding:8px 6px;font-size:12px;font-weight:800;color:var(--navy);letter-spacing:.3px;text-transform:uppercase;">' + escHtml(key) + '</td></tr>';
+    var avg = r.average == null ? '—' : Math.round(r.average * 10) / 10;
+    var avgStyle = r.at_risk ? 'color:#dc2626;font-weight:800;' : (r.average == null ? 'color:var(--text-muted);' : 'font-weight:700;');
+    var riskTag = r.at_risk ? '<span class="status-pill bad">At-Risk</span>' : '<span class="status-pill good">OK</span>';
+    var row = '<tr' + (r.at_risk ? ' style="background:#fef2f2;"' : '') + '>' +
+      '<td>' + escHtml(standingGradeLabel(r)) + '</td>' +
+      '<td>' + escHtml(r.section || '—') + '</td>' +
+      '<td style="font-weight:600;">' + escHtml(r.name) + '</td>' +
+      '<td style="text-align:center;">' + escHtml(String(r.subjects || 0)) + '</td>' +
+      '<td style="text-align:center;' + avgStyle + '">' + escHtml(String(avg)) + '</td>' +
+      '<td style="text-align:center;">' + standingPill(r.standing) + '</td>' +
+      '<td style="text-align:center;">' + riskTag + '</td></tr>';
+    return showHead ? head + row : row;
+  }).join('');
+}
+
+function renderSections(){
+  var d = dirData();
+  var selYear = dirYearSelect('sectionsYear', d.academicYears, d.year);
+  // Same source order in both dashboards: the selected year's rows, falling
+  // back to the flat active-year list when no year is selected.
+  var all = ((d.sectionsByYear || {})[selYear]) || (selYear ? [] : (d.sections || []));
+  var box = document.getElementById('sectionsRows');
+  var q = document.getElementById('sectionsSearch');
+  var rows = dirFilter(all, q && q.value, ['name', 'gradeLevel', 'year', 'adviser', 'status']);
+  var grid = document.getElementById('sectionsStats');
+  var sub = document.getElementById('sectionsSub');
+
+  if (sub) sub.textContent = selYear
+    ? 'Every section in S.Y. ' + selYear
+    : 'No sections listed for this school year yet.';
+
+  if (grid) {
+    if (!all.length) { grid.innerHTML = ''; TASS.empty.stats(grid, { message: 'No sections have been created for this school year.' }); }
+    else {
+      var advisers = {};
+      all.forEach(function (r) { if (r.adviser) advisers[r.adviser] = true; });
+      grid.innerHTML =
+        dirStat('Sections', all.length, 'fa-layer-group') +
+        dirStat('With Adviser', Object.keys(advisers).length, 'fa-user-tie') +
+        dirStat('Classrooms', all.reduce(function (n, r) { return n + (r.classrooms || 0); }, 0), 'fa-chalkboard-user') +
+        dirStat('Enrolled Students', all.reduce(function (n, r) { return n + (r.students || 0); }, 0), 'fa-users');
+    }
+  }
+
+  if (!box) return;
+  if (!all.length) { TASS.empty.table(box, 6, { message: 'No sections yet.', hint: 'Sections created by the registrar appear here.' }); return; }
+  if (!rows.length) { TASS.empty.table(box, 6, { message: 'No sections match "' + (q.value || '').trim() + '".' }); return; }
+  box.innerHTML = rows.map(function (r) {
+    return '<tr><td><strong>' + escHtml(r.name) + '</strong></td>' +
+           '<td>' + escHtml('Grade ' + r.gradeLevel) + '</td>' +
+           '<td>' + dirDash(r.adviser) + '</td>' +
+           '<td>' + escHtml(String(r.classrooms == null ? 0 : r.classrooms)) + '</td>' +
+           '<td>' + escHtml(String(r.students == null ? 0 : r.students)) + '</td>' +
+           '<td>' + dirPill(r.status) + '</td></tr>';
+  }).join('');
+}
+
+function renderSubjects(){
+  var d = dirData();
+  var selYear = dirYearSelect('subjectsYear', d.academicYears, d.year);
+  var all = ((d.subjectsByYear || {})[selYear]) || (selYear ? [] : (d.subjects || []));
+  var box = document.getElementById('subjectsRows');
+  var q = document.getElementById('subjectsSearch');
+  var rows = dirFilter(all, q && q.value, ['name', 'gradeLevel', 'subjectType', 'status']);
+  var grid = document.getElementById('subjectsStats');
+  var sub = document.getElementById('subjectsSub');
+
+  if (sub) sub.textContent = selYear
+    ? 'Every subject in S.Y. ' + selYear
+    : 'No active school year, so there is nothing to list yet.';
+
+  if (grid) {
+    if (!all.length) { grid.innerHTML = ''; TASS.empty.stats(grid, { message: 'No subjects have been created for this school year.' }); }
+    else {
+      var levels = {};
+      all.forEach(function (r) { if (r.gradeLevel) levels[r.gradeLevel] = true; });
+      grid.innerHTML =
+        dirStat('Subjects', all.length, 'fa-book') +
+        dirStat('Grade Levels', Object.keys(levels).length, 'fa-layer-group') +
+        dirStat('With Classrooms', all.filter(function (r) { return (r.classrooms || 0) > 0; }).length, 'fa-chalkboard-user') +
+        dirStat('Assessments', all.reduce(function (n, r) { return n + (r.assessments || 0); }, 0), 'fa-file-signature');
+    }
+  }
+
+  if (!box) return;
+  if (!all.length) { TASS.empty.table(box, 7, { message: 'No subjects yet.', hint: 'Subjects created by the registrar appear here.' }); return; }
+  if (!rows.length) { TASS.empty.table(box, 7, { message: 'No subjects match "' + (q.value || '').trim() + '".' }); return; }
+  box.innerHTML = rows.map(function (r) {
+    return '<tr><td><strong>' + escHtml(r.name) + '</strong></td>' +
+           '<td>' + escHtml('Grade ' + r.gradeLevel) + '</td>' +
+           '<td>' + dirDash(r.subjectType) + '</td>' +
+           '<td>' + dirDash(r.gradingPeriod) + '</td>' +
+           '<td>' + escHtml(String(r.classrooms == null ? 0 : r.classrooms)) + '</td>' +
+           '<td>' + escHtml(String(r.assessments == null ? 0 : r.assessments)) + '</td>' +
+           '<td>' + dirPill(r.status) + '</td></tr>';
+  }).join('');
+}
+
+var prinStudentLevel = '';
+var STUDENT_LEVELS = [
+  { code: 'elem', label: 'Elementary',         icon: 'fa-school',         min: 1,  max: 6 },
+  { code: 'hs',   label: 'Junior High School', icon: 'fa-user-graduate',  min: 7,  max: 10 },
+  { code: 'shs',  label: 'Senior High',        icon: 'fa-graduation-cap', min: 11, max: 12 },
+];
+function studentLevelCode(grade){
+  var g = parseInt(grade, 10);
+  if (isNaN(g)) return '';
+  if (g >= 1 && g <= 6) return 'elem';
+  if (g >= 7 && g <= 10) return 'hs';
+  if (g >= 11 && g <= 12) return 'shs';
+  return '';
+}
+function studentGradeCode(grade){
+  var g = parseInt(grade, 10);
+  if (isNaN(g)) return '';
+  if (g >= 1 && g <= 12) return 'g' + g;
+  return '';
+}
+function studentLevelRange(code){
+  for (var i = 0; i < STUDENT_LEVELS.length; i++) if (STUDENT_LEVELS[i].code === code) return STUDENT_LEVELS[i];
+  return null;
+}
+function studentLevelLabel(code){
+  var range = studentLevelRange(code);
+  if (code && code.startsWith('g')) {
+    var g = code.replace('g', '');
+    return 'Grade ' + g;
+  }
+  return range ? range.label : 'All Students';
+}
+function renderStudentsLevelCards(all){
+  var box = document.getElementById('studentsLevelCards');
+  if (!box) return;
+  var campus = principalCampus();
+  var campusCode = campus && campus.code;
+  var html = '';
+  
+  if (campusCode === 'elementary') {
+    // Elementary principal: total elementary students, then Grade 1 through Grade 6
+    var elemTotal = all.filter(function (r) { return studentLevelCode(r.grade) === 'elem'; }).length;
+    html += '<button class="student-level-card' + ((prinStudentLevel === '' || prinStudentLevel === 'elem-total') ? ' active' : '') + '" onclick="setStudentLevel(\'elem-total\')">' +
+      '<i class="fa-solid fa-users"></i><div><strong>Total Students</strong>' +
+      '<span>' + elemTotal + ' student' + (elemTotal === 1 ? '' : 's') + ' · Elementary</span></div>' +
+      '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    for (var g = 1; g <= 6; g++) {
+      var n = all.filter(function (r) { return parseInt(r.grade, 10) === g; }).length;
+      var active = prinStudentLevel === ('g' + g);
+      html += '<button class="student-level-card' + (active ? ' active' : '') + '" onclick="setStudentLevel(\'g' + g + '\')">' +
+        '<i class="fa-solid fa-school"></i><div><strong>Grade ' + g + '</strong>' +
+        '<span>' + n + ' student' + (n === 1 ? '' : 's') + '</span></div>' +
+        '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    }
+    box.innerHTML = html;
+    return;
+  } else if (campusCode === 'high_school') {
+    // High school principal: Total students (Junior High) = grades 7-10, then each grade 7-10; Total students (Senior High) = grades 11-12, then each grade 11-12
+    var jhsTotal = all.filter(function (r) { return studentLevelCode(r.grade) === 'hs'; }).length;
+    html += '<button class="student-level-card' + ((prinStudentLevel === '' || prinStudentLevel === 'jhs-total') ? ' active' : '') + '" onclick="setStudentLevel(\'jhs-total\')">' +
+      '<i class="fa-solid fa-users"></i><div><strong>Total Students</strong>' +
+      '<span>' + jhsTotal + ' student' + (jhsTotal === 1 ? '' : 's') + ' · Junior High (Grades 7–10)</span></div>' +
+      '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    for (var g2 = 7; g2 <= 10; g2++) {
+      var n2 = all.filter(function (r) { return parseInt(r.grade, 10) === g2; }).length;
+      var active2 = prinStudentLevel === ('g' + g2);
+      html += '<button class="student-level-card' + (active2 ? ' active' : '') + '" onclick="setStudentLevel(\'g' + g2 + '\')">' +
+        '<i class="fa-solid fa-user-graduate"></i><div><strong>Grade ' + g2 + '</strong>' +
+        '<span>' + n2 + ' student' + (n2 === 1 ? '' : 's') + '</span></div>' +
+        '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    }
+    var shsTotal = all.filter(function (r) { return studentLevelCode(r.grade) === 'shs'; }).length;
+    html += '<button class="student-level-card' + (prinStudentLevel === 'shs-total' ? ' active' : '') + '" onclick="setStudentLevel(\'shs-total\')">' +
+      '<i class="fa-solid fa-users"></i><div><strong>Total Students</strong>' +
+      '<span>' + shsTotal + ' student' + (shsTotal === 1 ? '' : 's') + ' · Senior High (Grades 11–12)</span></div>' +
+      '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    for (var g3 = 11; g3 <= 12; g3++) {
+      var n3 = all.filter(function (r) { return parseInt(r.grade, 10) === g3; }).length;
+      var active3 = prinStudentLevel === ('g' + g3);
+      html += '<button class="student-level-card' + (active3 ? ' active' : '') + '" onclick="setStudentLevel(\'g' + g3 + '\')">' +
+        '<i class="fa-solid fa-graduation-cap"></i><div><strong>Grade ' + g3 + '</strong>' +
+        '<span>' + n3 + ' student' + (n3 === 1 ? '' : 's') + '</span></div>' +
+        '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    }
+    box.innerHTML = html;
+    return;
+  }
+  
+  // Default/fallback to original behavior
+  html = '<button class="student-level-card' + (prinStudentLevel === '' ? ' active' : '') + '" onclick="setStudentLevel(\'\')">' +
+    '<i class="fa-solid fa-users"></i><div><strong>All Students</strong>' +
+    '<span>' + all.length + ' student' + (all.length === 1 ? '' : 's') + ' · every grade level</span></div>' +
+    '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>' +
+    STUDENT_LEVELS.map(function (lv) {
+      var n = all.filter(function (r) { return studentLevelCode(r.grade) === lv.code; }).length;
+      var active = prinStudentLevel === lv.code;
+      return '<button class="student-level-card' + (active ? ' active' : '') + '" onclick="setStudentLevel(\'' + lv.code + '\')">' +
+        '<i class="fa-solid ' + lv.icon + '"></i><div><strong>' + escHtml(lv.label) + '</strong>' +
+        '<span>' + n + ' student' + (n === 1 ? '' : 's') + ' · Grades ' + lv.min + '–' + lv.max + '</span></div>' +
+        '<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);"><i class="fa-solid fa-chevron-right"></i></span></button>';
+    }).join('');
+  box.innerHTML = html;
+}
+function setStudentLevel(code){
+  prinStudentLevel = code || '';
+  renderStudents();
+}
+function renderStudents(){
+  var d = dirData();
+  var selYear = dirYearSelect('studentsYear', d.academicYears, d.year);
+  var all = ((d.studentsByYear || {})[selYear]) || rosterStudents();
+  var box = document.getElementById('studentsRows');
+  var q = document.getElementById('studentsSearch');
+  var campus = principalCampus();
+  var filtered = all;
+  if (prinStudentLevel === 'elem-total') {
+    filtered = all.filter(function (r) { return studentLevelCode(r.grade) === 'elem'; });
+  } else if (prinStudentLevel === 'jhs-total') {
+    filtered = all.filter(function (r) { return studentLevelCode(r.grade) === 'hs'; });
+  } else if (prinStudentLevel === 'shs-total') {
+    filtered = all.filter(function (r) { return studentLevelCode(r.grade) === 'shs'; });
+  } else if (prinStudentLevel && prinStudentLevel.startsWith('g')) {
+    var gtarget = parseInt(prinStudentLevel.replace('g', ''), 10);
+    filtered = all.filter(function (r) { return parseInt(r.grade, 10) === gtarget; });
+  } else {
+    var range = studentLevelRange(prinStudentLevel);
+    filtered = range
+      ? all.filter(function (r) { return studentLevelCode(r.grade) === prinStudentLevel; })
+      : all;
+  }
+  var rows = dirFilter(filtered, q && q.value, ['name', 'lrn', 'section', 'email', 'status']);
+  var grid = document.getElementById('studentsStats');
+  var sub = document.getElementById('studentsSub');
+  var ttl = document.getElementById('studentsTableTitle');
+
+  renderStudentsLevelCards(all);
+
+  var lvLabel = studentLevelLabel(prinStudentLevel);
+  if (ttl) ttl.textContent = lvLabel;
+  var rangeSub = null;
+  if (prinStudentLevel && prinStudentLevel.startsWith('g')) {
+    var gsub = prinStudentLevel.replace('g', '');
+    rangeSub = null;
+  } else if (prinStudentLevel === 'elem-total') {
+    rangeSub = { min: 1, max: 6 };
+  } else if (prinStudentLevel === 'jhs-total') {
+    rangeSub = { min: 7, max: 10 };
+  } else if (prinStudentLevel === 'shs-total') {
+    rangeSub = { min: 11, max: 12 };
+  } else {
+    rangeSub = studentLevelRange(prinStudentLevel);
+  }
+  if (sub) sub.textContent = selYear
+    ? lvLabel + ' for S.Y. ' + selYear + (rangeSub ? ' · Grades ' + rangeSub.min + '–' + rangeSub.max : '')
+    : lvLabel + ' · no active school year set';
+
+  if (grid) {
+    if (!all.length) { grid.innerHTML = ''; TASS.empty.stats(grid, { message: 'No student records yet.' }); }
+    else if (!filtered.length) { grid.innerHTML = ''; TASS.empty.stats(grid, { message: 'No students in ' + lvLabel + ' for this school year.' }); }
+    else {
+      var grades = {};
+      var withAccount = 0;
+      filtered.forEach(function (r) { if (r.grade) grades[r.grade] = true; if (r.email) withAccount++; });
+      grid.innerHTML =
+        dirStat('Students', filtered.length, 'fa-user-graduate') +
+        dirStat('Grade Levels', Object.keys(grades).length, 'fa-layer-group') +
+        dirStat('Sectioned', filtered.filter(function (r) { return r.section; }).length, 'fa-users') +
+        dirStat('With LMS Account', withAccount, 'fa-at');
+    }
+  }
+
+  if (!box) return;
+  if (!all.length) { TASS.empty.table(box, 6, { message: 'No student records yet.', hint: 'Students enrolled by the registrar appear here.' }); return; }
+  if (!filtered.length) { TASS.empty.table(box, 6, { message: 'No students in ' + lvLabel + ' for this school year.', hint: 'Choose a different level card above or a different school year.' }); return; }
+  if (!rows.length) { TASS.empty.table(box, 6, { message: 'No students match "' + (q.value || '').trim() + '".' }); return; }
+  // Six columns, read-only: there is no Actions cell, matching the fact that
+  // the Principal cannot assign sections (that write is registrar-only).
+  box.innerHTML = rows.map(function (r) {
+    var ini = escHtml(r.initials || (r.name || '..').split(' ').map(function (x) { return x[0] || ''; }).join('').slice(0, 2).toUpperCase());
+    var grad = r.gradient || '#1e5faf';
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:10px;"><span style="width:30px;height:30px;border-radius:50%;background:' + escHtml(grad) + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">' + ini + '</span><strong style="white-space:nowrap;">' + escHtml(r.name) + '</strong></div></td>' +
+      '<td>' + dirDash(r.lrn) + '</td>' +
+      '<td>' + (r.grade ? escHtml('Grade ' + r.grade) : '—') + ' · ' + dirDash(r.section) + '</td>' +
+      '<td>' + (r.sex === 'M' ? 'Male' : r.sex === 'F' ? 'Female' : '—') + '</td>' +
+      '<td>' + dirDash(r.email) + '</td>' +
+      '<td>' + dirPill(r.status) + '</td></tr>';
+  }).join('');
+}
+
+// ══ ENROLLMENT STATUS (shared with Quality Assurance) ══
+const ENROLL_GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+const ENROLL_ELEM = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+const ENROLL_JHS = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
+const ENROLL_SHS = ['Grade 11', 'Grade 12'];
+const ENROLL_EMPTY = '<tr><td colspan="9" style="text-align:center;padding:26px 12px;color:var(--text-muted);font-size:13px;">No records found.</td></tr>';
+let enrollLvFilter = 'all';
+function enrollLevelOf(g) { g = (g || '').trim(); if (ENROLL_ELEM.includes(g)) return 'Elementary'; if (ENROLL_JHS.includes(g)) return 'Junior High School'; if (ENROLL_SHS.includes(g)) return 'Senior High School'; return 'Elementary'; }
+function enrollLevelCode(g) { const l = enrollLevelOf(g); if (l === 'Elementary') return 'elem'; if (l === 'Junior High School') return 'jhs'; return 'shs'; }
+function enrollStudentAge(birth) { if (!birth) return ''; const b = new Date(birth + 'T00:00:00'); if (isNaN(b)) return ''; const now = new Date(); let a = now.getFullYear() - b.getFullYear(); if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) a--; return a; }
+function enrollName(st) { return st.first + ' ' + (st.middle ? st.middle + ' ' : '') + st.last; }
+function enrollPill(status) { const cls = (status === 'Needs Attention' || status === 'At Risk' || status === 'Low') ? 'bad' : ((status === 'High' || status === 'Excellent' || status === 'Active') ? 'good' : 'ok'); return '<span class="status-pill ' + cls + '">' + escHtml(String(status)) + '</span>'; }
+function enrollEnrolledStudents() { return Array.isArray(window.__prinEnrollStudents) ? window.__prinEnrollStudents : []; }
+function enrollSectionsList() { return Array.isArray(window.__prinEnrollSections) ? window.__prinEnrollSections : []; }
+
+function renderEnrollment() {
+  const st = enrollEnrolledStudents();
+  const sections = enrollSectionsList();
+  const campus = principalCampus();
+  const set = function (id, v) { const el = document.getElementById(id); if (el) { el.textContent = v; } };
+  const campusCode = campus && campus.code;
+  if (campusCode === 'elementary') {
+    const elemTotal = st.filter(s => enrollLevelCode(s.grade) === 'elem').length;
+    set('enTotal', elemTotal);
+    set('enElem', elemTotal);
+    set('enJHS', 0);
+    set('enSHS', 0);
+    var ec = document.getElementById('enElemCard'); if (ec) ec.style.display = '';
+    var jc = document.getElementById('enJHSCard'); if (jc) jc.style.display = 'none';
+    var sc = document.getElementById('enSHSCard'); if (sc) sc.style.display = 'none';
+    set('enSections', sections.filter(function(sec){ const n = parseInt(sec.grade && sec.grade.replace(/\D/g,'')||0,10); return n>=1 && n<=6; }).length);
+  } else if (campusCode === 'high_school') {
+    const jhsTotal = st.filter(s => enrollLevelCode(s.grade) === 'jhs').length;
+    const shsTotal = st.filter(s => enrollLevelCode(s.grade) === 'shs').length;
+    set('enTotal', st.length);
+    set('enElem', 0);
+    set('enJHS', jhsTotal);
+    set('enSHS', shsTotal);
+    var ec2 = document.getElementById('enElemCard'); if (ec2) ec2.style.display = 'none';
+    var jc2 = document.getElementById('enJHSCard'); if (jc2) jc2.style.display = '';
+    var sc2 = document.getElementById('enSHSCard'); if (sc2) sc2.style.display = '';
+    set('enSections', sections.filter(function(sec){ const n = parseInt(sec.grade && sec.grade.replace(/\D/g,'')||0,10); return n>=7 && n<=12; }).length);
+  } else {
+    set('enTotal', st.length);
+    set('enElem', st.filter(s => enrollLevelCode(s.grade) === 'elem').length);
+    set('enJHS', st.filter(s => enrollLevelCode(s.grade) === 'jhs').length);
+    set('enSHS', st.filter(s => enrollLevelCode(s.grade) === 'shs').length);
+    var ec3 = document.getElementById('enElemCard'); if (ec3) ec3.style.display = '';
+    var jc3 = document.getElementById('enJHSCard'); if (jc3) jc3.style.display = '';
+    var sc3 = document.getElementById('enSHSCard'); if (sc3) sc3.style.display = '';
+    set('enSections', sections.length);
+  }
+
+  const campusCode2 = campus && campus.code;
+  if (campusCode2 === 'elementary') {
+    const gLabels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'].filter(g => st.some(s => s.grade === g));
+    if (gLabels.length) {
+      safeChart('enGradeChart', {
+        type: 'bar',
+        data: { labels: gLabels, datasets: [{ label: 'Students', data: gLabels.map(g => st.filter(s => s.grade === g).length), backgroundColor: gLabels.map(g => '#22a877'), borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+    } else {
+      safeChart('enGradeChart', { data: { labels: [], datasets: [] } });
+    }
+    const lvls = ['Elementary'];
+    const counts = [st.filter(s => enrollLevelOf(s.grade) === 'Elementary').length];
+    if (counts.some(n => n > 0)) {
+      safeChart('enLevelChart', {
+        type: 'doughnut',
+        data: { labels: lvls, datasets: [{ data: counts, backgroundColor: ['#22a877'], borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+      });
+    } else {
+      safeChart('enLevelChart', { data: { labels: [], datasets: [] } });
+    }
+  } else if (campusCode2 === 'high_school') {
+    const gLabels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].filter(g => st.some(s => s.grade === g));
+    if (gLabels.length) {
+      safeChart('enGradeChart', {
+        type: 'bar',
+        data: { labels: gLabels, datasets: [{ label: 'Students', data: gLabels.map(g => st.filter(s => s.grade === g).length), backgroundColor: gLabels.map(g => { const n = parseInt(g.replace(/\D/g, ''), 10) || 0; return n >= 11 ? '#0a2463' : '#1e5faf'; }), borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+    } else {
+      safeChart('enGradeChart', { data: { labels: [], datasets: [] } });
+    }
+    const lvls = ['Junior High School', 'Senior High School'];
+    const counts = lvls.map(l => st.filter(s => enrollLevelOf(s.grade) === l).length);
+    if (counts.some(n => n > 0)) {
+      safeChart('enLevelChart', {
+        type: 'doughnut',
+        data: { labels: lvls, datasets: [{ data: counts, backgroundColor: ['#1e5faf', '#0a2463'], borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+      });
+    } else {
+      safeChart('enLevelChart', { data: { labels: [], datasets: [] } });
+    }
+  } else {
+    const gLabels = ENROLL_GRADES.filter(g => st.some(s => s.grade === g));
+    if (gLabels.length) {
+      safeChart('enGradeChart', {
+        type: 'bar',
+        data: { labels: gLabels, datasets: [{ label: 'Students', data: gLabels.map(g => st.filter(s => s.grade === g).length), backgroundColor: gLabels.map(g => { const n = parseInt(g.replace(/\D/g, ''), 10) || 0; return n >= 11 ? '#0a2463' : n >= 7 ? '#1e5faf' : '#22a877'; }), borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+    } else {
+      safeChart('enGradeChart', { data: { labels: [], datasets: [] } });
+    }
+
+    const lvls = ['Elementary', 'Junior High School', 'Senior High School'];
+    const counts = lvls.map(l => st.filter(s => enrollLevelOf(s.grade) === l).length);
+    if (counts.some(n => n > 0)) {
+      safeChart('enLevelChart', {
+        type: 'doughnut',
+        data: { labels: lvls, datasets: [{ data: counts, backgroundColor: ['#22a877', '#1e5faf', '#0a2463'], borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+      });
+    } else {
+      safeChart('enLevelChart', { data: { labels: [], datasets: [] } });
+    }
+  }
+
+  const tb = document.getElementById('enSectionTable');
+  if (!tb) return;
+  if (!sections.length) { tb.innerHTML = ENROLL_EMPTY; return; }
+  tb.innerHTML = sections.map(sec => {
+    const cnt = st.filter(s => s.grade === sec.grade && s.section === sec.name).length;
+    return '<tr><td style="font-weight:600;">' + escHtml(sec.grade) + '</td><td>' + escHtml(sec.name) + '</td><td>' + escHtml(sec.adviser || 'Unassigned') + '</td><td style="text-align:center;font-weight:700;">' + cnt + '</td><td style="text-align:center;">' + enrollPill('Active') + '</td></tr>';
+  }).join('');
+}
+
+function dmFilter(lv, el) { enrollLvFilter = lv; document.querySelectorAll('.t-filter-btn').forEach(b => b.classList.remove('active')); if (el) el.classList.add('active'); renderDemographicList(); }
+function renderDemographicList() {
+  const tb = document.getElementById('dmStudentTable'); if (!tb) return;
+  const search = (document.getElementById('dmSearch') ? document.getElementById('dmSearch').value : '').toLowerCase();
+  const st = enrollEnrolledStudents();
+  const rows = st.map(s => {
+    const a = enrollStudentAge(s.birth);
+    return { name: enrollName(s), lrn: s.lrn, age: a === '' ? '—' : a, grade: s.grade, section: s.section, gender: s.gender, status: s.status, lf: (enrollName(s) + ' ' + s.lrn).toLowerCase(), lv: enrollLevelCode(s.grade) };
+  });
+  const filtered = rows.filter(r => (enrollLvFilter === 'all' || r.lv === enrollLvFilter) && (!search || r.lf.includes(search)));
+  if (!filtered.length) { tb.innerHTML = ENROLL_EMPTY; return; }
+  tb.innerHTML = filtered.map(r => {
+    const lvl = enrollLevelOf(r.grade).toUpperCase();
+    return '<tr><td style="font-weight:600;">' + escHtml(r.name) + '</td><td style="color:var(--text-muted);font-size:12px;">' + escHtml(r.lrn) + '</td><td style="text-align:center;">' + escHtml(String(r.age)) + '</td><td style="text-align:center;"><span class="status-pill ' + escHtml(r.lv) + '">' + escHtml(lvl) + '</span></td><td>' + escHtml(r.grade) + '</td><td>' + escHtml(r.section) + '</td><td style="text-align:center;">' + escHtml(r.gender || '—') + '</td><td style="text-align:center;">' + enrollPill(r.status) + '</td></tr>';
+  }).join('');
+}
+function renderDemographics() {
+  const st = enrollEnrolledStudents();
+  const campus = principalCampus();
+  const set = function (id, v) { const el = document.getElementById(id); if (el) { el.textContent = v; } };
+  const m = st.filter(s => s.gender === 'Male').length, f = st.filter(s => s.gender === 'Female').length;
+  set('dmMale', m); set('dmFemale', f);
+  const ages = st.map(s => enrollStudentAge(s.birth)).filter(a => a !== '');
+  set('dmAvgAge', ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : '—');
+  const campusCode = campus && campus.code;
+  var dmElemCard = document.getElementById('dmElemCard');
+  var dmJHSCard = document.getElementById('dmJHSCard');
+  var dmSHSCard = document.getElementById('dmSHSCard');
+  if (campusCode === 'elementary') {
+    const e = st.filter(s => enrollLevelCode(s.grade) === 'elem').length;
+    set('dmElem', e); set('dmJHS', 0); set('dmSHS', 0);
+    const counts = [e, 0, 0];
+    const lvls = ['Elementary', 'Junior High School', 'Senior High School'];
+    if (counts.some(n => n > 0)) {
+      safeChart('dmLevelChart', {
+        type: 'doughnut',
+        data: { labels: ['Elementary'], datasets: [{ data: [e], backgroundColor: ['#22a877'], borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+      });
+    } else {
+      safeChart('dmLevelChart', { data: { labels: [], datasets: [] } });
+    }
+  } else if (campusCode === 'high_school') {
+    const j = st.filter(s => enrollLevelCode(s.grade) === 'jhs').length;
+    const h = st.filter(s => enrollLevelCode(s.grade) === 'shs').length;
+    set('dmElem', 0); set('dmJHS', j); set('dmSHS', h);
+    const counts = [0, j, h];
+    const lvls = ['Elementary', 'Junior High School', 'Senior High School'];
+    var dmElemCard2 = document.getElementById('dmElemCard');
+    var dmJHSCard2 = document.getElementById('dmJHSCard');
+    var dmSHSCard2 = document.getElementById('dmSHSCard');
+    if (dmElemCard2) dmElemCard2.style.display = 'none';
+    if (dmJHSCard2) dmJHSCard2.style.display = '';
+    if (dmSHSCard2) dmSHSCard2.style.display = '';
+    if (j > 0 || h > 0) {
+      safeChart('dmLevelChart', {
+        type: 'doughnut',
+        data: { labels: ['Junior High School', 'Senior High School'], datasets: [{ data: [j, h], backgroundColor: ['#1e5faf', '#0a2463'], borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+      });
+    } else {
+      safeChart('dmLevelChart', { data: { labels: [], datasets: [] } });
+    }
+  } else {
+    const e = st.filter(s => enrollLevelCode(s.grade) === 'elem').length, j = st.filter(s => enrollLevelCode(s.grade) === 'jhs').length, h = st.filter(s => enrollLevelCode(s.grade) === 'shs').length;
+    set('dmElem', e); set('dmJHS', j); set('dmSHS', h);
+    const lvls = ['Elementary', 'Junior High School', 'Senior High School'];
+    const counts = [e, j, h];
+    var dmElemCard3 = document.getElementById('dmElemCard');
+    var dmJHSCard3 = document.getElementById('dmJHSCard');
+    var dmSHSCard3 = document.getElementById('dmSHSCard');
+    if (dmElemCard3) dmElemCard3.style.display = '';
+    if (dmJHSCard3) dmJHSCard3.style.display = '';
+    if (dmSHSCard3) dmSHSCard3.style.display = '';
+    if (counts.some(n => n > 0)) {
+      safeChart('dmLevelChart', {
+        type: 'doughnut',
+        data: { labels: lvls, datasets: [{ data: counts, backgroundColor: ['#22a877', '#1e5faf', '#0a2463'], borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom' } } }
+      });
+    } else {
+      safeChart('dmLevelChart', { data: { labels: [], datasets: [] } });
+    }
+  }
+
+  if (ages.length) {
+    const min = Math.min.apply(null, ages), max = Math.max.apply(null, ages), bins = [];
+    for (let a = min; a <= max; a++) bins.push({ age: a, n: ages.filter(x => x === a).length });
+    safeChart('dmAgeChart', {
+      type: 'bar',
+      data: { labels: bins.map(b => b.age + ' yrs'), datasets: [{ label: 'Learners', data: bins.map(b => b.n), backgroundColor: '#1e5faf', borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+  } else {
+    safeChart('dmAgeChart', { data: { labels: [], datasets: [] } });
+  }
+  renderDemographicList();
+}
+function renderStaffDemographics() {
+  if (window.TASS && TASS.demo) TASS.demo.render({ prefix: 'sdm', rows: window.__prinStaffDemo || [] });
+}
+window.tassEXEnrollReport = function () { return; };
+
 function renderAttendanceOverview(){
+  // Derived from the rows actually returned; a class with no records reports
+  // 0% upstream and is excluded so it cannot drag the average toward a
+  // number nobody measured.
+  const rows=Array.isArray(attendanceRecords)?attendanceRecords:[];
+  const measured=rows.filter(r=>r.avg>0).map(r=>r.avg);
   const els=document.querySelectorAll('#view-attendance .stats-grid .stat-val');
-  if(els.length>=4){els[0].textContent='94%';els[1].textContent='96%';els[2].textContent='88%';els[3].textContent='6';}
+  if(els.length>=4){
+    if(!measured.length){TASS.empty.stats(els,{message:'',source:'attendance.summary'});}
+    else{
+      const sum=measured.reduce((n,v)=>n+v,0);
+      els[0].textContent=(Math.round(sum/measured.length*10)/10)+'%';
+      els[1].textContent=Math.max.apply(null,measured)+'%';
+      els[2].textContent=Math.min.apply(null,measured)+'%';
+      els[3].textContent=String(measured.length);
+      for(let k=0;k<4;k++)els[k].classList.remove('tass-empty-val');
+    }
+  }
   const tb=document.querySelector('#view-attendance .attend-table tbody');
   if(tb){
-    tb.innerHTML=attendanceRecords.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+r.cls+'</td><td>'+r.teacher+'</td><td>'+r.students+'</td><td>'+r.avg+'%</td><td>'+r.last+'</td><td><span class="pill '+(r.status==='at-risk'?'pill-danger':'pill-active')+'">'+(r.status==='at-risk'?'AT RISK':'ON TRACK')+'</span></td></tr>').join('');
+    if(!rows.length){TASS.empty.table(tb,6,{message:'No attendance records yet.',hint:'Records appear once a teacher takes attendance for a class.'});return;}
+    tb.innerHTML=rows.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+escHtml(r.cls)+'</td><td>'+escHtml(r.teacher)+'</td><td>'+escHtml(r.students)+'</td><td>'+(r.avg>0?escHtml(r.avg)+'%':'—')+'</td><td>'+escHtml(r.last)+'</td><td><span class="pill '+(r.status==='at-risk'?'pill-danger':'pill-active')+'">'+(r.status==='at-risk'?'AT RISK':'ON TRACK')+'</span></td></tr>').join('');
   }
 }
 
 function renderRecentActivity(){
   const el=document.getElementById('dashActivityList');if(!el)return;
-  el.innerHTML=activityLogData.slice(0,4).map(r=>'<div class="log-item" style="padding:10px 0;"><div class="log-dot '+r.type+'"><i class="fa-solid '+(r.type==='upload'?'fa-arrow-up':r.type==='assess'?'fa-file-pen':'fa-calendar-check')+'"></i></div><div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;color:var(--navy);">'+r.detail+'</div><div style="font-size:11px;color:var(--gray-400);">'+r.teacher+' · '+r.cls+' · '+r.time+'</div></div></div>').join('');
+  const rows=(Array.isArray(window.prinActivityRows)?window.prinActivityRows:[]).slice(0,4);
+  if(!rows.length){TASS.empty.list(el,{source:'activity.recent'});return;}
+  el.innerHTML=rows.map(r=>'<div class="log-item" style="padding:10px 0;"><div class="log-dot '+escHtml(r.type||'upload')+'"><i class="fa-solid '+(r.type==='upload'?'fa-arrow-up':r.type==='assess'?'fa-file-pen':'fa-calendar-check')+'"></i></div><div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;color:var(--navy);">'+escHtml(r.detail)+'</div><div style="font-size:11px;color:var(--gray-400);">'+escHtml(r.teacher)+' · '+escHtml(r.cls)+' · '+escHtml(r.time)+'</div></div></div>').join('');
 }
 
 function renderTeacherDetailTabs(){
@@ -1599,44 +2879,38 @@ function renderTeacherDetailTabs(){
     const list=rows.length?rows:assessmentData.slice(0,3);
     assessEl.innerHTML='<table class="attend-table"><thead><tr><th>Title</th><th>Type</th><th>Deadline</th><th>Submissions</th><th>Avg</th></tr></thead><tbody>'+list.map(a=>'<tr><td style="text-align:left;font-weight:600;">'+a.title+'</td><td>'+a.type+'</td><td>'+a.deadline+'</td><td>'+a.subs+'</td><td>'+a.avg+'%</td></tr>').join('')+'</tbody></table>';
   }
-  // Attendance tab
+  // Attendance tab. This used to invent up to twelve rows called
+  // "Student 01".."Student 12" whose present/absent/late counts came from
+  // Math.sin/Math.cos of the row index. Real per-learner attendance has to be
+  // supplied by the backend.
   const attEl=document.querySelector('#dtab-attendance .attend-table tbody');
   if(attEl){
-    const rows=[];
-    for(let i=1;i<=Math.min(t.students,12);i++){
-      const present=28+Math.floor(Math.abs(Math.sin(i*7))*4);
-      const absent=Math.floor(Math.abs(Math.cos(i*3))*3);
-      const late=Math.floor(Math.abs(Math.sin(i*11))*2);
-      const total=present+absent+late;
-      rows.push({name:'Student '+String(i).padStart(2,'0'),total:total,present:present,absent:absent,late:late,rate:Math.round(present/total*100)});
-    }
-    attEl.innerHTML=rows.map(s=>'<tr><td style="text-align:left;">'+s.name+'</td><td>'+s.total+'</td><td>'+s.present+'</td><td>'+s.absent+'</td><td>'+s.late+'</td><td><span class="pill '+(s.rate>=90?'pill-active':'pill-danger')+'">'+s.rate+'%</span></td></tr>').join('');
+    const rows=Array.isArray(window.prinTeacherAttendance)?window.prinTeacherAttendance:[];
+    if(!rows.length){attEl.innerHTML='<tr class="tass-empty-row"><td colspan="6">No attendance records for this class yet.</td></tr>';TASS.wire.slots.tables=Object.assign({},TASS.wire.slots.tables,{'#dtab-attendance tbody':'attendance.records_for_teacher_class'});return;}
+    attEl.innerHTML=rows.map(s=>'<tr><td style="text-align:left;">'+escHtml(s.name)+'</td><td>'+escHtml(s.total)+'</td><td>'+escHtml(s.present)+'</td><td>'+escHtml(s.absent)+'</td><td>'+escHtml(s.late)+'</td><td><span class="pill '+(s.rate>=90?'pill-active':'pill-danger')+'">'+escHtml(s.rate)+'%</span></td></tr>').join('');
   }
 }
 
 function renderReportsOverview(){
-  const el=document.querySelector('#view-reports .card:last-child .card-body');if(!el)return;
-  const rows=[
-    {cls:'G7-A',avg:84,att:95,sub:91},{cls:'G8-B',avg:80,att:92,sub:85},{cls:'G9-C',avg:88,att:96,sub:93},
-    {cls:'G10-B',avg:72,att:88,sub:76},{cls:'G11-A',avg:87,att:94,sub:90},{cls:'G12-A',avg:89,att:91,sub:92}
-  ];
-  el.innerHTML='<table class="attend-table"><thead><tr><th style="text-align:left;">Class</th><th>Avg Score</th><th>Attendance</th><th>Submission Rate</th><th>Status</th></tr></thead><tbody>'+rows.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+r.cls+'</td><td>'+r.avg+'%</td><td>'+r.att+'%</td><td>'+r.sub+'%</td><td><span class="pill '+(r.avg>=75?'pill-active':'pill-danger')+'">'+(r.avg>=75?'ON TRACK':'AT RISK')+'</span></td></tr>').join('')+'</tbody></table><div style="font-size:11px;color:var(--gray-400);margin-top:10px;"><i class="fa-regular fa-circle-question"></i> Exportable reports are generated by the Registrar/System Administrator.</div>';
-}
-
-function renderActivityLog(teacherFilter){
-  const el=document.getElementById('activityLogList');if(!el)return;
-  const filtered=teacherFilter==='all'?activityLogData:activityLogData.filter(r=>r.teacher===teacherFilter);
-  el.innerHTML='<div class="log-list">'+filtered.map(r=>'<div class="log-item"><div class="log-dot '+r.type+'"><i class="fa-solid '+(r.type==='upload'?'fa-arrow-up':r.type==='assess'?'fa-file-pen':'fa-calendar-check')+'"></i></div><div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;color:var(--navy);">'+r.detail+'</div><div style="font-size:11px;color:var(--gray-400);">'+r.teacher+' · '+r.cls+'</div></div><div style="font-size:11px;color:var(--gray-400);white-space:nowrap;">'+r.time+'</div></div>').join('')+'</div>';
-  // populate filter dropdown
-  const sel=document.querySelector('#view-activitylog select');
-  if(sel&&sel.options.length<=1){
-    const teachers=[...new Set(activityLogData.map(r=>r.teacher))];
-    teachers.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
-    sel.onchange=function(){renderActivityLog(this.value);};
+  const el=document.getElementById('schoolPerfOverviewBody');if(!el)return;
+  // Was six fixed class rows (G7-A 84/95/91 … G12-A 89/91/92).
+  const rows=Array.isArray(window.prinPerfRows)?window.prinPerfRows:[];
+  if(!rows.length){
+    el.innerHTML='<div class="tass-empty-block"><i class="fa-solid fa-chart-simple"></i><span class="tass-empty-msg">No data yet.</span><span class="tass-empty-hint">Class-level averages appear once grades and attendance are recorded.</span></div>';
+    TASS.wire.slots.tables=Object.assign({},TASS.wire.slots.tables,{'#schoolPerfOverviewBody':'performance.class_rows'});
+    return;
   }
+  el.innerHTML='<table class="attend-table"><thead><tr><th style="text-align:left;">Class</th><th>Avg Score</th><th>Attendance</th><th>Submission Rate</th><th>Status</th></tr></thead><tbody>'+rows.map(r=>'<tr><td style="text-align:left;font-weight:600;">'+escHtml(r.cls||r.className||'—')+'</td><td>'+prinPctOrDash(r.avg)+'</td><td>'+prinPctOrDash(r.att)+'</td><td>'+prinPctOrDash(r.sub)+'</td><td><span class="pill '+(r.avg>=75?'pill-active':'pill-danger')+'">'+(r.avg>=75?'ON TRACK':'AT RISK')+'</span></td></tr>').join('')+'</tbody></table><div style="font-size:11px;color:var(--gray-400);margin-top:10px;"><i class="fa-regular fa-circle-question"></i> Exportable reports are generated by the Registrar/System Administrator.</div>';
 }
 
-function filterActivityLog(teacher){renderActivityLog(teacher);}
+function renderActivityLog(){
+  const el=document.getElementById('activityLogList');if(!el)return;
+  const all=Array.isArray(window.prinActivityRows)?window.prinActivityRows:[];
+  if(!all.length){TASS.empty.list(el,{message:'No activity yet.',hint:'Your sign-ins and actions inside SVI LMS will appear here.'});return;}
+  el.innerHTML='<div class="log-list">'+all.map(r=>'<div class="log-item"><div class="log-dot '+escHtml(r.type||'upload')+'"><i class="fa-solid '+(r.type==='upload'?'fa-arrow-up':r.type==='assess'?'fa-file-pen':r.type==='backup'?'fa-shield-halved':'fa-right-to-bracket')+'"></i></div><div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;color:var(--navy);">'+escHtml(r.detail)+'</div></div><div style="font-size:11px;color:var(--gray-400);white-space:nowrap;">'+escHtml(r.time)+'</div></div>').join('')+'</div>';
+}
+
+
 
 // ── CHARTS ──
 const chartInst = {};
@@ -1647,27 +2921,70 @@ function safeChart(id, config) {
   chartInst[id] = new Chart(el, config);
 }
 
+/* Chart series and table rows come from the backend bridge. Every array below
+   used to be hardcoded — six invented teachers, six invented classes, four
+   invented materials, three invented announcements, and a fixed performance
+   table. Each is now empty until principal_context() supplies it, and the
+   corresponding widget renders an explicit empty state.
+
+   Required database fields, per key:
+     attendTrend   { labels:[weekday|period], values:[attendancePct] }
+     uploads       { labels:[week], uploads:[n], assessments:[n] }
+     byTeacher     { labels:[teacherName], values:[postCount] }
+     teacherPost   { labels:[week], materials:[n], assessments:[n] }
+     teacherContent{ labels:['Materials','Assessments','Announcements','Others'], values:[n,n,n,n] }
+     attendByClass { labels:[className], values:[attendancePct] }
+     attendTrend2  { labels:[period], values:[attendancePct] }
+     performance   { labels:[quarter], values:[avgScorePct] }
+     assessByGrade { labels:[gradeLevel], values:[avgScorePct] }
+   Run TASS.empty.report() in the console for the live checklist. */
+const prinCharts = {
+  attendTrend:{labels:[],values:[]}, uploads:{labels:[],uploads:[],assessments:[]},
+  byTeacher:{labels:[],values:[]}, teacherPost:{labels:[],materials:[],assessments:[]},
+  teacherContent:{labels:[],values:[]}, attendByClass:{labels:[],values:[]},
+  attendTrend2:{labels:[],values:[]}, performance:{labels:[],values:[]},
+  assessByGrade:{labels:[],values:[]}
+};
+window.prinCharts = prinCharts;
+window.prinPerfRows = [];
+const PRIN_PALETTE = ['#1e5faf','#3a86d4','#16a34a','#e99b2a','#7c3aed','#dc2626','#0e7490','#db2777'];
+const prinHas = (key, field) => {
+  const s = prinCharts[key];
+  return !!(s && s[field || 'values'] && s[field || 'values'].length);
+};
+const prinPctOrDash = v => (typeof v === 'number' && !isNaN(v)) ? v + '%' : '—';
+
 function initDashboardCharts() {
-  if (chartsInit.dashboard) return; chartsInit.dashboard = true;
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.color = '#4a637f';
 
-  safeChart('dashAttendChart', {
-    type: 'line',
-    data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat'], datasets: [
-      { label:'School Avg', data:[92,94,93,95,91,90], borderColor:'#1e5faf', backgroundColor:'rgba(30,95,175,0.1)', tension:.4, fill:true }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{min:75,max:100,ticks:{callback:v=>v+'%'}}} }
-  });
+  if (prinHas('attendTrend')) {
+    safeChart('dashAttendChart', {
+      type: 'line',
+      data: { labels: prinCharts.attendTrend.labels, datasets: [
+        { label:'School Avg', data:prinCharts.attendTrend.values, borderColor:'#1e5faf', backgroundColor:'rgba(30,95,175,0.1)', tension:.4, fill:true }
+      ]},
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}} }
+    });
+  } else {
+    TASS.empty.chart('dashAttendChart', { source: 'attendance.rate_by_period' });
+  }
 
-  safeChart('dashUploadsChart', {
-    type: 'bar',
-    data: { labels: ['Week 1','Week 2','Week 3','Week 4'], datasets: [
-      { label:'Uploads', data:[42,58,49,63], backgroundColor:'#1e5faf', borderRadius:6 },
-      { label:'Assessments', data:[9,12,10,15], backgroundColor:'#3a86d4', borderRadius:6 }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}} }
-  });
+  // These two are multi-dataset series: the backend fills `uploads`/`materials`
+  // and `assessments`, never `values`. prinHas() defaults to `values`, so the
+  // field has to be named explicitly or the chart stays on its empty state.
+  if (prinHas('uploads', 'uploads')) {
+    safeChart('dashUploadsChart', {
+      type: 'bar',
+      data: { labels: prinCharts.uploads.labels, datasets: [
+        { label:'Uploads', data:prinCharts.uploads.uploads, backgroundColor:'#1e5faf', borderRadius:6 },
+        { label:'Assessments', data:prinCharts.uploads.assessments, backgroundColor:'#3a86d4', borderRadius:6 }
+      ]},
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}} }
+    });
+  } else {
+    TASS.empty.chart('dashUploadsChart', { source: 'content.uploads_by_week' });
+  }
 
   renderDashTeacherList();
   renderRecentActivity();
@@ -1676,81 +2993,98 @@ function initDashboardCharts() {
 function initTeacherDetailCharts() {
   const t = teacherData.find(x => x.id === currentTeacherId);
   if (!t) return;
-  safeChart('teacherPostingChart', {
-    type: 'bar',
-    data: { labels:['Week 1','Week 2','Week 3','Week 4'], datasets:[
-      { label:'Materials', data:[8,11,7,6], backgroundColor:'#1e5faf', borderRadius:6 },
-      { label:'Assessments', data:[2,3,1,2], backgroundColor:'#3a86d4', borderRadius:6 }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{y:{beginAtZero:true}} }
-  });
-  safeChart('teacherContentChart', {
-    type: 'doughnut',
-    data: { labels:['Materials','Assessments','Announcements','Others'], datasets:[{ data:[t.uploads,t.assessments,t.announcements,6], backgroundColor:['#1e5faf','#3a86d4','#16a34a','#db2777'], borderWidth:0 }]},
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, cutout:'60%' }
-  });
+  if (prinHas('teacherPost', 'materials')) {
+    safeChart('teacherPostingChart', {
+      type: 'bar',
+      data: { labels:prinCharts.teacherPost.labels, datasets:[
+        { label:'Materials', data:prinCharts.teacherPost.materials, backgroundColor:'#1e5faf', borderRadius:6 },
+        { label:'Assessments', data:prinCharts.teacherPost.assessments, backgroundColor:'#3a86d4', borderRadius:6 }
+      ]},
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{y:{beginAtZero:true}} }
+    });
+  } else {
+    TASS.empty.chart('teacherPostingChart', { source: 'content.posts_by_week_for_teacher' });
+  }
+  if (prinHas('teacherContent')) {
+    safeChart('teacherContentChart', {
+      type: 'doughnut',
+      data: { labels:prinCharts.teacherContent.labels, datasets:[{ data:prinCharts.teacherContent.values, backgroundColor:PRIN_PALETTE, borderWidth:0 }]},
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, cutout:'60%' }
+    });
+  } else {
+    TASS.empty.chart('teacherContentChart', { source: 'content.count_by_kind_for_teacher' });
+  }
   renderTeacherDetailTabs();
 }
 
 function initAttendanceCharts() {
-  if (chartsInit.attendance) return; chartsInit.attendance = true;
-  safeChart('attendByClassChart', {
-    type: 'bar',
-    data: { labels:['G7-A','G8-B','G9-C','G10-B','G11-A','G12-A'],
-      datasets:[{ label:'Attendance %', data:[95,92,96,88,94,91], backgroundColor:['#3a86d4','#3a86d4','#3a86d4','#d94f4f','#3a86d4','#3a86d4'], borderRadius:6 }]},
-    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{min:50,max:100,ticks:{callback:v=>v+'%'}}} }
-  });
-  safeChart('attendTrendChart2', {
-    type: 'line',
-    data:{ labels:['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'], datasets:[
-      {label:'School Avg',data:[93,94,92,91,94,93,95,94],borderColor:'#1e5faf',backgroundColor:'rgba(30,95,175,0.1)',tension:.4,fill:true}
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{min:75,max:100,ticks:{callback:v=>v+'%'}}} }
-  });
+  if (prinHas('attendByClass')) {
+    safeChart('attendByClassChart', {
+      type: 'bar',
+      data: { labels:prinCharts.attendByClass.labels,
+        datasets:[{ label:'Attendance %', data:prinCharts.attendByClass.values, backgroundColor:prinCharts.attendByClass.values.map(v=>v<90?'#d94f4f':'#3a86d4'), borderRadius:6 }]},
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{min:0,max:100,ticks:{callback:v=>v+'%'}}} }
+    });
+  } else {
+    TASS.empty.chart('attendByClassChart', { source: 'attendance.rate_by_class' });
+  }
+  if (prinHas('attendTrend2')) {
+    safeChart('attendTrendChart2', {
+      type: 'line',
+      data:{ labels:prinCharts.attendTrend2.labels, datasets:[
+        {label:'School Avg',data:prinCharts.attendTrend2.values,borderColor:'#1e5faf',backgroundColor:'rgba(30,95,175,0.1)',tension:.4,fill:true}
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}} }
+    });
+  } else {
+    TASS.empty.chart('attendTrendChart2', { source: 'attendance.rate_by_period' });
+  }
   renderAttendanceOverview();
 }
 
 function initPrincipalPerformanceChart() {
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.color = '#4a637f';
-  safeChart('principalPerformanceChart', {
-    type:'line',
-    data:{ labels:['Q1','Q2','Q3','Q4'], datasets:[{label:'Overall Performance',data:[81.2,84.5,83.0,86.4],borderColor:'#1e5faf',backgroundColor:'rgba(30,95,175,0.1)',tension:.35,fill:true,pointBackgroundColor:'#1e5faf',pointRadius:5}] },
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{min:60,max:100,ticks:{callback:v=>v+'%'}}}}
-  });
-  const setNum=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
-  setNum('perfAvgScore','83.8%');
-  setNum('perfPassRate','91%');
-  setNum('perfAttRate','94%');
-  setNum('perfSubRate','88%');
-  const rows=[
-    ['Grade 7-A','Ms. Santos',38,'84.2%','95%','91%',true],
-    ['Grade 8-B','Mr. Reyes',35,'79.6%','92%','85%',true],
-    ['Grade 9-A','Ms. Cruz',37,'88.4%','97%','93%',true],
-    ['Grade 10-B','Mr. Ong',32,'72.1%','88%','76%',false],
-    ['Grade 11-A','Ms. Garcia',30,'86.9%','94%','90%',true],
-    ['Grade 12-A','Mr. Lim',28,'89.2%','96%','92%',true]
-  ];
-  const tb=document.getElementById('prinPerfTable');
-  if(tb){
-    tb.innerHTML=rows.map(r=>'<tr><td class="name-col" style="text-align:left;">'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td><td>'+r[5]+'</td><td>'+(r[6]
-      ?'<span class="tag-ok" style="font-size:11px;font-weight:700;color:#16a34a;">ON TRACK</span>'
-      :'<span style="font-size:11px;font-weight:700;color:#dc2626;">AT RISK</span>')+'</td></tr>').join('');
+  if (prinHas('performance')) {
+    safeChart('principalPerformanceChart', {
+      type:'line',
+      data:{ labels:prinCharts.performance.labels, datasets:[{label:'Overall Performance',data:prinCharts.performance.values,borderColor:'#1e5faf',backgroundColor:'rgba(30,95,175,0.1)',tension:.35,fill:true,pointBackgroundColor:'#1e5faf',pointRadius:5}] },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+    });
+  } else {
+    TASS.empty.chart('principalPerformanceChart', { source: 'performance.overall_by_quarter' });
   }
+  // These four cards plus the table below used to be fixed at 83.8% / 91% /
+  // 94% / 88% and six invented class rows.
+  const rows=Array.isArray(window.prinPerfRows)?window.prinPerfRows:[];
+  TASS.empty.stats('#view-performance .stat-val', { source: 'performance.summary' });
+  const tb=document.getElementById('prinPerfTable');
+  if(!tb) return;
+  if(!rows.length){TASS.empty.table(tb,7,{source:'performance.class_rows'});return;}
+  tb.innerHTML=rows.map(r=>'<tr><td class="name-col" style="text-align:left;">'+escHtml(r.cls||r.className||'—')+'</td><td>'+escHtml(r.teacher||'—')+'</td><td>'+escHtml(r.students!=null?r.students:'—')+'</td><td>'+prinPctOrDash(r.avg)+'</td><td>'+prinPctOrDash(r.att)+'</td><td>'+prinPctOrDash(r.sub)+'</td><td>'+(r.onTrack
+    ?'<span class="tag-ok" style="font-size:11px;font-weight:700;color:#16a34a;">ON TRACK</span>'
+    :'<span style="font-size:11px;font-weight:700;color:#dc2626;">AT RISK</span>')+'</td></tr>').join('');
 }
 
 function initReportCharts() {
-  if (chartsInit.reports) return; chartsInit.reports = true;
-  safeChart('reportAssessChart', {
-    type:'bar',
-    data:{labels:['Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'],datasets:[{label:'Avg Score %',data:[84,80,88,72,87,89],backgroundColor:['#1e5faf','#1e5faf','#16a34a','#d94f4f','#1e5faf','#1e5faf'],borderRadius:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
-  });
-  safeChart('reportPostingChart', {
-    type:'bar',
-    data:{labels:['Malanot','Ramirez','Aguilar','Villanueva','Castillo','Santiago'],datasets:[{label:'Posts This Month',data:[40,35,24,16,25,13],backgroundColor:['#3a86d4','#3a86d4','#3a86d4','#e99b2a','#3a86d4','#d94f4f'],borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-  });
+  if (prinHas('assessByGrade')) {
+    safeChart('reportAssessChart', {
+      type:'bar',
+      data:{labels:prinCharts.assessByGrade.labels,datasets:[{label:'Avg Score %',data:prinCharts.assessByGrade.values,backgroundColor:prinCharts.assessByGrade.values.map((_,i)=>PRIN_PALETTE[i%PRIN_PALETTE.length]),borderRadius:8}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}
+    });
+  } else {
+    TASS.empty.chart('reportAssessChart', { source: 'grades.average_by_grade' });
+  }
+  if (prinHas('byTeacher')) {
+    safeChart('reportPostingChart', {
+      type:'bar',
+      data:{labels:prinCharts.byTeacher.labels,datasets:[{label:'Posts This Month',data:prinCharts.byTeacher.values,backgroundColor:prinCharts.byTeacher.values.map((_,i)=>PRIN_PALETTE[i%PRIN_PALETTE.length]),borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+    });
+  } else {
+    TASS.empty.chart('reportPostingChart', { source: 'content.posts_by_teacher' });
+  }
   renderReportsOverview();
 }
 
@@ -1762,6 +3096,7 @@ function closeAllPanels(){notifOpen=false;profileOpen=false;document.getElementB
 function markAllRead(){document.querySelectorAll('.notif-unread').forEach(n=>n.classList.remove('notif-unread'));showToast('All marked as read','success');closeAllPanels();}
 
 // ── MODALS ──
+function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function confirmLogout(){document.getElementById('confirmModal').classList.add('open');closeAllPanels();}
 function exportReport(name){showToast(`Generating "${name}"...`,'success');setTimeout(()=>showToast(`"${name}" exported!`,'success'),2000);}
@@ -1803,70 +3138,26 @@ document.addEventListener('click', function(e){
 });
 
 // ── INIT ──
-(function seedPrincipalSampleData(){
-  if(teacherData.length===0){
-    teacherData.push(
-      {id:'lm',name:'Ms. Lovelyn C. Malanot',initials:'LM',subject:'Science',classes:4,students:120,uploads:32,assessments:8,announcements:15,freq:'high',grad:'linear-gradient(135deg,#1e5faf,#3a86d4)',bars:[3,4,2,5,3,1,0]},
-      {id:'jr',name:'Mr. Jose Ramirez',initials:'JR',subject:'Mathematics',classes:5,students:150,uploads:25,assessments:10,announcements:12,freq:'high',grad:'linear-gradient(135deg,#16a34a,#4ade80)',bars:[2,3,4,2,5,2,1]},
-      {id:'ga',name:'Ms. Gina Aguilar',initials:'GA',subject:'English',classes:4,students:125,uploads:18,assessments:6,announcements:9,freq:'mid',grad:'linear-gradient(135deg,#e11d48,#f43f5e)',bars:[2,2,1,3,2,1,0]},
-      {id:'nv',name:'Ms. Norma Villanueva',initials:'NV',subject:'Filipino',classes:3,students:100,uploads:12,assessments:4,announcements:7,freq:'mid',grad:'linear-gradient(135deg,#f59e0b,#fbbf24)',bars:[1,2,1,2,1,0,0]},
-      {id:'bc',name:'Mr. Ben Castillo',initials:'BC',subject:'MAPEH',classes:5,students:160,uploads:20,assessments:5,announcements:11,freq:'high',grad:'linear-gradient(135deg,#7c3aed,#a78bfa)',bars:[3,3,2,4,2,1,0]},
-      {id:'es',name:'Ms. Elena Santiago',initials:'ES',subject:'Araling Panlipunan',classes:4,students:130,uploads:10,assessments:3,announcements:5,freq:'low',grad:'linear-gradient(135deg,#0891b2,#22d3ee)',bars:[1,0,1,1,0,0,0]}
-    );
-  }
-  if(allClassData.length===0){
-    allClassData.push(
-      {title:'Grade 7 – Science',section:'Section A',teacher:'Ms. Lovelyn C. Malanot',students:35,assess:8,grad:'linear-gradient(135deg,#1e5faf,#3a86d4)'},
-      {title:'Grade 8 – Mathematics',section:'Section B',teacher:'Mr. Jose Ramirez',students:40,assess:10,grad:'linear-gradient(135deg,#16a34a,#4ade80)'},
-      {title:'Grade 9 – English',section:'Section C',teacher:'Ms. Gina Aguilar',students:32,assess:6,grad:'linear-gradient(135deg,#e11d48,#f43f5e)'},
-      {title:'Grade 10 – Filipino',section:'Section D',teacher:'Ms. Norma Villanueva',students:30,assess:4,grad:'linear-gradient(135deg,#f59e0b,#fbbf24)'},
-      {title:'Grade 11 – MAPEH',section:'STEM-A',teacher:'Mr. Ben Castillo',students:28,assess:5,grad:'linear-gradient(135deg,#7c3aed,#a78bfa)'},
-      {title:'Grade 12 – Araling Panlipunan',section:'ABM-A',teacher:'Ms. Elena Santiago',students:25,assess:3,grad:'linear-gradient(135deg,#0891b2,#22d3ee)'}
-    );
-  }
-  if(allMaterials.length===0){
-    allMaterials.push(
-      {type:'pdf',icon:'fa-solid fa-file-pdf',name:'Cell Structure Lesson Plan',meta:'PDF · 2.4 MB',teacher:'L. Malanot',cls:'G7-A',date:'Apr 8',dl:24},
-      {type:'ppt',icon:'fa-solid fa-file-powerpoint',name:'Photosynthesis Slides',meta:'PPTX · 8.1 MB',teacher:'L. Malanot',cls:'G9-C',date:'Apr 9',dl:31},
-      {type:'doc',icon:'fa-solid fa-file-word',name:'Quadratic Equations Worksheet',meta:'DOCX · 180 KB',teacher:'J. Ramirez',cls:'G8-B',date:'Apr 9',dl:18},
-      {type:'vid',icon:'fa-solid fa-video',name:'Literary Devices Explained',meta:'MP4 · 45 MB',teacher:'G. Aguilar',cls:'G9-C',date:'Apr 10',dl:12}
-    );
-  }
-  if(announcementData.length===0){
-    announcementData.push(
-      {id:'a1',title:'School Intramurals Week 2026',content:'The annual San Vicente Institute Intramurals will be held from April 21-25, 2026. All students are encouraged to participate.',date:'Apr 1, 2026',updated:'Apr 1, 2026',archived:false},
-      {id:'a2',title:'Parent-Teacher Conference',content:'Scheduled conference for parents of all grade levels on April 28, 2026 at the school gymnasium.',date:'Apr 3, 2026',updated:'Apr 3, 2026',archived:false},
-      {id:'a3',title:'Recognition Day',content:'Recognition day for outstanding students will be held on May 15, 2026.',date:'Apr 6, 2026',updated:'Apr 6, 2026',archived:false}
-    );
-  }
-})();
-
-const setDashStat=(idx,val)=>{const el=document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child('+idx+') .stat-val');if(el)el.textContent=val;};
-setDashStat(1,'6');
-setDashStat(2,'1,024');
-setDashStat(3,'117');
-setDashStat(4,'36');
-setDashStat(5,'94%');
-setDashStat(6,'88%');
-setDashStat(7,'24');
-setDashStat(8,'1');
+// Sample seeding removed. Teachers, classes, materials and announcements now
+// come only from the backend bridge — nothing is invented on first load.
+window.prinTeacherAttendance = [];
+// Dashboard stat cards start as a dash, not a zero: an unmeasured metric must
+// not read as a measured 0. The bridge below fills them from real aggregates.
+TASS.empty.stats('#view-dashboard .stat-val', { source: 'dashboard.summary' });
 initDashboardCharts();
 renderDashTeacherList();
 renderTeacherList();
 renderClasses();
-renderMaterials('all');
 populatePrincipalFilters();
-refreshPrincipalNotifications();
+if(!window.__TASS_REAL__) refreshPrincipalNotifications();
 
 function refreshPrincipalNotifications(){
   var el=document.getElementById('notifList');if(!el)return;
-  var items=[
-    {icon:'fa-chalkboard-user',bg:'#dbeafe',c:'#2563eb',t:'Teacher uploaded new material',d:'L. Malanot uploaded Cell Division Worksheet to G7-A',time:'30 min ago',unread:true},
-    {icon:'fa-file-pen',bg:'#dcfce7',c:'#16a34a',t:'Assessment closed',d:'J. Ramirez closed Quiz 1 – Equations · 40/40 submissions',time:'2 hrs ago',unread:true},
-    {icon:'fa-calendar-check',bg:'#ede9fe',c:'#7c3aed',t:'Attendance recorded',d:'G. Aguilar recorded G9-C attendance · 31/32 present',time:'Today, 8:40 AM',unread:false},
-    {icon:'fa-triangle-exclamation',bg:'#fef9c3',c:'#a16207',t:'Low attendance alert',d:'G10-B attendance dropped to 88%',time:'Yesterday',unread:false}
-  ];
-  el.innerHTML=items.map(function(n){return '<div class="notif-item'+(n.unread?' notif-unread':'')+'"><div class="notif-dot-icon" style="background:'+n.bg+';color:'+n.c+';"><i class="fa-solid '+n.icon+'"></i></div><div><div class="notif-text">'+n.t+'</div><div class="notif-time">'+n.time+'</div></div></div>';}).join('');
+  // Derived from the real ActivityLog stream. This used to be four fixed items
+  // naming real-sounding teachers and a fabricated 88% attendance alert.
+  var rows=Array.isArray(window.prinActivityRows)?window.prinActivityRows:[];
+  if(!rows.length){TASS.empty.list(el,{message:'No new notifications.',hint:'Classroom activity will appear here.'});return;}
+  el.innerHTML=rows.map(function(n){return '<div class="notif-item"><div class="notif-dot-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fa-solid fa-clock-rotate-left"></i></div><div><div class="notif-text">'+escHtml(n.action||n.detail||'')+'</div><div class="notif-time">'+escHtml(n.time||'')+'</div></div></div>';}).join('');
 }
 </script>
 
@@ -2345,16 +3636,77 @@ canvas{ max-width:100% !important; }
 // ── My Profile (avatar + contact info, per-dashboard storage) ──
 const PROFILE_KEY='tass_profile_principal';
 const PROFILE_MODAL_ID='profileModal';
-const PROFILE_DEFAULTS={name:'Dr. Helena V.',email:'principal@sanvicente.edu.ph',role:'Principal',dept:'Office of the Principal',contact:'0917 555 0102',avatar:''};
+const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Principal" }}',dept:'',contact:'',avatar:'{{ user_avatar_url|default:"" }}'};
 let profileAvatarData=""
+let profilePhotoFile=null;
+let profileBusy=false;
 function profil_initials(n){return (n||"").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"..";}
-function getProfile(){try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(p)return p;}catch(e){}return JSON.parse(JSON.stringify(PROFILE_DEFAULTS));}
+function initialsAvatar(sz,fs){const ini=('{{ user_initials }}'||'..');return "data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 "+sz+" "+sz+"%22><circle cx=%22"+(sz/2)+"%22 cy=%22"+(sz/2)+"%22 r=%22"+(sz/2)+"%22 fill=%22%233a86d4%22/><text x=%22"+(sz/2)+"%22 y=%22"+Math.round(sz*0.675)+"%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%22"+fs+"%22>"+ini+"</text></svg>";}
+function getProfile(){
+  // Identity belongs to the server account, so a stale local edit can never
+  // rename the signed-in user. Only the optional extras persist locally.
+  const d=JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
+  const srv=window.__TASS_PROFILE__;
+  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
+    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar)d.avatar=p.avatar;}
+  }catch(e){}
+  return d;
+}
 function profileSet(id,v){const el=document.getElementById(id);if(el)el.value=(v==null?"":String(v));}
-function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src="{% static 'dashboards/img/profile-placeholder.jpg' %}";}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
+function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src=initialsAvatar(40,16);}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src=initialsAvatar(80,30);}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
 function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
 function closeProfile(){if(typeof closeModal==="function")closeModal(PROFILE_MODAL_ID);}
-function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
-function saveProfile(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById("profileModal")))return;const g=function(id){const el=document.getElementById(id);return el&&el.value?el.value.trim():"";};const name=g("profileName"),email=g("profileEmail");if(!name||!email){if(typeof showToast==="function")showToast("Name and email are required.","error");return;}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(typeof showToast==="function")showToast("Please enter a valid email address.","error");const _e=document.getElementById("profileEmail");if(_e){_e.classList.add("is-invalid");_e.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}const _ct=String(g("profileContact")).replace(/[^0-9]/g,"");if(_ct&&_ct.length<10){if(typeof showToast==="function")showToast("Contact number must have at least 10 digits.","error");const _c=document.getElementById("profileContact");if(_c){_c.classList.add("is-invalid");_c.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}const rec={name:name,email:email,role:g("profileRole")||PROFILE_DEFAULTS.role,dept:g("profileDept")||PROFILE_DEFAULTS.dept,contact:String(g("profileContact")).replace(/[^0-9+]/g,""),avatar:profileAvatarData};try{localStorage.setItem(PROFILE_KEY,JSON.stringify(rec));}catch(e){}const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=name;applyHeaderPhoto(profileAvatarData);const st=document.getElementById("profileStatus");if(st){st.style.display="block";st.textContent="Profile updated successfully!";}if(typeof showToast==="function")showToast("Profile updated successfully!","success");setTimeout(closeProfile,600);}
+function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;profilePhotoFile=f;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
+function saveProfile(){
+  if(profileBusy)return;
+  if(typeof tassValidate==="function"&&!tassValidate(document.getElementById(PROFILE_MODAL_ID)))return;
+  const g=function(id){const el=document.getElementById(id);return el&&el.value?el.value.trim():"";};
+  const name=g("profileName"),email=g("profileEmail");
+  if(!name||!email){if(typeof showToast==="function")showToast("Name and email are required.","error");return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(typeof showToast==="function")showToast("Please enter a valid email address.","error");const _e=document.getElementById("profileEmail");if(_e){_e.classList.add("is-invalid");_e.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}
+  const _ct=String(g("profileContact")).replace(/[^0-9]/g,"");
+  if(_ct&&_ct.length<10){if(typeof showToast==="function")showToast("Contact number must have at least 10 digits.","error");const _c=document.getElementById("profileContact");if(_c){_c.classList.add("is-invalid");_c.addEventListener("input",function(){this.classList.remove("is-invalid");});}return;}
+  profileBusy=true;
+  const fd=new FormData();
+  fd.append("name",name);
+  fd.append("email",email);
+  fd.append("contact",String(g("profileContact")).replace(/[^0-9+]/g,""));
+  if(profilePhotoFile)fd.append("avatar",profilePhotoFile);
+  fetch("/api/profile/",{
+    method:"POST",
+    credentials:"same-origin",
+    headers:{"X-CSRFToken":(typeof msgCsrf==="function")?msgCsrf():(window.csrfToken||"")},
+    body:fd
+  }).then(function(r){
+    return r.json().then(function(d){return {ok:r.ok,data:d};});
+  }).then(function(res){
+    profileBusy=false;
+    const d=res.data||{};
+    if(!res.ok){
+      const msg=(d&&d.message)||"Could not save your profile. Please try again.";
+      if(typeof showToast==="function")showToast(msg,"error");
+      const st=document.getElementById("profileStatus");
+      if(st){st.style.display="block";st.textContent=msg;st.style.color="var(--danger)";}
+      return;
+    }
+    if(d&&d.avatar){profileAvatarData=d.avatar;}
+    profilePhotoFile=null;
+    const rec={name:name,email:email,role:g("profileRole")||PROFILE_DEFAULTS.role,dept:g("profileDept")||PROFILE_DEFAULTS.dept,contact:String(g("profileContact")).replace(/[^0-9+]/g,""),avatar:profileAvatarData};
+    try{localStorage.setItem(PROFILE_KEY,JSON.stringify(rec));}catch(e){}
+    const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=name;
+    applyHeaderPhoto(profileAvatarData);
+    const st=document.getElementById("profileStatus");
+    if(st){st.style.display="block";st.textContent="Profile updated successfully!";st.style.color="";}
+    if(typeof showToast==="function")showToast("Profile updated successfully!","success");
+    setTimeout(closeProfile,600);
+  }).catch(function(){
+    profileBusy=false;
+    if(typeof showToast==="function")showToast("Network error — your profile was not saved.","error");
+    const st=document.getElementById("profileStatus");
+    if(st){st.style.display="block";st.textContent="Network error — your profile was not saved.";st.style.color="var(--danger)";}
+  });
+}
 if(window.openTeacherProfileModal)window.openTeacherProfileModal=window.openProfile;
 (function initHeaderProfile(){const p=getProfile();const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=p.name;if(p.avatar)applyHeaderPhoto(p.avatar);})();
 if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
@@ -2363,7 +3715,12 @@ if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
 // ── Notifications (functional, per-dashboard storage) ──
 const NOTIFS_STORAGE_KEY='tass_notifs_prin';
 const NOTIFS_CONTAINER='notifList';
-const NOTIFS_DEFAULT_ITEMS=[{icon:'fa-door-open',title:'Meeting Invite',msg:'Weekly Administrators\' Meeting — 3:00 PM tomorrow.',unread:true,mins:30},{icon:'fa-file-circle-check',title:'Report Ready',msg:'School performance summary for Q1 is ready for review.',unread:true,mins:95},{icon:'fa-user-shield',title:'Concern Raised',msg:'A teacher flagged an issue in Grade 10 — Hope.',unread:true,mins:240},{icon:'fa-envelope-open-text',title:'Memo',msg:'Reminder: submit the school calendar to the Division Office.',unread:false,mins:1700}];
+// Three fabricated alerts used to be seeded here on first load: a 3:00 PM
+// administrators' meeting invite, a Q1 report "ready for review", and a
+// budget note. They are not Notification rows, and readNotif()/markAllRead()
+// call persistNotifs(), which would write them into localStorage where
+// api_bridge.js could POST them onward. Start empty; fill from D.notifs.
+const NOTIFS_DEFAULT_ITEMS=[];
 function notifEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';});}
 function notifTimeAgo(m){if(m==null||m<1)return'Just now';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+' hr ago';var d=Math.floor(h/24);return d+' d ago';}
 function loadNotifs(){try{var a=JSON.parse(localStorage.getItem(NOTIFS_STORAGE_KEY)||'null');if(Array.isArray(a))return a;}catch(e){}return NOTIFS_DEFAULT_ITEMS.map(function(n){return Object.assign({},n);});}
@@ -2537,7 +3894,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
   var ORIG = window.showView;
   if (typeof ORIG !== 'function') return;
-  var NAV = {'activitylog':1,'announcements':1,'assessments':1,'attendance':1,'classes':1,'dashboard':1,'materials':1,'performance':1,'reports':1,'settings':1,'teachers':1};
+  var NAV = {'activitylog':1,'attendance':1,'classes':1,'dashboard':1,'performance':1,'reports':1,'sections':1,'settings':1,'students':1,'subjects':1,'teachers':1};
   function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
   function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
   function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
@@ -2554,10 +3911,19 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script>
 /* Principal real-data bridge — loads backend records into the view-only simulator. */
 (function(){
+  TASS.page = 'principal';
   if (!window.__TASS_REAL__) return;
   var el = document.getElementById('principal-backend-data');
   if (!el) return;
   var data = null; try { data = JSON.parse(el.textContent); } catch (e) {}
+
+  // The signed-in user's own record, straight from the server.
+  window.__TASS_PROFILE__ = (data && data.profile) || null;  // Notifications are orthogonal to the rest of the payload, so they load before
+  // the guard below. Expected shape: {icon, title, msg, unread, mins}.
+  // With no notifs key the panel keeps its empty state rather than inventing events.
+  if (data && Array.isArray(data.notifs) && data.notifs.length) {
+    try { persistNotifs(data.notifs); renderNotifs(); } catch (e) {}
+  }
   if (!data || !data.stats) return;
   var fill = function(arr, items){ arr.length = 0; (items || []).forEach(function(x){ arr.push(x); }); };
 
@@ -2568,38 +3934,112 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   fill(attendanceRecords, data.attendance);
   fill(activityLogData, data.activity);
 
-  var setDashStat = function(idx, val){
-    var card = document.querySelector('#view-dashboard .stats-grid .stat-card:nth-child(' + idx + ') .stat-val');
-    if (card) card.textContent = val;
+  // Table rows not present in the payload stay empty and render their empty state.
+  window.prinAssessRows  = Array.isArray(data.assessments) ? data.assessments : [];
+  window.prinAttendRows  = Array.isArray(data.attendance) ? data.attendance : [];
+  window.prinActivityRows= Array.isArray(data.activity) ? data.activity : [];
+
+  // Read-only roster backing the Students / Sections / Subjects panels. Absent
+  // keys resolve to empty structures so the panels render an empty state
+  // instead of throwing when a role lacks one of the view permissions.
+  window.__prinDirectory = data.directory || null;
+  // Campus scope for the header badge and the announcement composer. Emitted
+  // by principal_context; defaults to whole school when absent.
+  window.__prinCampus = (data && data.campus) || null;
+  if (window.__prinCampus) { try { campusHeaderBadge(); } catch (e) {} }
+  window.__prinStudents  = Array.isArray(data.students) ? data.students : [];
+  window.__prinEnrollStudents = Array.isArray(data.enrollStudents) ? data.enrollStudents : [];
+  // Staff counterpart, built from EmployeeProfile.sex/birthdate.
+  window.__prinStaffDemo = (data.staffDemographics && Array.isArray(data.staffDemographics.rows)) ? data.staffDemographics.rows : [];
+  window.__prinEnrollSections = Array.isArray(data.enrollSections) ? data.enrollSections : [];
+  window.__prinStanding  = Array.isArray(data.standing) ? data.standing : [];
+  window.prinPerfRows    = Array.isArray(data.performance) ? data.performance : [];
+  window.__prinSubmissionRate = data.stats && typeof data.stats.submissionRate === 'number' ? data.stats.submissionRate : null;
+  window.prinTeacherAttendance = Array.isArray(data.teacherAttendance) ? data.teacherAttendance : [];
+
+  // Chart series. Each stays empty until principal_context() supplies it, so the
+  // chart helpers render an empty state rather than a placeholder. Shapes are
+  // documented above `const prinCharts`.
+  var C = window.prinCharts || {};
+  var setSeries = function(key, labels, values){
+    var s = C[key]; if (!s) return;
+    s.labels = labels || []; s.values = values || [];
+  };
+  if (data.charts) {
+    setSeries('attendTrend',   data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.labels, data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.values);
+    setSeries('attendTrend2',  data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.labels, data.charts.attendanceByPeriod && data.charts.attendanceByPeriod.values);
+    setSeries('attendByClass', data.charts.attendanceByClass && data.charts.attendanceByClass.labels,   data.charts.attendanceByClass && data.charts.attendanceByClass.values);
+    setSeries('byTeacher',     data.charts.postsByTeacher && data.charts.postsByTeacher.labels,       data.charts.postsByTeacher && data.charts.postsByTeacher.values);
+    setSeries('performance',   data.charts.performanceByQuarter && data.charts.performanceByQuarter.labels, data.charts.performanceByQuarter && data.charts.performanceByQuarter.values);
+    setSeries('assessByGrade', data.charts.averageByGrade && data.charts.averageByGrade.labels,         data.charts.averageByGrade && data.charts.averageByGrade.values);
+    ['uploads','teacherPost'].forEach(function(k){
+      var s = C[k]; if (!s || !data.charts[k]) return;
+      s.labels = data.charts[k].labels || [];
+      s.uploads = s.materials = data.charts[k].uploads || data.charts[k].materials || [];
+      s.assessments = data.charts[k].assessments || [];
+    });
+    if (data.charts.teacherContent) {
+      C.teacherContent.labels = data.charts.teacherContent.labels || [];
+      C.teacherContent.values = data.charts.teacherContent.values || [];
+    }
+  }
+
+  var setDashStat = function(id, val){
+    var el = document.getElementById(id);
+    if (el) { el.textContent = val; el.classList.remove('tass-empty-val'); }
   };
   var st = data.stats;
-  setDashStat(1, String(st.teachers || 0));
-  setDashStat(2, String(st.students || 0));
-  setDashStat(3, String(st.materials || 0));
-  setDashStat(4, String(st.assessments || 0));
-  setDashStat(5, (st.attendanceRate || 0) + '%');
-  setDashStat(6, (st.submissionRate || 0) + '%');
-  setDashStat(7, String(st.classes || 0));
-  setDashStat(8, String(st.lowActivity || 0));
+  setDashStat('dashStatTeachers', String(st.teachers || 0));
+  setDashStat('dashStatStudents', String(st.students || 0));
+  setDashStat('dashStatMaterials', String(st.materials || 0));
+  setDashStat('dashStatAssessments', String(st.assessments || 0));
+  setDashStat('dashStatClasses', String(st.classes || 0));
+  setDashStat('dashStatLowActivity', String(st.lowActivity || 0));
 
   var ay = data.yearLabel;
   if (ay) document.querySelectorAll('[data-ay]').forEach(function(el2){ el2.textContent = ay; });
 
-  if (data.announcements && announcementData && announcementData.length === 0){
-    data.announcements.forEach(function(a){ announcementData.push(a); });
+  if (data.announcements && Array.isArray(data.announcements) && document.getElementById('announcementList')){
+    // Backend is authoritative: replace any client-side list (including a stale
+    // cache) rather than only filling an empty one.
+    announcementData = data.announcements.slice();
+    try { localStorage.setItem('tassPrincipalAnnouncements', JSON.stringify(announcementData)); } catch (e) {}
+    renderAnnouncements();
   }
 
+  if (typeof initDashboardCharts === 'function') initDashboardCharts();
+  if (typeof initPrincipalPerformanceChart === 'function') initPrincipalPerformanceChart();
+  if (typeof initReportCharts === 'function') initReportCharts();
   if (typeof renderDashTeacherList === 'function') renderDashTeacherList();
   if (typeof renderTeacherList === 'function') renderTeacherList();
   if (typeof renderHeatmap === 'function') renderHeatmap();
   if (typeof renderClasses === 'function') renderClasses(window._classTeacher || 'all');
-  if (typeof renderMaterials === 'function') renderMaterials(window._materialType || 'all');
+  // The roster panels are the ones a deep link can land on before this bridge
+  // has run: the router activates the restored view on page load, and it sits
+  // above this script, so renderStudents/renderSections/renderSubjects already
+  // ran against the empty dirData() fallback. Without re-running them here the
+  // level cards and tables stay on their all-zero empty state after a refresh.
+  if (typeof renderStudents === 'function') renderStudents();
+  if (typeof renderSections === 'function') renderSections();
+  if (typeof renderSubjects === 'function') renderSubjects();
+  // Same reason: the standing table is rendered by the router before this bridge
+  // has run, so it has to be re-rendered now that window.__prinStanding exists.
+  if (typeof renderPrincipalStanding === 'function') renderPrincipalStanding();
   if (typeof populatePrincipalFilters === 'function') populatePrincipalFilters();
-  if (typeof renderAssessments === 'function') renderAssessments();
+  // Same reason as the tables above: a chart view opened via a direct URL or a
+  // refresh initializes before this bridge has filled prinCharts, so the chart
+  // would stay on its empty state. Rebuild the active view's charts now that
+  // the series are loaded (safeChart destroys the old instance).
+  var _activeView = document.querySelector('.view.active');
+  var _activeId = _activeView ? String(_activeView.id || '').replace('view-', '') : null;
+  if (_activeId === 'dashboard') { if (typeof initDashboardCharts === 'function') initDashboardCharts(); }
+  else if (_activeId === 'attendance') { if (typeof initAttendanceCharts === 'function') initAttendanceCharts(); }
+  else if (_activeId === 'reports') { if (typeof initReportCharts === 'function') initReportCharts(); }
+  else if (_activeId === 'performance') { if (typeof initPrincipalPerformanceChart === 'function') initPrincipalPerformanceChart(); }
   if (typeof renderAttendanceOverview === 'function') renderAttendanceOverview();
   if (typeof renderRecentActivity === 'function') renderRecentActivity();
-  if (typeof renderActivityLog === 'function') renderActivityLog('all');
-  if (typeof renderAnnouncements === 'function') renderAnnouncements();
+  if (typeof renderActivityLog === 'function') renderActivityLog();
+  if (typeof renderStaffDemographics === 'function') renderStaffDemographics();
   if (typeof refreshPrincipalNotifications === 'function') refreshPrincipalNotifications();
 })();
 </script>
@@ -2608,8 +4048,38 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script src="/static/js/api_bridge.js"></script>
 <script>
 window.__TASS_BRIDGE__={interval:4000,watch:[
- {key:'tassPrincipalAnnouncements',endpoint:'school-announcements/',guard:function(v){return Array.isArray(v)&&v.length>0;},map:function(v){return {announcements:v};}}
+  {key:'tassPrincipalAnnouncements',endpoint:'school-announcements/',guard:function(v){return Array.isArray(v)&&v.length>0;},map:function(v){return {announcements:v};}}
 ]};
 </script>
+<script>
+/* The shared calendar (and the backup runner) post JSON, which Django
+   rejects without a CSRF token in the header. This template is standalone,
+   so base.html does not set it. */
+window.csrfToken = (function () {
+  var el = document.querySelector('#logoutForm input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+})();
+</script>
+<script src="{% static 'js/calendar.js' %}"></script>
+<script>
+/* Activity calendar — the payload arrives inside the same json_script blob the
+   rest of this dashboard reads, so the first month paints with no request.
+   Controls are rendered only when the backend says canEdit (System
+   Administrator / Principal). */
+(function () {
+  if (!window.TASS || !TASS.calendar) return;
+  var el = document.getElementById('principal-backend-data');
+  if (!el) return;
+  var payload;
+  try { payload = JSON.parse(el.textContent); } catch (e) { return; }
+  var cal = payload && payload.calendar;
+  if (!cal) return;
+  TASS.calendar.mount('calRoot', { data: cal });
+})();
+</script>
+
+<script src="/static/js/profile_bridge.js"></script>
+<script src="{% static 'js/tass_live.js' %}"></script>
+<script src="/static/js/pilot_guard.js"></script>
 </body>
 </html>

@@ -7,6 +7,8 @@ from django.utils import timezone
 
 from apps.accounts.decorators import perm_required, role_required
 from apps.accounts.models import StudentProfile
+from apps.accounts.ordering import order_students
+from apps.accounts.campus import scoped_classrooms, user_can_read_grade
 
 from apps.assessments.models import Assessment, Submission
 from apps.attendance.models import AttendanceRecord, AttendanceSession
@@ -16,14 +18,22 @@ from apps.teaching_learning.models import LearningResource
 from .forms import AddStudentForm, VirtualClassroomEnrollForm, VirtualClassroomForm
 from .models import VirtualClassroom, VirtualClassroomEnrollment
 
-ADMIN_ROLES = ("registrar", "assistant_principal", "system_admin")
+ADMIN_ROLES = (
+    "registrar",
+    "assistant_principal",
+    "system_admin",
+    "principal",
+    "elementary_principal",
+)
 
 
 def _classrooms_for_user(user):
     if user.is_superuser:
         return VirtualClassroom.objects.all()
     if user.groups.filter(name__in=ADMIN_ROLES).exists():
-        return VirtualClassroom.objects.all()
+        # A principal in ADMIN_ROLES is campus-bound; hand them only their own
+        # grade band, not the other campus's classrooms.
+        return scoped_classrooms(VirtualClassroom.objects.all(), user)
     if user.groups.filter(name="teacher").exists():
         return VirtualClassroom.objects.filter(teacher=user)
     if user.groups.filter(name="student").exists() and hasattr(user, "student_profile"):
@@ -38,7 +48,7 @@ def _can_access_classroom(classroom, user):
     if user.is_superuser:
         return True
     if user.groups.filter(name__in=ADMIN_ROLES).exists():
-        return True
+        return user_can_read_grade(user, classroom.section.grade_level)
     if user.groups.filter(name="teacher").exists():
         return classroom.teacher_id == user.id
     if (
@@ -113,10 +123,11 @@ def classroom_detail(request, pk):
         from django.http import HttpResponseForbidden
 
         return HttpResponseForbidden("You do not have permission to access this page.")
-    enrollments = (
-        classroom.enrollments.select_related("student")
-        .filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE)
-        .order_by("student__last_name")
+    enrollments = order_students(
+        classroom.enrollments.select_related("student").filter(
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE
+        ),
+        prefix="student__",
     )
     is_teacher = _can_teach_classroom(classroom, request.user)
 

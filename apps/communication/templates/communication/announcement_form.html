@@ -4,10 +4,12 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">{{ title }}</h1>
-    <p class="page-sub">Fill in the details below.</p>
+    <p class="page-sub">
+      {% if classroom %}Reaches only the students enrolled in {{ classroom }}.{% else %}Fill in the details below.{% endif %}
+    </p>
   </div>
-  <a class="btn btn-outline" href="{% url 'communication:announcements' %}">
-    <i class="fa-solid fa-arrow-left"></i> Back to List
+  <a class="btn btn-outline" href="{{ back_url|default:'/communication/announcements/' }}">
+    <i class="fa-solid fa-arrow-left"></i> Back
   </a>
 </div>
 
@@ -18,6 +20,7 @@
   <div class="card-body">
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
+      {% if classroom %}<input type="hidden" name="virtual_classroom" value="{{ classroom.pk }}">{% endif %}
       {% if form.non_field_errors %}
       <div class="messages">
         {% for error in form.non_field_errors %}
@@ -28,6 +31,7 @@
 
       <div class="form-row">
         {% for field in form %}
+        {% if classroom and field.name == "virtual_classroom" %}{% else %}
         <div class="form-group">
           <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
@@ -38,11 +42,12 @@
           <div class="help-text">{{ error }}</div>
           {% endfor %}
         </div>
+        {% endif %}
         {% endfor %}
       </div>
 
       <div class="form-actions">
-        <a class="btn btn-outline" href="{% url 'communication:announcements' %}">Cancel</a>
+        <a class="btn btn-outline" href="{{ back_url|default:'/communication/announcements/' }}">Cancel</a>
         <button type="submit" class="btn btn-primary">
           <i class="fa-solid fa-save"></i> Save Announcement
         </button>

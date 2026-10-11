@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Students in {{ section }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Students in {{ section.name }}</h1>
+    <p class="page-sub">
+      Grade {{ section.grade_level }} &middot; {{ section.academic_year.label }}
+      &middot; {{ enrolled_count }} enrolled
+    </p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    {% if perms.academic_structure.update_section_custom %}
+    <a class="btn btn-outline" href="{% url 'academic:section_update' section.pk %}">
+      <i class="fa-solid fa-pen"></i> Edit Section
+    </a>
+    {% endif %}
+    <a class="btn btn-outline" href="{% url 'academic:section_list' %}">
+      <i class="fa-solid fa-arrow-left"></i> Back to Sections
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-graduate"></i> Enrolled Students</div>
+  </div>
+  {% if enrollments %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>LRN</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in enrollments %}
+        <tr>
+          <td>{{ e.student.lrn|default:"—" }}</td>
+          <td>{{ e.student.last_name }}, {{ e.student.first_name }} {{ e.student.middle_initial }}</td>
+          <td>{{ e.student.user.email }}</td>
+          <td>
+            <div class="row-actions">
+              {% if perms.academic_structure.archive_student_enrollment_inline %}
+              <form method="post" action="{% url 'academic:section_student_remove' section.pk e.pk %}"
+                class="inline-form"
+                onsubmit="return confirm('Remove this student from the section? The student record is kept.')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="fa-solid fa-user-minus"></i> Remove
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa-solid fa-user-graduate"></i>
+      <p>No students are enrolled in this section yet.</p>
+      <p>Use the panels below to add students one by one or copy a whole roster from another section.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if move_form and perms.academic_structure.create_student_enrollment_inline %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-layer-group"></i> Bulk Assign from Another Section</div>
+  </div>
+  <div class="card-body">
+    <p class="help-text">
+      Copies every student currently enrolled in the chosen section into this one.
+      Pick a section from a previous school year to promote that cohort into
+      {{ section.academic_year.label }}, or a sister section from this year to
+      transfer learners across. Enrollments already in this section are left
+      untouched.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="copy_from_section" value="1">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="{{ move_form.source_section.id_for_label }}">Source section</label>
+          {{ move_form.source_section }}
+          {% if move_form.source_section.help_text %}
+          <div class="help-text">{{ move_form.source_section.help_text }}</div>
+          {% endif %}
+          {% for error in move_form.source_section.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-file-import"></i> Copy Students Into This Section
+        </button>
+      </div>
+      {% for error in move_form.non_field_errors %}
+      <div class="message error"><i class="fa-solid fa-circle-info"></i>{{ error }}</div>
+      {% endfor %}
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if assign_form and perms.academic_structure.create_student_enrollment_inline %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-plus"></i> Add Students One by One</div>
+  </div>
+  <div class="card-body">
+    {% if candidates %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th><i class="fa-solid fa-check"></i></th>
+              <th>LRN</th>
+              <th>Name</th>
+              <th>Currently in</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in candidates %}
+            <tr>
+              <td>
+                <input type="checkbox" name="students" value="{{ student.pk }}" id="section_student_{{ student.pk }}">
+              </td>
+              <td>{{ student.lrn|default:"—" }}</td>
+              <td>
+                <label for="section_student_{{ student.pk }}">
+                  {{ student.last_name }}, {{ student.first_name }} {{ student.middle_initial }}
+                </label>
+              </td>
+              <td>{{ student.section_display|default:"Not enrolled this year" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="help-text">
+        {{ candidate_count }} student(s) available. Students already placed in
+        another section this school year are not listed here &mdash; use
+        &ldquo;Bulk Assign from Another Section&rdquo; above to transfer them.
+      </div>
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'academic:section_list' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-user-plus"></i> Enroll Selected Students
+        </button>
+      </div>
+    </form>
+    {% else %}
+    <div class="empty-state">
+      <i class="fa-solid fa-check-double"></i>
+      <p>Every student on record is already in this section.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

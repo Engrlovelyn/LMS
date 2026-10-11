@@ -1,0 +1,48 @@
+/* =========================================================================
+   TASS shared mobile guard
+   Loaded by every dashboard template (and the password-reset page) AFTER
+   fontawesome/calendar/empty_state but BEFORE each template's own <style>,
+   so every rule below uses !important to win the cascade.
+
+   Keeps this file small and about device behaviour only — visual design
+   still lives in each dashboard's stylesheet.
+   ========================================================================= */
+
+/* 1. Stop iOS / iPadOS from auto-zooming the viewport.
+
+   Safari scales the whole page the moment a focused text control is set
+   below 16px. Every TASS input is 13.5-14px, so tapping a filter, search
+   or modal field on a phone/tablet made the page visibly jump and made it
+   hard to see what you had just tapped.
+
+   Applies to touch devices at any width (iPad landscape, touch laptops)
+   and to any layout narrower than 900px. */
+@media (max-width: 900px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* 2. Never let iOS inflate text in landscape, which overflows cards and
+   tables. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 3. Kill the ~300ms double-tap delay on controls and stop a stray
+   double-tap from zooming the page when the user meant to press a button. */
+@media (pointer: coarse) {
+  button,
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  .btn,
+  .icon-btn,
+  .tab-btn,
+  .nav-item {
+    touch-action: manipulation;
+  }
+}

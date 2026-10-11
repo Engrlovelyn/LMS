@@ -43,7 +43,12 @@
 
       <div class="form-actions">
         <a class="btn btn-outline" href="{% url 'academic:section_list' %}">Cancel</a>
-        <button type="submit" class="btn btn-primary">
+        {% if not section and perms.academic_structure.create_student_enrollment_inline %}
+        <button type="submit" name="save_and_add_students" value="1" class="btn btn-outline">
+          <i class="fa-solid fa-user-graduate"></i> Save &amp; Assign Students
+        </button>
+        {% endif %}
+        <button type="submit" name="save_next" value="1" class="btn btn-primary">
           <i class="fa-solid fa-save"></i> Save Section
         </button>
       </div>

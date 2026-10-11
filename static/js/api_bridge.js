@@ -1,12 +1,10 @@
 /**
- * SVI LMS — localStorage → PostgreSQL write bridge.
+ * SVI LMS - localStorage -> PostgreSQL write bridge.
  *
  * The dashboards persist every save to localStorage. This poller watches the
  * keys listed in window.__TASS_BRIDGE__.watch and, whenever one of them
  * changes, POSTs the equivalent payload to the /api/* endpoints so the same
- * data lands in PostgreSQL too. It is intentionally non-invasive: the SPA's
- * own localStorage persistence still runs, and if the server is unreachable
- * the page continues to work exactly as before.
+ * data lands in PostgreSQL too. It is intentionally non-invasive.
  *
  * Config shape (set on window before this file loads):
  *   window.__TASS_BRIDGE__ = {
@@ -29,6 +27,7 @@
   var cfg = window.__TASS_BRIDGE__ || { watch: [] };
   var watch = Array.isArray(cfg.watch) ? cfg.watch : [];
   var last = {};
+  var lastError = '';
   var busy = false;
   var timer = null;
 
@@ -57,10 +56,20 @@
         x.onreadystatechange = function () {
           if (x.readyState !== 4) return;
           var out = { ok: false };
-          try { out = JSON.parse(x.responseText || '{}'); } catch (e) {}
-          resolve(out);
+          try {
+            out = JSON.parse(x.responseText || '{}');
+          } catch (e) {
+            out = { ok: false, message: 'Server returned invalid JSON' };
+          }
+          // The HTTP status used to be ignored entirely, so a 403/500 looked
+          // exactly like success and the change was silently dropped.
+          if (x.status < 200 || x.status >= 300 || out.ok === false) {
+            resolve(Object.assign({}, out, { status: x.status, ok: false }));
+            return;
+          }
+          resolve(Object.assign({}, out, { status: x.status, ok: true }));
         };
-        try { x.send(JSON.stringify(payload)); } catch (e) { resolve({ ok: false }); }
+        try { x.send(JSON.stringify(payload)); } catch (e) { resolve({ ok: false, message: String(e) }); }
       });
     });
   }
@@ -75,8 +84,14 @@
   function isFreshChange(key) {
     var s = snapshot(key);
     if (s === last[key]) return false;
-    last[key] = s;
     return s !== null;
+  }
+
+  // Remembered only after the server accepts a payload. Committing the
+  // snapshot up-front meant a failed POST was never retried, because the
+  // localStorage key had not changed again since.
+  function markSeen(key) {
+    last[key] = snapshot(key);
   }
 
   function payloadsFor(rule, value) {
@@ -91,14 +106,21 @@
   function route(rule) {
     var value = null;
     try { value = JSON.parse(localStorage.getItem(rule.key) || 'null'); } catch (e) { value = null; }
-    if (value === null || value === undefined) return Promise.resolve();
+    if (value === null || value === undefined) { markSeen(rule.key); return Promise.resolve(); }
     var list = payloadsFor(rule, value);
     var chain = Promise.resolve();
     list.forEach(function (p) {
       if (p === undefined || p === null) return;
-      chain = chain.then(function () { return post(rule.endpoint, p); });
+      chain = chain.then(function () {
+        return post(rule.endpoint, p).then(function (res) {
+          if (res && res.ok === false) {
+            throw new Error(res.message || ('Save failed for ' + rule.key));
+          }
+          return res;
+        });
+      });
     });
-    return chain;
+    return chain.then(function () { markSeen(rule.key); });
   }
 
   function tick() {
@@ -111,8 +133,24 @@
     dirty.forEach(function (r) {
       chain = chain.then(function () { return route(r); });
     });
-    chain.then(function () { busy = false; schedule(); })
-          .catch(function () { busy = false; schedule(); });
+    chain.then(function () { busy = false; lastError = ''; schedule(); })
+          .catch(function (err) {
+            busy = false;
+            try {
+              console.warn('api_bridge tick error:', err);
+              var msg = (err && err.message) || 'Your last change could not be saved.';
+              // The key is deliberately left "dirty" so the next tick retries.
+              // Only surface a toast when the error is new, otherwise a broken
+              // connection would pop the same message every interval.
+              if (msg !== lastError) {
+                lastError = msg;
+                if (typeof window.showToast === 'function') {
+                  window.showToast(msg + ' Retrying...', 'error');
+                }
+              }
+            } catch (e) {}
+            schedule();
+          });
   }
 
   function schedule() {

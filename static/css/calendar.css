@@ -1,0 +1,280 @@
+/* SVI LMS — school-activity calendar.
+   A real month calendar: weekday header, only the weeks the month spans, today
+   ring, events as solid category-coloured bars that run continuously across the
+   days they span. Scoped under .tass-cal and driven by the dashboard's own CSS
+   variables, so it follows the light/dark theme without a second palette. */
+
+.tass-cal {
+  --tcal-line: var(--card-border, #e2e8f0);
+  --tcal-bg: var(--card-bg, #fff);
+  --tcal-soft: var(--gray-100, #f6f8fb);
+  --tcal-text: var(--text-primary, #0f172a);
+  --tcal-muted: var(--text-muted, #64748b);
+  --tcal-accent: var(--ict, var(--blue, #1e5faf));
+  --tcal-radius: 14px;
+
+  color: var(--tcal-text);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.tass-cal *, .tass-cal *::before, .tass-cal *::after { box-sizing: border-box; }
+
+/* ── header: month + legend ───────────────────────────────────────────── */
+.tass-cal .tcal-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 9px;
+}
+.tass-cal .tcal-month { display: flex; align-items: center; gap: 6px; }
+.tass-cal .tcal-label {
+  margin: 0; min-width: 150px; text-align: center;
+  font-size: 15.5px; font-weight: 800; letter-spacing: -.3px;
+  color: var(--tcal-text);
+}
+.tass-cal .tcal-nav, .tass-cal .tcal-today, .tass-cal .tcal-btn, .tass-cal .tcal-add {
+  appearance: none; cursor: pointer; font-family: inherit;
+  border: 1px solid var(--tcal-line); background: var(--tcal-bg);
+  color: var(--tcal-text); border-radius: 8px;
+  font-size: 12px; font-weight: 700; transition: background .12s, border-color .12s;
+}
+.tass-cal .tcal-nav { width: 28px; height: 28px; display: grid; place-items: center; }
+.tass-cal .tcal-today { height: 28px; padding: 0 11px; margin-left: 4px; }
+.tass-cal .tcal-nav:hover, .tass-cal .tcal-today:hover, .tass-cal .tcal-btn:hover {
+  background: var(--tcal-soft);
+}
+.tass-cal .tcal-btn.primary { background: var(--tcal-accent); border-color: var(--tcal-accent); color: #fff; }
+.tass-cal .tcal-btn.primary:hover { filter: brightness(1.08); }
+.tass-cal .tcal-btn.ghost { background: transparent; }
+
+.tass-cal .tcal-legend { display: flex; flex-wrap: wrap; gap: 10px; }
+.tass-cal .tcal-key {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: var(--tcal-muted);
+}
+.tass-cal .tcal-key i { width: 9px; height: 9px; border-radius: 3px; }
+
+/* ── frame ────────────────────────────────────────────────────────────── */
+.tass-cal .tcal-frame {
+  border: 1px solid var(--tcal-line); border-radius: var(--tcal-radius);
+  overflow: hidden; background: var(--tcal-line);
+}
+.tass-cal .tcal-dows { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; }
+.tass-cal .tcal-dow {
+  background: var(--tcal-soft); padding: 6px 5px;
+  text-align: center; font-size: 10px; font-weight: 800;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--tcal-muted);
+}
+.tass-cal .tcal-dow .full { display: none; }
+
+.tass-cal .tcal-grid { background: var(--tcal-line); }
+.tass-cal .tcal-week {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+}
+
+/* ── a day cell ───────────────────────────────────────────────────────── */
+.tass-cal .tcal-day {
+  position: relative;
+  background: var(--tcal-bg); min-height: 76px;
+  padding: 4px 4px 5px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+  transition: background .12s;
+}
+.tass-cal .tcal-day:hover { background: var(--tcal-soft); }
+.tass-cal .tcal-day.out { background: color-mix(in srgb, var(--tcal-soft) 55%, var(--tcal-bg)); }
+.tass-cal .tcal-day.out .tcal-num { color: color-mix(in srgb, var(--tcal-muted) 45%, transparent); }
+.tass-cal .tcal-day.sel { box-shadow: inset 0 0 0 2px var(--tcal-accent); }
+
+/* A day that has something booked: tinted with the colour of the first entry,
+   a dot on the date, and a full-strength number. Kept above .out but below
+   .today so a booked day still reads as "today" when both are true. */
+.tass-cal .tcal-day.has {
+  background: color-mix(in srgb, var(--dc) 7%, var(--tcal-bg));
+}
+.tass-cal .tcal-day.has .tcal-num { color: var(--tcal-text); }
+.tass-cal .tcal-day.has::after {
+  content: ''; position: absolute; top: 7px; right: 7px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--dc);
+}
+.tass-cal .tcal-day.has.out { background: color-mix(in srgb, var(--dc) 4%, var(--tcal-bg)); }
+.tass-cal .tcal-day.has.out::after { opacity: .45; }
+.tass-cal .tcal-day.today::after { box-shadow: 0 0 0 2px var(--tcal-bg); }
+
+.tass-cal .tcal-num {
+  align-self: flex-start; min-width: 20px; height: 20px; padding: 0 3px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; font-size: 11.5px; font-weight: 800;
+  color: var(--tcal-muted);
+}
+.tass-cal .tcal-day.today .tcal-num { background: var(--tcal-accent); color: #fff; }
+.tass-cal .tcal-day.today { background: color-mix(in srgb, var(--tcal-accent) 5%, var(--tcal-bg)); }
+
+.tass-cal .tcal-bars { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* ── an event bar ─────────────────────────────────────────────────────── */
+.tass-cal .tcal-bar {
+  display: flex; align-items: center; gap: 4px; min-width: 0;
+  font-size: 10px; font-weight: 600; line-height: 1.3;
+  padding: 1px 4px; cursor: pointer;
+  color: var(--c); background: var(--cs);
+  border-radius: 0;
+}
+.tass-cal .tcal-bar b { font-weight: 800; flex: none; opacity: .85; }
+.tass-cal .tcal-bar .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tass-cal .tcal-bar:hover { filter: brightness(.97); }
+.tass-cal .tcal-bar.alone { border-radius: 4px; }
+.tass-cal .tcal-bar.s { border-radius: 4px 0 0 4px; padding-left: 6px; }
+.tass-cal .tcal-bar.e { border-radius: 0 4px 4px 0; }
+.tass-cal .tcal-bar.s.e, .tass-cal .tcal-bar.alone { border-radius: 4px; }
+.tass-cal .tcal-bar:not(.s):not(.alone) { box-shadow: inset 2px 0 0 var(--c); }
+.tass-cal .tcal-bar:not(.e):not(.alone) { box-shadow: inset -2px 0 0 var(--c); }
+.tass-cal .tcal-bar:not(.s):not(.e):not(.alone) {
+  box-shadow: inset 2px 0 0 var(--c), inset -2px 0 0 var(--c);
+}
+
+.tass-cal .tcal-more {
+  appearance: none; cursor: pointer; font-family: inherit; text-align: left;
+  border: 0; background: transparent; padding: 0 5px;
+  font-size: 10px; font-weight: 800; color: var(--tcal-muted);
+}
+
+/* ── selected-day agenda ──────────────────────────────────────────────── */
+.tass-cal .tcal-agenda { margin-top: 12px; }
+.tass-cal .tcal-agenda-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.tass-cal .tcal-agenda-date { font-size: 13.5px; font-weight: 800; }
+.tass-cal .tcal-agenda-sub { font-size: 11.5px; color: var(--tcal-muted); }
+.tass-cal .tcal-add {
+  background: var(--tcal-accent); border-color: var(--tcal-accent); color: #fff;
+  padding: 8px 15px; border-radius: 9px;
+}
+.tass-cal .tcal-add:hover { filter: brightness(1.08); }
+.tass-cal .tcal-ro {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--tcal-muted);
+  border: 1px solid var(--tcal-line); border-radius: 20px; padding: 4px 11px;
+}
+
+.tass-cal .tcal-agenda-list { display: grid; gap: 9px; }
+.tass-cal .tcal-item {
+  border: 1px solid var(--tcal-line); border-left: 4px solid var(--c);
+  border-radius: 10px; padding: 10px 13px; background: var(--tcal-bg);
+}
+.tass-cal .tcal-item-hd { display: flex; align-items: center; gap: 8px; }
+.tass-cal .tcal-item-hd > i { font-size: 8px; }
+.tass-cal .tcal-item-title { font-weight: 800; font-size: 13.5px; }
+.tass-cal .tcal-chip {
+  margin-left: auto; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--c); background: var(--cs);
+  padding: 3px 9px; border-radius: 20px;
+}
+.tass-cal .tcal-item-meta {
+  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px;
+  font-size: 11.5px; color: var(--tcal-muted);
+}
+.tass-cal .tcal-item-meta i { margin-right: 3px; }
+.tass-cal .tcal-item-desc {
+  font-size: 12.5px; color: var(--tcal-muted); margin-top: 6px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.tass-cal .tcal-item-acts { display: flex; gap: 7px; margin-top: 9px; }
+.tass-cal .tcal-item-acts button {
+  appearance: none; cursor: pointer; font-family: inherit;
+  border: 1px solid var(--tcal-line); background: var(--tcal-bg);
+  color: var(--tcal-muted); border-radius: 7px;
+  padding: 4px 11px; font-size: 11.5px; font-weight: 700;
+}
+.tass-cal .tcal-item-acts button:hover { background: var(--tcal-soft); color: var(--tcal-text); }
+.tass-cal .tcal-item-acts button.danger:hover { color: #dc2626; border-color: #fca5a5; }
+
+.tass-cal .tcal-empty {
+  text-align: center; padding: 18px 14px; color: var(--tcal-muted);
+  border: 1px dashed var(--tcal-line); border-radius: var(--tcal-radius);
+}
+.tass-cal .tcal-empty i { font-size: 22px; opacity: .4; display: block; margin-bottom: 6px; }
+.tass-cal .tcal-link {
+  appearance: none; cursor: pointer; font-family: inherit; margin-top: 9px;
+  border: 1px solid var(--tcal-line); background: var(--tcal-bg);
+  border-radius: 8px; padding: 6px 14px; font-size: 12.5px; font-weight: 700;
+  color: var(--tcal-accent);
+}
+
+/* ── editor ───────────────────────────────────────────────────────────── */
+.tass-cal .tcal-modal {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(15, 23, 42, .55);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.tass-cal .tcal-modal[hidden] { display: none; }
+.tass-cal .tcal-modal-card {
+  background: var(--tcal-bg); border-radius: 14px; width: min(600px, 100%);
+  max-height: 90vh; overflow: auto;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .35);
+}
+.tass-cal .tcal-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 19px; border-bottom: 1px solid var(--tcal-line);
+  font-weight: 800; font-size: 14.5px;
+}
+.tass-cal .tcal-x {
+  appearance: none; cursor: pointer; border: 0; background: transparent;
+  color: var(--tcal-muted); font-size: 16px; padding: 4px 7px; border-radius: 7px;
+}
+.tass-cal .tcal-x:hover { background: var(--tcal-soft); }
+.tass-cal .tcal-modal-body { padding: 19px; }
+
+.tass-cal .tcal-form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.tass-cal .tcal-fld { display: flex; flex-direction: column; gap: 5px; }
+.tass-cal .tcal-fld.wide { grid-column: 1 / -1; }
+.tass-cal .tcal-fld > span {
+  font-size: 11.5px; font-weight: 800; color: var(--tcal-muted);
+  display: flex; gap: 6px; align-items: baseline;
+}
+.tass-cal .tcal-fld > span b { color: #dc2626; }
+.tass-cal .tcal-fld > span i { font-style: normal; font-weight: 500; opacity: .8; }
+.tass-cal .tcal-fld.chk { flex-direction: row; align-items: center; gap: 8px; align-self: end; padding-bottom: 8px; }
+.tass-cal .tcal-fld.chk input { width: 16px; height: 16px; }
+.tass-cal .tcal-fld input[type=text], .tass-cal .tcal-fld input[type=date],
+.tass-cal .tcal-fld input[type=time], .tass-cal .tcal-fld select,
+.tass-cal .tcal-fld textarea {
+  width: 100%; border: 1px solid var(--tcal-line); border-radius: 8px;
+  padding: 8px 11px; font-size: 13px; font-family: inherit;
+  color: var(--tcal-text); background: var(--tcal-bg);
+}
+.tass-cal .tcal-fld input:focus, .tass-cal .tcal-fld select:focus,
+.tass-cal .tcal-fld textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--tcal-accent) 30%, transparent);
+  border-color: var(--tcal-accent);
+}
+.tass-cal .tcal-fld input:disabled { background: var(--tcal-soft); color: var(--tcal-muted); }
+.tass-cal .tcal-form-acts {
+  grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 3px;
+}
+.tass-cal .tcal-form-acts .tcal-btn { padding: 8px 15px; }
+
+/* ── busy + toast ─────────────────────────────────────────────────────── */
+.tass-cal.busy { opacity: .55; pointer-events: none; }
+.tass-cal .tcal-toast {
+  position: absolute; right: 0; bottom: 0; z-index: 30;
+  background: #0f172a; color: #fff; padding: 9px 15px;
+  border-radius: 9px; font-size: 12.5px; font-weight: 700;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .3);
+}
+.tass-cal .tcal-toast.err { background: #b91c1c; }
+
+/* ── responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .tass-cal .tcal-dow .full { display: inline; }
+  .tass-cal .tcal-dow .short { display: none; }
+  .tass-cal .tcal-label { min-width: 0; font-size: 16px; }
+}
+@media (max-width: 640px) {
+  .tass-cal .tcal-day { min-height: 58px; padding: 3px; }
+  .tass-cal .tcal-num { min-width: 19px; height: 19px; font-size: 11px; }
+  .tass-cal .tcal-bar { font-size: 9px; padding: 1px 3px; }
+  .tass-cal .tcal-bar b { display: none; }
+  .tass-cal .tcal-form { grid-template-columns: 1fr; }
+}

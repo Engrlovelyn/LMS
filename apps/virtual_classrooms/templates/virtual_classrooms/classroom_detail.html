@@ -18,7 +18,7 @@
       <a class="btn btn-outline" href="{% url 'attendance:record_attendance' classroom.pk %}">
         <i class="fa-solid fa-calendar-check"></i> Take Attendance
       </a>
-      <a class="btn btn-outline" href="{% url 'communication:class_announcement_add' %}">
+      <a class="btn btn-outline" href="{% url 'communication:class_announcement_add_for' classroom.pk %}">
         <i class="fa-solid fa-bullhorn"></i> Announce
       </a>
     {% endif %}
@@ -277,7 +277,7 @@
     <div class="card-header">
       <div class="card-title"><i class="fa-solid fa-bullhorn" style="color:var(--blue)"></i> Announcements</div>
       {% if perms.communication.post_class_announcement %}
-        <a class="btn btn-primary btn-sm" href="{% url 'communication:class_announcement_add' %}"><i class="fa-solid fa-plus"></i> Post</a>
+        <a class="btn btn-primary btn-sm" href="{% url 'communication:class_announcement_add_for' classroom.pk %}"><i class="fa-solid fa-plus"></i> Post</a>
       {% endif %}
     </div>
     <div class="card-body">
@@ -296,22 +296,45 @@
 <!-- MESSAGES TAB -->
 <div class="tab-pane" id="tab-messages">
   <div class="card">
-    <div class="card-header"><div class="card-title"><i class="fa-solid fa-comments" style="color:var(--blue)"></i> Class Messages</div>
-      {% if perms.communication.send_group_messaging %}<a class="btn btn-outline btn-sm" href="{% url 'communication:group_message_thread' classroom.pk %}"><i class="fa-solid fa-comments"></i> Open Thread</a>{% endif %}
-    </div>
-    <div class="card-body">
-      {% if group_messages %}
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        {% for m in group_messages %}
-        <div class="msg {% if m.sender_id == request.user.id %}sent{% else %}received{% endif %}">
-          <div class="msg-bubble">{{ m.content }}</div>
-          <div class="msg-time">{{ m.sender.get_full_name|default:m.sender.email }} &middot; {{ m.sent_at|date:"M d g:i A" }}</div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty-state"><i class="fa-solid fa-comments"></i><p>No class messages yet.</p></div>
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-comments" style="color:var(--blue)"></i> Class Messages</div>
+      {% if perms.communication.send_group_messaging %}
+      <a class="btn btn-outline btn-sm" href="{% url 'communication:group_message_thread' classroom.pk %}"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Thread</a>
       {% endif %}
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="msg-layout" style="grid-template-columns:1fr;height:auto;border:none;border-radius:0;">
+        <div class="msg-main" style="background:var(--card-bg);min-height:360px;">
+          <div class="msg-messages" style="min-height:320px;max-height:420px;">
+            {% for m in group_messages %}
+            <div class="msg {% if m.sender_id == request.user.id %}sent{% else %}received{% endif %}">
+              {% if m.sender_id != request.user.id %}
+              <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:2px;">{{ m.sender.get_full_name|default:m.sender.email }}</div>
+              {% endif %}
+              <div class="msg-bubble">{{ m.content|linebreaksbr }}</div>
+              {% if m.attachment %}
+              <a class="msg-time" href="{{ m.attachment.url }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:var(--blue);font-weight:600;"><i class="fa-solid fa-paperclip"></i> Attachment</a>
+              {% endif %}
+              <div class="msg-time">{{ m.sent_at|date:"M d, g:i A" }}</div>
+            </div>
+            {% empty %}
+            <div class="empty-state"><i class="fa-solid fa-comments"></i><p>No class messages yet. Say hello to your class!</p></div>
+            {% endfor %}
+          </div>
+          {% if perms.communication.send_group_messaging %}
+          <form method="post" action="{% url 'communication:group_message_thread' classroom.pk %}" enctype="multipart/form-data" class="msg-input-area" id="classMsgForm">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path|urlencode }}">
+            <input type="text" name="content" class="msg-input" id="classMsgInput" placeholder="Type a message..." required maxlength="2000" autocomplete="off">
+            <label class="btn btn-outline btn-sm" title="Attach a file" style="margin:0;cursor:pointer;">
+              <input type="file" name="attachment" id="classMsgFile" style="display:none;" onchange="var s=this.nextElementSibling;if(s)s.textContent=this.files[0]?this.files[0].name:'Attach';">
+              <span><i class="fa-solid fa-paperclip"></i> Attach</span>
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane"></i> Send</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </div>

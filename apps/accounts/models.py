@@ -40,6 +40,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
     password_changed_at = models.DateTimeField(null=True, blank=True)
+    # When the lockout policy last locked this account. Null while the account
+    # has never been locked; cleared on unlock so the dashboard never shows a
+    # stale lock date for an account that is already active again.
+    locked_at = models.DateTimeField(null=True, blank=True)
+    # Set when an administrator hands the user a password out-of-band (the
+    # forgot-password recovery path). Because the administrator knows the
+    # password, the user is forced to choose their own at next sign-in instead
+    # of being able to keep using the shared one.
+    must_change_password = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=True)
 
     is_active = models.BooleanField(default=True)
@@ -103,6 +112,8 @@ class User(AbstractBaseUser, PermissionsMixin):
             ("archive_account", "Archive Account"),
             ("reset_account_password", "Reset Account Password"),
             ("reset_forgotten_password", "Reset Forgotten Password"),
+            ("unlock_account", "Unlock Locked Account"),
+            ("resend_verification_email", "Resend Verification Email"),
             ("log_in_user", "Log In User"),
             ("manage_active_sessions", "Manage Active Sessions"),
             ("view_role_based_dashboard", "View Role-Based Dashboard"),
@@ -134,10 +145,16 @@ class Role(models.Model):
         SYSTEM_ADMIN = "system_admin", "System Administrator"
         REGISTRAR = "registrar", "Registrar"
         TEACHER = "teacher", "Teacher"
-        PRINCIPAL = "principal", "Principal"
+        # The principal role code predates the school being split into a
+        # Junior/High School campus and an Elementary campus. It is kept as
+        # `principal` (rather than renamed) so every existing assignment, group
+        # and login redirect keeps working; only the display label says which
+        # campus it governs. Scope itself lives on `Campus.Scope`, not on the
+        # role, so an Assistant Principal can be scoped per campus too.
+        PRINCIPAL = "principal", "High School Principal"
+        ELEMENTARY_PRINCIPAL = "elementary_principal", "Elementary Principal"
         ASSISTANT_PRINCIPAL = "assistant_principal", "Assistant Principal"
         STUDENT = "student", "Student"
-        TASS_ADMINISTRATOR = "tass_administrator", "SVI Administrator"
         QUALITY_AUDIT = "quality_audit", "Quality Assurance"
 
     code = models.CharField(max_length=20, choices=Code.choices, unique=True)
@@ -223,6 +240,13 @@ class EmployeeProfile(models.Model):
         blank=True,
         validators=[phone_validator]
     )
+    sex = models.CharField(
+        max_length=1,
+        choices=SexChoices.choices,
+        blank=True,
+    )
+    birthdate = models.DateField(null=True, blank=True)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
 
     def __str__(self):
         return f"{self.last_name}, {self.first_name}"
@@ -261,6 +285,7 @@ class StudentProfile(models.Model):
     guardian_name = models.CharField(max_length=100, blank=True)
     guardian_email = models.EmailField(blank=True)
     guardian_contact_number = models.CharField(max_length=20, blank=True)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
 
     def __str__(self):
         return f"{self.last_name}, {self.first_name} ({self.lrn})"

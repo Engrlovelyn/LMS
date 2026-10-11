@@ -5635,6 +5635,7 @@ body.sidebar-expanded .view-only-box, .sidebar:hover .view-only-box{ opacity: 1;
 .pill.inactive{ background:#fee2e2; color:#dc2626; }
 
 .pill.pending{ background:#fef9c3; color:#854d0e; }
+.pill.late{ background:#fef3c7; color:#b45309; }
 
 .pill.male{ background:#dbeafe; color:#1d4ed8; }
 

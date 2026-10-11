@@ -8,6 +8,44 @@
   </div>
 </div>
 
+{% if new_contacts %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-pen-to-square"></i> Start a Conversation</div>
+  </div>
+  <div class="card-body">
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--text-muted);">
+      People you share a class with. Pick one to open the chat — the first message
+      starts the conversation.
+    </p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in new_contacts %}
+          <tr>
+            <td>{{ c.name }}</td>
+            <td><span class="pill pending">{{ c.role }}</span></td>
+            <td style="text-align:right;">
+              <a class="btn btn-primary btn-sm" href="{% url 'communication:private_message_thread' c.id %}">
+                <i class="fa-solid fa-paper-plane"></i> Message
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="card-header">
     <div class="card-title"><i class="fa-solid fa-comments"></i> Conversations</div>

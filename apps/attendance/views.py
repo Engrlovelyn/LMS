@@ -4,8 +4,25 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+def _notify_attendance(vc, actor):
+    """Let the classroom's students repaint their Attendance tab live."""
+    from apps.communication.realtime import notify_enrolled_students
+
+    try:
+        notify_enrolled_students(vc.pk, kind=["attendance"], actor=actor, exclude=actor)
+    except Exception:  # realtime must never block a save
+        pass
+
+
+from apps.accounts.campus import (
+    campus_scopes_for,
+    scoped_classrooms,
+    sections_for_campus,
+    user_can_read_grade,
+)
 from apps.accounts.decorators import perm_required
 from apps.accounts.models import StudentProfile
+from apps.accounts.ordering import order_students
 from apps.academic_structure.models import AcademicYear, Section
 from apps.virtual_classrooms.models import (
     VirtualClassroom,
@@ -15,14 +32,24 @@ from apps.virtual_classrooms.models import (
 from .forms import AttendanceRecordForm, SessionDateForm, StatusUpdateForm
 from .models import AttendanceRecord, AttendanceSession
 
-ADMIN_ROLES = ("registrar", "assistant_principal", "system_admin", "principal", "tass_administrator")
+ADMIN_ROLES = (
+    "registrar",
+    "assistant_principal",
+    "system_admin",
+    "principal",
+    "elementary_principal",
+    "quality_audit",
+)
 
 
 def _classrooms_for_user(user):
     if user.is_superuser or user.groups.filter(name__in=ADMIN_ROLES).exists():
-        return VirtualClassroom.objects.select_related(
-            "academic_year", "section", "subject", "teacher"
-        ).all()
+        return scoped_classrooms(
+            VirtualClassroom.objects.select_related(
+                "academic_year", "section", "subject", "teacher"
+            ).all(),
+            user,
+        )
     if user.groups.filter(name="teacher").exists():
         return VirtualClassroom.objects.select_related(
             "academic_year", "section", "subject", "teacher"
@@ -39,7 +66,10 @@ def _classrooms_for_user(user):
 
 def _can_access_classroom(classroom, user):
     if user.is_superuser or user.groups.filter(name__in=ADMIN_ROLES).exists():
-        return True
+        # Passing the role gate is not enough: a principal in ADMIN_ROLES is
+        # campus-bound, so a Grade 11 room must stay closed to the Elementary
+        # Principal even though the tuple says "principal".
+        return user_can_read_grade(user, classroom.section.grade_level)
     if user.groups.filter(name="teacher").exists():
         return classroom.teacher_id == user.id
     if (
@@ -59,7 +89,7 @@ def _enrolled_students(classroom):
         virtual_classroom=classroom,
         status=VirtualClassroomEnrollment.STATUS_ACTIVE,
     ).values_list("student_id", flat=True)
-    return StudentProfile.objects.filter(id__in=ids).order_by("last_name", "first_name")
+    return order_students(StudentProfile.objects.filter(id__in=ids))
 
 
 def _session_stats(session):
@@ -172,7 +202,14 @@ def record_attendance(request, vc_pk):
                         request,
                         f"{student}: {'; '.join(exc.messages)}",
                     )
-            messages.success(request, f"Saved attendance for {saved} student(s) on {session_date}.")
+            if saved:
+                messages.success(request, f"Saved attendance for {saved} student(s) on {session_date}.")
+                _notify_attendance(session.virtual_classroom, request.user)
+            else:
+                messages.warning(
+                    request,
+                    "No attendance records were saved. Please set a status for at least one student.",
+                )
             return redirect(reverse("attendance:session_detail", args=[session.pk]))
 
     session_date = request.GET.get("date")
@@ -291,11 +328,19 @@ def session_update(request, pk):
             ),
             "remarks": record.remark if record else "",
         }
+        form = StatusUpdateForm(initial=initial)
+        # The per-student form is rendered outside the table (a <form> may not
+        # straddle <td> boundaries); each control points back at it via the HTML5
+        # `form` attribute.
+        form_id = f"rowform-{student.pk}"
+        for field_name in ("status", "remarks", "attachment"):
+            form.fields[field_name].widget.attrs["form"] = form_id
         rows.append(
             {
                 "student": student,
                 "record": record,
-                "status_form": StatusUpdateForm(initial=initial),
+                "status_form": form,
+                "form_id": form_id,
             }
         )
 
@@ -330,6 +375,7 @@ def record_status_update(request, pk):
                         defaults=defaults,
                     )
                     messages.success(request, f"Attendance for {record.student} updated.")
+                    _notify_attendance(session.virtual_classroom, request.user)
                 except ValidationError as exc:
                     messages.error(request, "; ".join(exc.messages))
         else:
@@ -340,8 +386,12 @@ def record_status_update(request, pk):
 @perm_required("generate_attendance_report")
 def attendance_report(request):
     years = AcademicYear.objects.all()
-    sections = Section.objects.all()
-    vcs = VirtualClassroom.objects.select_related("academic_year", "section", "subject").all()
+    scopes = campus_scopes_for(request.user)
+    sections = sections_for_campus(Section.objects.all(), scopes)
+    vcs = scoped_classrooms(
+        VirtualClassroom.objects.select_related("academic_year", "section", "subject").all(),
+        request.user,
+    )
 
     context = {
         "years": years,

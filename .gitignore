@@ -18,3 +18,10 @@ Thumbs.db
 # Logs and database backups
 *.log
 media/backups/
+
+# Local media uploads and collectstatic output
+media/
+staticfiles/
+
+# Local database dumps / backups
+backups/

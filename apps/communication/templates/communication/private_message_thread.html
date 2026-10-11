@@ -1,10 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ peer.email }} - Messages{% endblock %}
+{% block title %}{{ peer_display|default:peer.email }} - Messages{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1 class="page-title">{{ peer.email }}</h1>
-    <p class="page-sub">Private conversation.</p>
+    {# The heading used to print peer.email, so a student's own teacher showed up
+       as an address rather than a person. #}
+    <h1 class="page-title">{{ peer_display|default:peer.email }}</h1>
+    <p class="page-sub">Private conversation{% if peer.email %} · {{ peer.email }}{% endif %}.</p>
   </div>
   <a class="btn btn-outline" href="{% url 'communication:messages' %}">
     <i class="fa-solid fa-arrow-left"></i> Back to Messages
@@ -13,7 +15,7 @@
 
 <div class="card">
   <div class="card-header">
-    <div class="card-title"><i class="fa-solid fa-envelope"></i> {{ peer.email }}</div>
+    <div class="card-title"><i class="fa-solid fa-envelope"></i> {{ peer_display|default:peer.email }}</div>
   </div>
   <div class="card-body">
     <div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;margin-bottom:18px;">

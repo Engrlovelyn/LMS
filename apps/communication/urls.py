@@ -19,6 +19,11 @@ urlpatterns = [
     ),
     path("announcements/class/add/", views.class_announcement_add, name="class_announcement_add"),
     path(
+        "announcements/class/<int:vc_pk>/add/",
+        views.class_announcement_add,
+        name="class_announcement_add_for",
+    ),
+    path(
         "announcements/class/<int:pk>/update/",
         views.class_announcement_update,
         name="class_announcement_update",

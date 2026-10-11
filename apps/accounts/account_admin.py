@@ -120,6 +120,11 @@ def lock_user_account(user, reason="Failed sign-in attempts reached the lockout 
     user.status = User.Status.LOCKED
     user.locked_at = timezone.now()
     user.save(update_fields=["status", "locked_at", "is_active"])
+    # Locking ends the current device so the single-session slot is not held
+    # by an account that can no longer authenticate.
+    from .session_guard import release_all_sessions
+
+    release_all_sessions(user)
     ActivityLog.objects.create(
         user=user,
         action="account_locked",
@@ -160,6 +165,11 @@ def unlock_user_account(user, actor=None):
             "is_active",
         ]
     )
+    # Clear any device row left behind while the account was locked, so the
+    # user is not told "already signed in" the moment they try again.
+    from .session_guard import release_all_sessions
+
+    release_all_sessions(user)
     ActivityLog.objects.create(
         user=actor,
         action="account_unlocked",
@@ -222,6 +232,10 @@ def issue_temporary_password(user, new_password=None, actor=None):
     # Recorded so the user's own later password change is not rejected as a
     # reuse of the password an administrator set on their behalf.
     PasswordHistory.objects.create(user=user, hashed_password=user.password)
+    # A new password invalidates any device still holding the old one.
+    from .session_guard import release_all_sessions
+
+    release_all_sessions(user)
     ActivityLog.objects.create(
         user=actor,
         action="admin_password_reset",

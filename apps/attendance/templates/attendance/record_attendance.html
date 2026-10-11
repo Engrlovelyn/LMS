@@ -102,3 +102,61 @@
 </div>
 {% endif %}
 {% endblock %}
+
+{% block extra_js %}
+<script>
+/* An "Absent - Excused" row must carry a remark or an attachment (the model
+   enforces this server-side in AttendanceRecord.clean()). Mirror it in the UI so
+   the teacher is guided before submitting instead of hitting a 500-style error. */
+(function () {
+  function baseOf(name) { return name.slice(0, name.length - 'status'.length); }
+  function rowFields(sel) {
+    var row = sel.closest('tr');
+    var b = baseOf(sel.getAttribute('name') || '');
+    return {
+      row: row,
+      remark: row ? row.querySelector('[name="' + b + 'remarks"]') : null,
+      file: row ? row.querySelector('[name="' + b + 'attachment"]') : null
+    };
+  }
+  var selects = Array.prototype.slice.call(
+    document.querySelectorAll('select[name$="-status"], select[name="status"]')
+  );
+  if (!selects.length) return;
+  function sync(sel) {
+    var f = rowFields(sel);
+    var on = sel.value === 'absent_excused';
+    [f.remark, f.file].forEach(function (el) {
+      var cell = el && el.closest('td');
+      if (cell) cell.style.background = on ? '#fffbeb' : '';
+    });
+  }
+  selects.forEach(function (sel) {
+    sync(sel);
+    sel.addEventListener('change', function () { sync(sel); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('form'), function (form) {
+    var mine = selects.filter(function (s) { return (s.form || s.closest('form')) === form; });
+    if (!mine.length) return;
+    form.addEventListener('submit', function (ev) {
+      var missing = [];
+      mine.forEach(function (sel) {
+        if (sel.value !== 'absent_excused') return;
+        var f = rowFields(sel);
+        var hasRemark = f.remark && f.remark.value.trim().length > 0;
+        var hasFile = f.file && f.file.files && f.file.files.length > 0;
+        if (!hasRemark && !hasFile) {
+          var cells = f.row ? f.row.querySelectorAll('td') : [];
+          missing.push(cells.length > 1 ? cells[1].textContent.trim() : 'a student');
+          if (f.row) f.row.style.background = '#fef2f2';
+        }
+      });
+      if (missing.length) {
+        ev.preventDefault();
+        alert('An excused absence needs a remark or an attachment for: ' + missing.join(', '));
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

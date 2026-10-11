@@ -1,15 +1,26 @@
 import csv
 import io
+import json
+from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Q
-from django.http import FileResponse, HttpResponseForbidden
+from django.http import FileResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.paginator import Paginator
+from django.views.decorators.csrf import csrf_protect
 
 from apps.accounts.decorators import has_permission, perm_required
+from apps.accounts.campus import (
+    WHOLE_SCHOOL,
+    assessments_for_campus,
+    campus_scopes_for,
+    scoped_classrooms,
+    sections_for_campus,
+    user_can_read_grade,
+)
 from apps.accounts.models import ActivityLog, StudentProfile, User
 from apps.academic_structure.models import AcademicYear, Section
 from apps.assessments.models import Assessment, AssessmentAssignment, Submission
@@ -21,6 +32,23 @@ from apps.virtual_classrooms.models import (
 
 from .forms import SFReportForm, SFReportTemplateForm
 from .models import GeneratedReport, SFReportTemplate
+
+
+def perm_required_any(*codenames):
+    """Restrict a view to users holding at least one permission codename."""
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not any(has_permission(request.user, c) for c in codenames):
+                return HttpResponseForbidden(
+                    "You do not have permission to access this page."
+                )
+            return view_func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def analytics_index(request):
@@ -35,10 +63,20 @@ def analytics_index(request):
 
 
 def _classrooms_for_user(user):
-    if user.is_superuser or user.groups.filter(name="tass_administrator").exists():
+    if user.is_superuser or user.groups.filter(name="quality_audit").exists():
         return VirtualClassroom.objects.select_related(
             "academic_year", "section", "subject", "teacher"
         ).all()
+    # Campus-bound principals read only their own grade band here too --
+    # otherwise the class-level redirect in ``analytics_index`` hands the
+    # Elementary Principal a Grade 11 classroom as their first link.
+    if user.groups.filter(name__in=("principal", "elementary_principal")).exists():
+        return scoped_classrooms(
+            VirtualClassroom.objects.select_related(
+                "academic_year", "section", "subject", "teacher"
+            ).all(),
+            user,
+        )
     if user.groups.filter(name="teacher").exists():
         return VirtualClassroom.objects.select_related(
             "academic_year", "section", "subject", "teacher"
@@ -68,6 +106,19 @@ def school_analytics(request):
     sections = Section.objects.all()
     submissions = Submission.objects.all()
     attendance = AttendanceRecord.objects.all()
+
+    # A campus-scoped reader (a principal) must see the school analytics of
+    # their own campus only; the numbers below are aggregated from the same
+    # base querysets, so cutting them here is the whole filter.
+    scopes = campus_scopes_for(request.user)
+    if WHOLE_SCHOOL not in scopes:
+        campus_vcs = scoped_classrooms(VirtualClassroom.objects.all(), request.user)
+        enrollments = enrollments.filter(virtual_classroom__in=campus_vcs)
+        sections = sections_for_campus(sections, scopes)
+        submissions = submissions.filter(
+            assessment_assignment__virtual_classroom__in=campus_vcs
+        )
+        attendance = attendance.filter(session__virtual_classroom__in=campus_vcs)
 
     if year_filter:
         enrollments = enrollments.filter(virtual_classroom__academic_year=year_filter)
@@ -100,6 +151,8 @@ def school_analytics(request):
     classrooms = VirtualClassroom.objects.select_related("section", "subject").filter(
         status=VirtualClassroom.STATUS_ACTIVE
     )
+    if WHOLE_SCHOOL not in scopes:
+        classrooms = scoped_classrooms(classrooms, request.user)
     if year_filter:
         classrooms = classrooms.filter(academic_year=year_filter)
 
@@ -135,6 +188,8 @@ def class_analytics(request, vc_pk):
         VirtualClassroom.objects.select_related("academic_year", "section", "subject", "teacher"),
         pk=vc_pk,
     )
+    if not user_can_read_grade(request.user, classroom.section.grade_level):
+        return HttpResponseForbidden("You cannot view this classroom's analytics.")
 
     student_ids = VirtualClassroomEnrollment.objects.filter(
         virtual_classroom=classroom,
@@ -205,6 +260,12 @@ def attendance_trends(request):
     years = AcademicYear.objects.all()
 
     records = AttendanceRecord.objects.all()
+    if WHOLE_SCHOOL not in campus_scopes_for(request.user):
+        records = records.filter(
+            session__virtual_classroom__in=scoped_classrooms(
+                VirtualClassroom.objects.all(), request.user
+            )
+        )
     if year_filter:
         records = records.filter(session__virtual_classroom__academic_year=year_filter)
 
@@ -234,6 +295,7 @@ def submission_reports(request):
     assessment_pk = request.GET.get("assessment")
     status_filter = request.GET.get("status")
 
+    scopes = campus_scopes_for(request.user)
     assessments = Assessment.objects.all()
     qs = (
         Submission.objects.select_related(
@@ -244,6 +306,10 @@ def submission_reports(request):
         )
         .order_by("-submitted_at")
     )
+    if WHOLE_SCHOOL not in scopes:
+        campus_vcs = scoped_classrooms(VirtualClassroom.objects.all(), request.user)
+        qs = qs.filter(assessment_assignment__virtual_classroom__in=campus_vcs)
+        assessments = assessments_for_campus(assessments, scopes)
 
     if assessment_pk:
         qs = qs.filter(assessment_assignment__assessment_id=assessment_pk)
@@ -321,7 +387,7 @@ def sf_report_home(request):
 
     reports = (
         GeneratedReport.objects.select_related("academic_year", "generated_by")
-        .filter(report_type__in=[GeneratedReport.TYPE_SF1, GeneratedReport.TYPE_SF2])
+        .filter(report_type__in=[GeneratedReport.TYPE_SF1, GeneratedReport.TYPE_SF2, GeneratedReport.TYPE_SF3])
         .order_by("-generated_at")
     )
     templates = SFReportTemplate.objects.select_related("uploaded_by").order_by("form_type", "name")
@@ -375,7 +441,7 @@ def _generate_sf_report(user, report_type, academic_year):
                 ]
             )
         scope = f"SF1 Learner Roster - {academic_year.label}"
-    else:
+    elif report_type == GeneratedReport.TYPE_SF2:
         writer.writerow(["School Form 2 (SF2) - Daily Attendance"])
         writer.writerow(["Academic Year:", academic_year.label])
         writer.writerow([])
@@ -405,6 +471,37 @@ def _generate_sf_report(user, report_type, academic_year):
                 ]
             )
         scope = f"SF2 Daily Attendance - {academic_year.label}"
+    elif report_type == GeneratedReport.TYPE_SF3:
+        writer.writerow(["School Form 3 (SF3) - Summary of Attendance"])
+        writer.writerow(["Academic Year:", academic_year.label])
+        writer.writerow([])
+        writer.writerow(["Student", "LRN", "Section", "Present", "Late", "Excused", "Unexcused", "Total"])
+        for e in students:
+            s = e.student
+            stats = AttendanceRecord.objects.filter(
+                student=s,
+                session__virtual_classroom__academic_year=academic_year,
+            ).aggregate(
+                present=Count("id", filter=Q(status=AttendanceRecord.PRESENT_ON_TIME)),
+                late=Count("id", filter=Q(status=AttendanceRecord.PRESENT_LATE)),
+                excused=Count("id", filter=Q(status=AttendanceRecord.ABSENT_EXCUSED)),
+                unexcused=Count("id", filter=Q(status=AttendanceRecord.ABSENT_UNEXCUSED)),
+            )
+            total = sum(v or 0 for v in stats.values())
+            writer.writerow(
+                [
+                    f"{s.last_name}, {s.first_name}",
+                    s.lrn,
+                    e.virtual_classroom.section.name,
+                    stats["present"],
+                    stats["late"],
+                    stats["excused"],
+                    stats["unexcused"],
+                    total,
+                ]
+            )
+        scope = f"SF3 Summary of Attendance - {academic_year.label}"
+
 
     content = buffer.getvalue()
     filename = f"{report_type}_{academic_year.label}.csv".replace("/", "-")
@@ -443,13 +540,83 @@ def report_download(request, pk):
     )
 
 
-@perm_required("analytics.manage_sf_report_templates")
+@perm_required_any(
+    "analytics.manage_sf_report_templates", "analytics.generate_sf_reports"
+)
 def sf_template_download(request, pk):
+    # Teachers generate SF2 directly from their dashboard and print the current
+    # school form, so an uploaded template has to be reachable by everyone who
+    # generates SF reports -- not only the administrator who uploaded it.
+    if not (
+        has_permission(request.user, "analytics.manage_sf_report_templates")
+        or has_permission(request.user, "analytics.generate_sf_reports")
+    ):
+        return HttpResponseForbidden("You do not have permission to download this template.")
     template = get_object_or_404(SFReportTemplate, pk=pk)
     return FileResponse(
         template.template_file.open("rb"),
         as_attachment=True,
         filename=template.template_file.name.rsplit("/", 1)[-1],
+    )
+
+
+@login_required
+@csrf_protect
+@perm_required("analytics.manage_sf_report_templates")
+def sf_template_upload(request):
+    """Upload one SF form template (JSON response, for the dashboard).
+
+    Multipart form fields: ``name``, ``form_type`` (default ``sf2``),
+    ``description`` and ``template_file``. The template becomes the active
+    override the moment it is stored and is picked up automatically by the
+    teacher dashboards, so no extra activation step is required.
+    """
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST required."}, status=405)
+
+    data = request.POST
+    name = (data.get("name") or "").strip()
+    form_type = (data.get("form_type") or SFReportTemplate.FORM_SF2).strip()
+    description = (data.get("description") or "").strip()
+    template_file = request.FILES.get("template_file")
+
+    if not name:
+        return JsonResponse({"ok": False, "error": "Template name is required."}, status=400)
+    if not template_file:
+        return JsonResponse({"ok": False, "error": "Choose a template file to upload."}, status=400)
+
+    valid_forms = {code for code, _label in SFReportTemplate.FORM_TYPE_CHOICES}
+    if form_type not in valid_forms:
+        return JsonResponse({"ok": False, "error": "Unknown SF form type."}, status=400)
+
+    template = SFReportTemplate.objects.create(
+        name=name,
+        form_type=form_type,
+        description=description,
+        template_file=template_file,
+        is_active=True,
+        uploaded_by=request.user,
+    )
+    try:
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f"Uploaded SF template: {name}",
+            related_entity_type="analytics.SFReportTemplate",
+            related_entity_id=template.pk,
+        )
+    except Exception:
+        pass
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "id": template.pk,
+            "name": template.name,
+            "form": template.form_type,
+            "active": True,
+            "at": template.uploaded_at.strftime("%b %d, %Y") if template.uploaded_at else "",
+            "message": f"SF template '{template.name}' uploaded. Teachers will use it automatically.",
+        }
     )
 
 
@@ -463,6 +630,7 @@ def sf_template_delete(request, pk):
         user=request.user,
         action=f"Deleted SF template: {name}",
         related_entity_type="analytics.SFReportTemplate",
+        related_entity_id=pk,
     )
     activity_log.save()
     messages.success(request, f"SF template '{name}' deleted.")

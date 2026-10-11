@@ -7,6 +7,7 @@
 <title>SVI LMS – Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
 <style>
   :root {
     --navy: #0a2463; --blue: #1e5faf; --sky: #3a86d4; --light-blue: #d6e8f7; --accent: #e8f0fc;
@@ -26,9 +27,12 @@
   body {
     font-family: 'Plus Jakarta Sans', sans-serif;
     min-height: 100vh;
+    min-height: 100dvh; /* follows the *visible* viewport, so the card never re-centers when the URL bar or soft keyboard resizes it */
     background: var(--navy);
     display: flex;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;   /* the page itself is the scroller — never clip content */
+    scrollbar-gutter: stable; /* keeps the layout from widening by one scrollbar when a modal locks body scroll */
   }
 
   /* ── LEFT PANEL ── */
@@ -155,12 +159,18 @@
     flex: 1;
     background: var(--white);
     display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
     padding: 44px 48px;
     position: relative;
-    overflow-y: auto;
+    /* No nested scroll container: the body scrolls, so there is one scroll
+       owner and the browser never has to pick between two boxes when the
+       soft keyboard opens. The panel grows with its content, which is what
+       keeps vertical centering from ever clipping the card. */
+    overflow: visible;
   }
 
-  .auth-container { width: 100%; max-width: 100x; }
+  .auth-container { width: 100%; max-width: 100%; }
 
   /* Mobile-only brand row (left panel is hidden below 900px) */
   .mobile-brand { display: none; align-items: center; gap: 10px; justify-content: center; margin: -4px 0 28px; }
@@ -184,7 +194,7 @@
   }
   .auth-header p { font-size: 14px; color: var(--g600); line-height: 1.6; }
 
-  .form-group { margin-bottom: 18px; position: relative; }
+  .form-group { margin-bottom: 14px; position: relative; }
   .form-label {
     display: block; font-size: 12px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .6px;
@@ -247,15 +257,22 @@
   /* With eye toggle, status icon shifts left */
   .has-eye .status-icon { right: 40px; }
 
-  /* Error / helper text */
+  /* Error / helper text.
+     The slot is ALWAYS in the layout (min-height) and only its visibility
+     toggles. Inserting/removing it on blur or on every keystroke used to
+     reflow the whole form — and because the card is vertically centered,
+     every insert re-centered the page, which is what made the login screen
+     jump while typing. */
   .field-msg {
-    font-size: 11.5px; margin-top: 5px;
-    display: none; align-items: center; gap: 5px;
+    font-size: 11.5px; margin-top: 4px;
+    display: flex; align-items: center; gap: 5px;
+    min-height: 16px;
+    visibility: hidden;
     animation: msgIn .2s ease;
   }
-  .field-msg.show { display: flex; }
+  .field-msg.show { visibility: visible; }
   .field-msg.err { color: var(--danger); }
-  .field-msg.hint { color: var(--g400); display: flex; }
+  .field-msg.hint { color: var(--g400); visibility: visible; }
   @keyframes msgIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 
   /* Forgot row */
@@ -464,6 +481,7 @@
     body {
       display: block;
       min-height: 100vh;
+      min-height: 100dvh;
       overflow-y: auto;
       background: var(--white);
     }
@@ -474,11 +492,19 @@
 
     .right-panel {
       min-height: 100vh;
+      min-height: 100dvh;
       width: 100%;
       padding: 42px 24px;
       align-items: center;
       justify-content: center;
-      overflow-y: visible;
+      overflow: visible;
+    }
+
+    /* 16px stops iOS Safari from auto-zooming the viewport the moment an
+       input is focused — the single biggest cause of "the page moves when I
+       type" on an iPhone. */
+    .form-control {
+      font-size: 16px;
     }
 
     .auth-container {
@@ -503,7 +529,10 @@
         url("{% static 'dashboards/img/sanvicente.jpg' %}");
       background-size: cover;
       background-position: center;
-      background-attachment: fixed;
+      /* NOT `fixed`: iOS has no real fixed-attachment support and repaints the
+         whole background whenever the viewport resizes for the soft keyboard,
+         which looks exactly like the page leaping. */
+      background-attachment: scroll;
     }
 
     .right-panel {
@@ -565,20 +594,38 @@
     }
 
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .form-control {
-      font-size: 13.5px;
+      /* 16px: prevents iOS focus auto-zoom (see the 900px block). */
+      font-size: 16px;
       padding-top: 10px;
       padding-bottom: 10px;
     }
 
+    /* Remember Me (left) and Forgot Password (right) must stay on one row on
+       phones too — stacking them made the link easy to miss. */
     .forgot-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
       margin-bottom: 16px;
+      flex-wrap: nowrap;
+    }
+
+    .forgot-row label {
+      min-width: 0;
+    }
+
+    .forgot-row label span {
+      white-space: nowrap;
+    }
+
+    .forgot-row .link-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .btn-submit {
@@ -660,10 +707,8 @@
     }
   }
 
-  /* Slight rightward nudge for the sign-in form (tablets/laptops/desktops) */
-  @media (min-width: 601px) {
-    .auth-container { transform: translateX(18px); }
-  }
+  /* The card sits flush in its column: the 18px rightward nudge used to
+     make the panel scroll horizontally on Windows/trackpads. */
 
   /* Laptops / desktops: photo panel on the left, all login content on the white right panel */
   @media (min-width: 901px) {
@@ -736,7 +781,7 @@
     /* RIGHT: fully white panel holding all content */
     .right-panel {
       flex: 1;
-      overflow-y: auto;
+      overflow: visible;   /* body is the only scroller — see the note above */
       padding: 56px 32px;
       background: #eef4fc;
     }
@@ -905,12 +950,13 @@
     align-items: center;
     justify-content: center;
     flex-basis: 100%;
-    white-space: nowrap;
+    white-space: normal;   /* lets a long link pair wrap instead of overflowing */
+    text-align: center;
   }
 
   .footer-links a {
     display: inline;
-    white-space: nowrap;
+    white-space: normal;
     padding: 0;
     border: none;
     background: none;
@@ -945,7 +991,8 @@
   .page-footer p {
     font-size: 12px;
     color: var(--g400);
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
     margin: 0;
   }
 
@@ -1648,6 +1695,165 @@ canvas{ max-width:100% !important; }
 @media (max-width:420px){
   .header-right{gap:4px;}
 }
+
+/* =========================================================
+   STABILITY LAYER — keep last so it wins the cascade
+   ========================================================= */
+
+/* Toasts float over the page. They used to be injected in normal flow right
+   above the form, which pushed the vertically-centred card down at the exact
+   moment the user tapped Sign In. */
+#login-toast-area,
+#forgot-toast-area {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 24px));
+  z-index: 1200;
+  pointer-events: none;
+}
+#login-toast-area .toast,
+#forgot-toast-area .toast { pointer-events: auto; }
+
+/* The About / Contact modals set display:none inline and the JS only ever
+   adds .show — without this they never opened. */
+#aboutModal.show,
+#contactModal.show {
+  display: flex !important;
+}
+body.modal-open { overflow: hidden; }
+
+/* Tablet-width modal tidy-up (the <=600px block below only fired on phones). */
+@media (max-width: 900px) {
+  #aboutModal,
+  #contactModal {
+    padding: 16px !important;
+    align-items: flex-start !important;
+    overflow-y: auto;
+  }
+
+  #aboutModal > div,
+  #contactModal > div {
+    margin: auto 0;
+  }
+
+  #aboutModal [style*="grid-template-columns:1fr 1fr"],
+  #contactModal [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  #aboutModal p[style*="padding-left:46px"],
+  #contactModal div[style*="padding-left:46px"] {
+    padding-left: 0 !important;
+  }
+}
+
+/* Nothing on this page may force a horizontal scrollbar. */
+.auth-container,
+.right-panel,
+.page {
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   FIT TO SCREEN — the login page occupies exactly one viewport.
+   Kept last so it wins the cascade at every breakpoint and in every
+   browser. The page itself never scrolls: `body` is locked to the
+   visible viewport with `overflow: hidden`, both panels are sized to
+   that same height (`100dvh` where available, `100vh` as the fallback
+   for older Safari/browsers), and the auth card is centered with auto
+   margins — the one centring technique that never clips the top of the
+   card. On genuinely short windows (small laptop, zoomed-in, landscape
+   phone) the *panel* scrolls as a safety net instead of the page.
+   ========================================================= */
+html {
+  height: 100%;
+}
+
+body {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  margin: 0;
+}
+
+.left-panel,
+.right-panel {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;      /* allow shrink so the row is never taller than the screen */
+  max-height: none;
+}
+
+.right-panel {
+  overflow-y: auto;   /* safety net for short / zoomed windows */
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+}
+
+.auth-container {
+  margin: auto;       /* centers the card both ways without ever clipping it */
+}
+
+/* Compress the right column so the form fits — no page or panel scroll —
+   on ordinary laptop/desktop viewports (~660px tall and up). */
+@media (min-width: 901px) {
+  .right-panel {
+    padding-top: clamp(20px, 3.5vh, 42px);
+    padding-bottom: clamp(20px, 3.5vh, 42px);
+  }
+  .right-logo-row { margin-bottom: 14px; }
+  .right-logo-row .logo-box { width: clamp(72px, 10vh, 104px); height: clamp(72px, 10vh, 104px); }
+  .right-logo-row .right-logo-title .big { font-size: clamp(22px, 2.6vw, 30px); }
+  .desktop-login-header { margin-bottom: 12px; }
+  .desktop-login-header h2 { font-size: clamp(21px, 2.6vw, 26px); margin-bottom: 4px; }
+  .desktop-login-header p { font-size: 12px; line-height: 1.5; }
+  .auth-header { margin-bottom: 16px; }
+  .form-group { margin-bottom: 12px; }
+  .forgot-row { margin-bottom: 12px; }
+  .btn-submit { min-height: 46px; margin-bottom: 10px; }
+  .page-footer { margin-top: 10px; padding-top: 10px; }
+}
+
+/* =========================================================
+   LOGIN BUTTON LABEL — always visible, every screen size.
+   The label lives in #login-btn-text; it is pinned so it can never be
+   pushed out by the leading spinner/icon or clipped by the button's
+   overflow:hidden. Kept last so it wins the cascade on mobile too.
+   ========================================================= */
+.btn-submit {
+  min-height: 46px;
+  min-width: 120px;
+  line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.btn-submit #login-btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff !important;
+  font-weight: 700;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-submit #login-btn-icon,
+.btn-submit .spinner {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .btn-submit {
+    min-height: 48px;
+    font-size: 15px;
+  }
+}
 </style>
 
 </head>
@@ -1717,7 +1923,11 @@ canvas{ max-width:100% !important; }
         </div>
       </div>
 
-      <div class="forgot-row">
+      <div class="forgot-row" style="justify-content: space-between; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--g600); cursor: pointer;">
+          <input type="checkbox" id="remember-me" style="width: 16px; height: 16px; cursor: pointer;">
+          <span>Remember me</span>
+        </label>
         <button class="link-btn" onclick="showPage('page-forgot')">Forgot password?</button>
       </div>
 
@@ -2150,6 +2360,7 @@ canvas{ max-width:100% !important; }
 
     const email = val('login-email');
     const password = val('login-pass');
+    const rememberMe = document.getElementById('remember-me') && document.getElementById('remember-me').checked;
 
     fetch("{% url 'accounts:login' %}", {
       method: "POST",
@@ -2157,7 +2368,7 @@ canvas{ max-width:100% !important; }
         "Content-Type": "application/json",
         "X-CSRFToken": getCookie("csrftoken"),
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember_me: rememberMe }),
     })
       .then(res => res.json().then(data => ({ status: res.status, data })))
       .then(({ status, data }) => {

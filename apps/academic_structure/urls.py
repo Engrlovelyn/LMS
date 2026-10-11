@@ -15,6 +15,12 @@ urlpatterns = [
     path("sections/add/", views.section_add, name="section_add"),
     path("sections/<int:pk>/update/", views.section_update, name="section_update"),
     path("sections/<int:pk>/archive/", views.section_archive, name="section_archive"),
+    path("sections/<int:pk>/students/", views.section_students, name="section_students"),
+    path(
+        "sections/<int:pk>/students/<int:enrollment_pk>/remove/",
+        views.section_student_remove,
+        name="section_student_remove",
+    ),
     path("subjects/", views.subject_list, name="subject_list"),
     path("subjects/add/", views.subject_add, name="subject_add"),
     path("subjects/<int:pk>/update/", views.subject_update, name="subject_update"),

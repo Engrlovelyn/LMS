@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Verify Email{% endblock %}
+{% block extra_head %}
+{% if ok %}<meta http-equiv="refresh" content="5;url={{ next_url }}">{% endif %}
+{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
@@ -12,11 +15,23 @@
   <div class="card-body text-center" style="padding:48px 32px;">
     {% if ok %}
     <div style="margin-bottom:18px;"><i class="fa-solid fa-circle-check" style="font-size:44px;color:var(--success);"></i></div>
-    <h2 style="margin:0 0 8px;">Email verified</h2>
+    <h2 style="margin:0 0 8px;">Email successfully verified</h2>
     <p style="color:var(--text-muted);margin:0 0 24px;">
       {% if email %}Your address {{ email }} has been verified successfully.{% else %}Your email address has been verified successfully.{% endif %}
     </p>
-    <a class="btn btn-primary" href="{% url 'accounts:login_page' %}">Go to Sign In</a>
+    <p style="color:var(--text-muted);margin:0 0 24px;font-size:13px;">You can now continue to login or change your password.</p>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a class="btn btn-primary" href="{% if next_url %}{{ next_url }}{% else %}{% url 'accounts:login_page' %}{% endif %}">Continue to Login</a>
+      <a class="btn btn-outline" href="{% url 'accounts:login_page' %}?reset=1">Change Password</a>
+    </div>
+    {% elif expired %}
+    <div style="margin-bottom:18px;"><i class="fa-solid fa-hourglass-end" style="font-size:44px;color:var(--warning);"></i></div>
+    <h2 style="margin:0 0 8px;">Link expired</h2>
+    <p style="color:var(--text-muted);margin:0 0 24px;">
+      Your verification link has already expired (48-hour limit).<br>
+      Please visit the ICT Office for assistance.
+    </p>
+    <a class="btn btn-outline" href="{% url 'accounts:login_page' %}">Back to Sign In</a>
     {% else %}
     <div style="margin-bottom:18px;"><i class="fa-solid fa-triangle-exclamation" style="font-size:44px;color:var(--danger);"></i></div>
     <h2 style="margin:0 0 8px;">Link expired or invalid</h2>
