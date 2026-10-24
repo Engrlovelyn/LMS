@@ -2366,7 +2366,7 @@ def profile(request):
     changed = False
 
     if email and email != request.user.email and User.objects.filter(email=email).exclude(pk=request.user.pk).exists():
-        return _err("That email address is already in use by another account.", status=409)
+        return _err("That email address is already in use by another account.", status=200)
 
     employee = _employee(request.user)
     if employee is not None:

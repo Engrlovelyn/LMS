@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth import get_user_model
 
 from apps.accounts.models import StudentProfile
 from apps.academic_structure.models import AcademicYear, Section, Subject
@@ -106,6 +107,11 @@ class VirtualClassroomForm(forms.ModelForm):
             widget=TeacherSelect(attrs={"class": "form-control"}),
             help_text="Every active teacher in the school is listed. Search or filter by grade to narrow the list.",
         )
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        teachers_all = User.objects.filter(groups__name="teacher")
+        self.fields["teacher"].queryset = teachers_all | teacher_qs
+        self.fields["teacher"].queryset = self.fields["teacher"].queryset.distinct()
 
     def clean(self):
         cleaned = super().clean()
