@@ -40,6 +40,7 @@ urlpatterns = [
     path("learning-resources/attach/", views.attach_learning_resource, name="api_learning_resource_attach"),
     path("attendance/", views.attendance, name="api_attendance"),
     path("submissions/", views.submissions, name="api_submissions"),
+    path("submissions/autosave/", views.submission_autosave, name="api_submission_autosave"),
     path("remind/", views.remind, name="api_remind"),
     path("submission-file/<int:pk>/", views.submission_file, name="api_submission_file"),
     path("manual-grade/", views.manual_grade, name="api_manual_grade"),

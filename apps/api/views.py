@@ -2530,6 +2530,67 @@ def submissions(request):
     return _ok(submission_id=submission.pk, created=created, violations=violations)
 
 
+@login_required
+@require_POST
+def submission_autosave(request):
+    """Periodically save student answers as a draft (autosave)."""
+    from apps.assessments.models import AssessmentAssignment, Submission, SubmissionResponse
+
+    student = _student(request.user)
+    if student is None:
+        return _err("Only students can save drafts.", 403)
+
+    data = _payload(request)
+    aid = data.get("assessment_id")
+    if not aid or not str(aid).isdigit():
+        return _err("assessment_id is required.")
+    assignment = AssessmentAssignment.objects.filter(
+        assessment_id=int(aid)
+    ).select_related("assessment").first()
+    if assignment is None:
+        return _err("Assessment not found.", 404)
+    enrolled = VirtualClassroomEnrollment.objects.filter(
+        student=student,
+        virtual_classroom_id=assignment.virtual_classroom_id,
+        status=STATUS_ACTIVE,
+    ).exists()
+    if not enrolled:
+        return _err("You are not enrolled in this class.", 403)
+
+    assessment = assignment.assessment
+    if assessment.status == Assessment.STATUS_ARCHIVED:
+        return _err("This assessment is no longer accepting submissions.", 403)
+    now = timezone.now()
+    if assessment.available_at and assessment.available_at > now:
+        return _err("This assessment is not yet available.", 403)
+    if assessment.submission_deadline and assessment.submission_deadline < now:
+        return _err("The submission deadline has passed.", 403)
+
+    submission, created = Submission.objects.get_or_create(
+        assessment_assignment=assignment,
+        student=student,
+    )
+    if not created and (submission.responses.exists() or submission.attached_file):
+        return _err("You have already submitted this assessment.", 409)
+
+    answers = data.get("answers") or {}
+    parts = list(assessment.parts.order_by("order"))
+    for part in parts:
+        pkey = str(part.pk)
+        part_data = answers.get(pkey) if isinstance(answers, dict) else None
+        if part_data is None and isinstance(answers, dict):
+            part_data = answers.get(part.pk)
+        if part_data is None:
+            continue
+        response, _ = SubmissionResponse.objects.get_or_create(
+            submission=submission,
+            part=part,
+        )
+        response.response_data = part_data
+        response.save(update_fields=["response_data"])
+    return _ok(saved=True, submission_id=submission.pk)
+
+
 # ---------------------------------------------------------------------------
 # POST /api/remind/ — a teacher nudges students who have not submitted.
 #

@@ -1840,6 +1840,7 @@ function updateProgress() {
     const drafts = readStore(STORAGE.quizDraft, {});
     drafts[quizAssessmentKey] = { answers: quizAnswers, savedAt: new Date().toISOString(), title: quizAssessmentTitle };
     writeStore(STORAGE.quizDraft, drafts);
+    try { autosaveQuizProgress(); } catch(e){}
   }
 }
 function startQuizTimer(minutes) {
@@ -1855,8 +1856,26 @@ function startQuizTimer(minutes) {
       if (quizSeconds <= 300) el.style.color = '#f0ac3a';
       if (quizSeconds <= 60)  el.style.color = '#dc2626';
     }
+    if (quizSeconds % 30 === 0 && quizSeconds > 0) {
+      try { autosaveQuizProgress(); } catch(e){}
+    }
     if (quizSeconds <= 0) { clearInterval(quizTimer); submitQuiz(); }
   }, 1000);
+}
+let _autosaveInFlight = false;
+function autosaveQuizProgress() {
+  if (quizSubmitted || _autosaveInFlight) return;
+  if (!quizAssessmentId) return;
+  try {
+    _autosaveInFlight = true;
+    const payload = { assessment_id: quizAssessmentId, answers: quizAnswers };
+    fetch('/api/submissions/autosave/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': msgCsrf() },
+      body: JSON.stringify(payload)
+    }).catch(function(){}).finally(function(){ _autosaveInFlight = false; });
+  } catch(e) { _autosaveInFlight = false; }
 }
 function submitQuiz() {
   if (quizSubmitted) return;
