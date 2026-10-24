@@ -4,7 +4,58 @@ from apps.accounts.models import StudentProfile
 from apps.academic_structure.models import AcademicYear, Section, Subject
 
 from .models import VirtualClassroom
-from .services import teacher_conflict_in_section
+from .services import assignable_teachers, teacher_conflict_in_section
+
+
+def _teacher_meta(teacher):
+    """Grade levels and subjects a teacher already handles, for the picker."""
+    rooms = list(teacher.teaching_classrooms.all())
+    grades = sorted(
+        {room.section.grade_level for room in rooms if room.section_id}
+    )
+    subjects = sorted({room.subject.name for room in rooms if room.subject_id})
+    advised = sorted(
+        {section.grade_level for section in teacher.advised_sections.all()}
+    )
+    return grades, subjects, advised
+
+
+class TeacherChoiceField(forms.ModelChoiceField):
+    """Show a teacher's name plus the grades/subjects they already handle."""
+
+    def label_from_instance(self, obj):
+        name = obj.get_full_name() or obj.email
+        grades, subjects, advised = _teacher_meta(obj)
+        details = []
+        if grades:
+            details.append("Grades " + ", ".join(str(g) for g in grades))
+        elif advised:
+            details.append("Adviser of Grade " + ", ".join(str(g) for g in advised))
+        if subjects:
+            shown = subjects[:3]
+            text = ", ".join(shown)
+            if len(subjects) > len(shown):
+                text += " +{} more".format(len(subjects) - len(shown))
+            details.append(text)
+        return "{} — {}".format(name, "; ".join(details)) if details else name
+
+
+class TeacherSelect(forms.Select):
+    """Select widget that tags each option with searchable metadata."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        instance = getattr(value, "instance", None)
+        if instance is not None:
+            grades, subjects, advised = _teacher_meta(instance)
+            option["attrs"]["data-grades"] = ",".join(
+                str(g) for g in sorted(set(grades) | set(advised))
+            )
+            option["attrs"]["data-name"] = (
+                instance.get_full_name() or instance.email or ""
+            ).lower()
+            option["attrs"]["data-subjects"] = ",".join(subjects).lower()
+        return option
 
 
 class VirtualClassroomForm(forms.ModelForm):
@@ -16,6 +67,7 @@ class VirtualClassroomForm(forms.ModelForm):
             "subject",
             "teacher",
             "grading_period",
+            "schedule",
             "theme_color",
             "background_image",
             "status",
@@ -31,6 +83,29 @@ class VirtualClassroomForm(forms.ModelForm):
         self.fields["academic_year"].queryset = AcademicYear.objects.filter(status="ACTIVE")
         self.fields["section"].queryset = Section.objects.filter(status="ACTIVE")
         self.fields["subject"].queryset = Subject.objects.filter(status="ACTIVE")
+        # The advisor picker must offer every eligible teacher in the school,
+        # not just the ones already attached to this section. Grade levels and
+        # subjects are shown as context only; they never remove a teacher from
+        # the list, so a teacher who has not yet taught a grade can still be
+        # assigned to it.
+        teacher_qs = (
+            assignable_teachers()
+            .select_related("employee_profile")
+            .prefetch_related(
+                "teaching_classrooms__section",
+                "teaching_classrooms__subject",
+                "advised_sections",
+            )
+            .order_by("employee_profile__last_name", "employee_profile__first_name", "email")
+        )
+        self.fields["teacher"] = TeacherChoiceField(
+            queryset=teacher_qs,
+            required=False,
+            label="Advisor / Teacher",
+            empty_label="— Select a teacher —",
+            widget=TeacherSelect(attrs={"class": "form-control"}),
+            help_text="Every active teacher in the school is listed. Search or filter by grade to narrow the list.",
+        )
 
     def clean(self):
         cleaned = super().clean()

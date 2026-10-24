@@ -56,6 +56,18 @@ class Command(BaseCommand):
     help = "Seed representative demo data for pilot testing"
 
     def handle(self, *args, **kwargs):
+        # DISABLED: this demo seeder writes sections, subjects, classrooms,
+        # topics, assessments, attendance and announcements. It is turned off so
+        # a deploy or seed run cannot repopulate the assessment, attendance, TLA
+        # or announcement data the team is going to enter themselves. Remove
+        # these two lines to re-enable.
+        self.stdout.write(
+            self.style.WARNING(
+                "seed_demo_data is disabled; no demo rows were created."
+            )
+        )
+        return
+
         ay = AcademicYear.objects.filter(status="ACTIVE").first()
         if not ay:
             self.stdout.write(self.style.ERROR("No active Academic Year. Create one first."))

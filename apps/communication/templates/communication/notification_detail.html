@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ notification.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ notification.title }}</h1>
+    <p class="page-sub">
+      {{ notification.created_at|date:"M d, Y · g:i A" }}
+      {% if notification.virtual_classroom %} &middot; {{ notification.virtual_classroom }}{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'communication:notifications' %}">
+    <i class="fa-solid fa-arrow-left"></i> All notifications
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid {% if notification.notification_type == 'announcement' %}fa-bullhorn{% elif notification.notification_type == 'material' %}fa-book-open{% elif notification.notification_type == 'attendance' %}fa-calendar-xmark{% elif notification.notification_type == 'assessment' %}fa-file-pen{% else %}fa-bell{% endif %}"></i>
+      {% if announcement %}Class Announcement{% else %}Notification{% endif %}
+    </div>
+  </div>
+  <div class="card-body" style="font-size:14px;line-height:1.6;">
+    {% if announcement %}
+      {{ announcement.content|linebreaksbr }}
+    {% else %}
+      {{ notification.message|linebreaksbr }}
+    {% endif %}
+  </div>
+  <div class="card-body" style="border-top:1px solid var(--card-border);display:flex;gap:10px;flex-wrap:wrap;">
+    {% if not announcement %}
+      {% if view_url %}
+      <a class="btn btn-primary" href="{{ view_url }}">
+        <i class="fa-solid fa-eye"></i> View Answers &amp; Score
+      </a>
+      {% endif %}
+      {% if open_target %}
+      <a class="btn btn-outline" href="{{ open_target }}">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+      </a>
+      {% elif notification.url %}
+      <a class="btn btn-outline" href="{{ notification.url }}">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+      </a>
+      {% endif %}
+    {% endif %}
+    <a class="btn btn-outline" href="{% url 'communication:notifications' %}">
+      <i class="fa-solid fa-bell"></i> Back to notifications
+    </a>
+  </div>
+</div>
+{% endblock %}

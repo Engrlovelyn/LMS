@@ -18,6 +18,7 @@ import json
 import re
 from datetime import date
 from pathlib import Path
+from unittest import mock
 
 from django.contrib.auth.models import Group, Permission
 from django.core.management import call_command
@@ -660,3 +661,47 @@ class DemographicsTests(SystemAdminFixture):
         self.assertIn("'/analytics/sf/templates/upload/'", upload)
         self.assertIn("FormData", upload)
         self.assertIn("'template_file'", upload)
+
+
+class SystemAdminCreatesStudentAccountTests(SystemAdminFixture):
+    """The Add User modal must be able to create a learner, not only employees."""
+
+    TEMPLATE = (
+        Path(__file__).resolve().parents[2] / "templates" / "frontend" / "system_admin.html"
+    )
+
+    def test_add_user_modal_offers_a_student_account_type(self):
+        source = self.TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn('id="addAccountType"', source)
+        self.assertIn("value=\"student\"", source)
+        # The submit handler dispatches on the chosen type and the student path
+        # posts to the dedicated endpoint.
+        self.assertIn("function submitCreateAccount", source)
+        self.assertIn("function submitCreateStudent", source)
+        self.assertIn("'/api/students/create/'", source)
+
+    def test_student_created_from_dashboard_appears_in_accounts(self):
+        admin = self.login_admin()
+        with mock.patch("apps.accounts.email_branding.send_html_email", return_value=1):
+            resp = self.client.post(
+                reverse("api_student_create"),
+                data={
+                    "name": "Ana Reyes",
+                    "first_name": "Ana",
+                    "last_name": "Reyes",
+                    "email": "ana.reyes@tass.test",
+                    "lrn": "107632190045",
+                    "birthdate": "2012-05-04",
+                    "sex": "F",
+                },
+            )
+        self.assertEqual(resp.status_code, 200, resp.content)
+
+        payload = system_admin_context(admin)["dashboard_json"]
+        account = next(
+            a for a in payload["accounts"] if a["email"] == "ana.reyes@tass.test"
+        )
+        # A student's identifier shows in the "Employee" column as the LRN, and
+        # the row carries the Student role so it lands in the Students bucket.
+        self.assertEqual(account["emp"], "107632190045")
+        self.assertIn("student", account["role_codes"])

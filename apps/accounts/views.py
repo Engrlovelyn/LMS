@@ -77,8 +77,6 @@ def logout_view(request):
     return redirect("accounts:login_page")
 
 
-@csrf_protect
-@require_http_methods(["POST"])
 def _send_new_device_notice(user, device_info, ip_address):
     """Send the courtesy "new device" email off the request path.
 
@@ -206,6 +204,19 @@ def login_view(request):
 
     role_assignment = min(role_assignments, key=_role_priority)
 
+    # The System Administrator is the account used to run recovery actions
+    # (unlock a locked account, issue a temporary password) while a demo or
+    # support session is in progress. Enforcing one device on *that* account
+    # silently ends the browser the administrator is working from as soon as
+    # they sign in somewhere else, which surfaced as "Authentication required"
+    # the next time they clicked Unlock. Superusers and the system_admin role
+    # are therefore allowed concurrent devices; everyone else keeps the
+    # one-active-device rule.
+    is_system_admin = (
+        authenticated_user.is_superuser
+        or role_assignment.role.code == "system_admin"
+    )
+
     # ------------------------------------------------------------------
     # One active device per account (non-functional requirement).
     #
@@ -227,39 +238,40 @@ def login_view(request):
             locked_users = locked_users.select_for_update()
         locked_user = locked_users.get(pk=authenticated_user.pk)
 
-        existing = session_guard.active_session_for(locked_user)
-        # Re-authenticating inside the browser that already holds the session
-        # (or as the same user) must never lock the person out of their own
-        # account; only a *different* device is rejected.
-        same_client = existing is not None and (
-            (current_session_key and existing.session_key == current_session_key)
-            or (
-                request.user.is_authenticated
-                and request.user.pk == authenticated_user.pk
+        if not is_system_admin:
+            existing = session_guard.active_session_for(locked_user)
+            # Re-authenticating inside the browser that already holds the session
+            # (or as the same user) must never lock the person out of their own
+            # account; only a *different* device is rejected.
+            same_client = existing is not None and (
+                (current_session_key and existing.session_key == current_session_key)
+                or (
+                    request.user.is_authenticated
+                    and request.user.pk == authenticated_user.pk
+                )
             )
-        )
-        if existing is not None and not same_client:
-            ActivityLog.objects.create(
-                user=locked_user,
-                action="login_blocked_active_session",
-                related_entity_type="User",
-                related_entity_id=locked_user.pk,
-            )
-            return JsonResponse(
-                {
-                    "ok": False,
-                    "reason": "active_session",
-                    "message": session_guard.ACTIVE_SESSION_MESSAGE,
-                },
-                status=409,
-            )
+            if existing is not None and not same_client:
+                ActivityLog.objects.create(
+                    user=locked_user,
+                    action="login_blocked_active_session",
+                    related_entity_type="User",
+                    related_entity_id=locked_user.pk,
+                )
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "reason": "active_session",
+                        "message": session_guard.ACTIVE_SESSION_MESSAGE,
+                    },
+                    status=409,
+                )
 
-        # This device now owns the account: drop every *other* device row but
-        # keep the one this request is carrying, so Django can still save the
-        # session on the way out.
-        session_guard.release_other_sessions(
-            locked_user, keep_session_key=current_session_key
-        )
+            # This device now owns the account: drop every *other* device row but
+            # keep the one this request is carrying, so Django can still save the
+            # session on the way out.
+            session_guard.release_other_sessions(
+                locked_user, keep_session_key=current_session_key
+            )
 
         remember_me = bool(payload.get("remember_me"))
         if remember_me:

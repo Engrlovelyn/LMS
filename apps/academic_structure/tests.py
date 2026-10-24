@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.assessments.models import Assessment, AssessmentAssignment
@@ -13,7 +14,7 @@ from apps.communication.models import ClassAnnouncement
 from apps.teaching_learning.models import LearningResource, LearningResourcePlacement, Topic
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
-from .models import AcademicStructureVersion, AcademicYear, Section, Subject
+from .models import AcademicStructureVersion, AcademicYear, Section, StudentEnrollment, Subject
 from .services import rollover_year
 
 User = get_user_model()
@@ -492,3 +493,63 @@ class YearRolloverTestCase(TestCase):
         )
         self.assertEqual(res.status_code, 302)
         self.assertTrue(Section.objects.filter(academic_year=self.current, name="Newton").exists())
+
+
+class StudentEnrollmentUpdateTestCase(TestCase):
+    """Update Student Enrollment -- move a learner to another section / archive."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = get_user_model().objects.create_superuser(
+            email="sa@tass.test", password="pass"
+        )
+        cls.admin.status = get_user_model().Status.ACTIVE
+        cls.admin.save()
+        cls.year = AcademicYear.objects.create(
+            label="2026-2027", start_date=date(2026, 6, 1), end_date=date(2027, 3, 31),
+        )
+        cls.section_a = Section.objects.create(
+            academic_year=cls.year, name="Newton", grade_level=8,
+        )
+        cls.section_b = Section.objects.create(
+            academic_year=cls.year, name="Einstein", grade_level=8,
+        )
+        user = get_user_model().objects.create_user(
+            email="student@tass.test", password="pass",
+        )
+        cls.student = StudentProfile.objects.create(
+            user=user, lrn="123456789099", first_name="Juan", last_name="Dela Cruz",
+            birthdate=date(2008, 1, 1),
+        )
+        cls.enrollment = StudentEnrollment.objects.create(
+            student=cls.student, academic_year=cls.year, section=cls.section_a,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_move_student_to_another_section(self):
+        res = self.client.post(
+            reverse(
+                "academic:student_enrollment_update",
+                args=[self.section_a.pk, self.enrollment.pk],
+            ),
+            {"section": self.section_b.pk, "status": StudentEnrollment.STATUS_ENROLLED},
+        )
+        self.assertEqual(res.status_code, 302)
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.enrollment.section, self.section_b)
+        self.assertEqual(self.enrollment.status, StudentEnrollment.STATUS_ENROLLED)
+
+    def test_archive_enrollment_sets_archived_at(self):
+        res = self.client.post(
+            reverse(
+                "academic:student_enrollment_update",
+                args=[self.section_a.pk, self.enrollment.pk],
+            ),
+            {"section": self.section_a.pk, "status": StudentEnrollment.STATUS_ARCHIVED},
+        )
+        self.assertEqual(res.status_code, 302)
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.enrollment.status, StudentEnrollment.STATUS_ARCHIVED)
+        self.assertIsNotNone(self.enrollment.archived_at)

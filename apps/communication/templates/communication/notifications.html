@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Notifications</h1>
+    <p class="page-sub">
+      {{ unread_count }} unread · {{ notifications|length }} total
+    </p>
+  </div>
+  <div class="row-actions">
+    {% if unread_count %}
+    <form method="post" action="{% url 'communication:notification_mark_all_read' %}">
+      {% csrf_token %}
+      <button class="btn btn-outline" type="submit">
+        <i class="fa-solid fa-check-double"></i> Mark all read
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-bell"></i> Recent Activity</div>
+  </div>
+  <div id="notificationPageList">
+    {% for n in notifications %}
+    <div class="notif-item {% if not n.is_read %}notif-unread{% endif %}"
+         style="display:flex;gap:10px;align-items:flex-start;">
+      <a href="{% url 'communication:notification_open' n.pk %}"
+         style="text-decoration:none;display:flex;gap:10px;color:inherit;flex:1;min-width:0;">
+        <div class="notif-dot-icon" style="background:#eef2ff;color:#4f46e5;">
+          <i class="fa-solid {% if n.notification_type == 'announcement' %}fa-bullhorn{% elif n.notification_type == 'material' %}fa-book-open{% elif n.notification_type == 'attendance' %}fa-calendar-xmark{% else %}fa-file-pen{% endif %}"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="notif-text" style="font-weight:600;">{{ n.title }}</div>
+          <div class="notif-text" style="color:var(--text-muted);">{{ n.message }}</div>
+          <div class="notif-time">{{ n.created_at|date:"M d, Y · g:i A" }}</div>
+        </div>
+      </a>
+      {% if not n.is_read %}<span class="badge-dot" style="position:static;border:none;"></span>{% endif %}
+      {% if n.notification_type == 'assessment' and n.source_type == 'assessment' and n.source_id %}
+      <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_result' n.source_id %}"
+         style="align-self:center;flex-shrink:0;padding:4px 10px;font-size:11.5px;text-decoration:none;">
+        <i class="fa-solid fa-eye"></i> View
+      </a>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="notif-empty" style="padding:32px;text-align:center;color:var(--text-muted);">
+      <i class="fa-solid fa-bell-slash" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>
+      No notifications yet.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

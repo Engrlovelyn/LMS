@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}User Account{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">User Account</h1>
+    <p class="page-sub">View and update this account's credentials and status.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'accounts:employee_account_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Accounts
+  </a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ account_user.get_full_name|default:account_user.email }}</div>
+    <div class="lbl">Account Holder</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ profile_type }}</div>
+    <div class="lbl">Account Type</div>
+  </div>
+  <div class="stat-card">
+    <div class="val"><span class="pill {{ account_user.status|lower }}">{{ account_user.get_status_display }}</span></div>
+    <div class="lbl">Status</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-id-card"></i> Account Details</div>
+  </div>
+  <div class="card-body">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" value="{{ account_user.email }}" readonly>
+      </div>
+      {% if profile %}
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input class="form-control" value="{{ account_user.get_full_name }}" readonly>
+      </div>
+      {% endif %}
+      <div class="form-group">
+        <label class="form-label">Created</label>
+        <input class="form-control" value="{{ account_user.date_created|date:'Y-m-d H:i' }}" readonly>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Roles</label>
+        <div>
+          {% for assignment in assignments %}
+          <span class="pill">{{ assignment.role }} ({{ assignment.academic_year.label }})</span>
+          {% empty %}
+          <span class="page-sub">No role assignments.</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if can_update %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-pen"></i> Update Account</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-save"></i> Save Account
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if can_reactivate and account_user.status == 'archived' %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-rotate-right"></i> Reactivate Account</div>
+  </div>
+  <div class="card-body">
+    <p>This account is archived. Reactivating restores the user's sign-in access and role.</p>
+    <form method="post" action="{% url 'accounts:account_reactivate' account_user.pk %}" class="inline-form"
+      onsubmit="return confirm('Reactivate this account?')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-rotate-right"></i> Reactivate
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

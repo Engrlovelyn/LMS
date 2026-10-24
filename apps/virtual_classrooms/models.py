@@ -21,6 +21,7 @@ class VirtualClassroom(models.Model):
         "accounts.User", on_delete=models.PROTECT, null=True, blank=True, related_name="teaching_classrooms"
     )
     grading_period = models.CharField(max_length=15, blank=True, help_text="e.g. 1ST_TRIMESTER")
+    schedule = models.CharField(max_length=100, blank=True, help_text="e.g. Mon–Wed 8:00–9:30 AM")
     theme_color = models.CharField(max_length=7, default="#4F46E5")
     background_image = models.ImageField(upload_to="vc_backgrounds/", null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ACTIVE)

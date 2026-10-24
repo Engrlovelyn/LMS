@@ -10,6 +10,7 @@ urlpatterns = [
     path("class/<int:vc_pk>/", views.class_analytics, name="class_analytics"),
     path("attendance/", views.attendance_trends, name="attendance_trends"),
     path("reports/", views.submission_reports, name="submission_reports"),
+    path("reports/generate/", views.submission_report_generate, name="submission_report_generate"),
     path("sf/", views.sf_report_home, name="sf_report_home"),
     path("sf/templates/upload/", views.sf_template_upload, name="sf_template_upload"),
     path("sf/templates/<int:pk>/download/", views.sf_template_download, name="sf_template_download"),

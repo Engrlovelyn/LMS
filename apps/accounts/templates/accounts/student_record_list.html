@@ -36,6 +36,21 @@
   </div>
 </div>
 
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body">
+    <form method="get" action="" class="form-row" style="align-items:flex-end;margin:0;">
+      <div class="form-group" style="flex:2;min-width:220px;margin-bottom:0;">
+        <label class="form-label" for="stuSearch">Search</label>
+        <input type="search" id="stuSearch" name="q" value="{{ q }}" class="form-control" placeholder="Search name, LRN, or email...">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <button class="btn btn-outline"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+        {% if q %}<a class="btn btn-outline" href="{% url 'accounts:student_record_list' %}">Clear</a>{% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-header">
     <div class="card-title"><i class="fa-solid fa-user-graduate"></i> Student Records</div>
@@ -83,6 +98,16 @@
             {% if perms.accounts.update_student_record %}
             <a class="btn btn-outline btn-sm" href="{% url 'accounts:student_record_update' student.pk %}">
               <i class="fa-solid fa-pen"></i> Update
+            </a>
+            {% endif %}
+            {% if perms.accounts.view_user_account %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:account_detail' student.user.pk %}">
+              <i class="fa-solid fa-id-card"></i> View Account
+            </a>
+            {% endif %}
+            {% if perms.accounts.reactivate_account and student.user.status == 'archived' %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:account_reactivate' student.user.pk %}">
+              <i class="fa-solid fa-rotate-right"></i> Reactivate
             </a>
             {% endif %}
             {% if perms.accounts.archive_student_record and student.user.status != 'archived' %}

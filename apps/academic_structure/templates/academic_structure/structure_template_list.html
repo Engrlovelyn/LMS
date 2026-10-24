@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Manage Academic Structure Templates{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Manage Academic Structure Templates</h1>
+    <p class="page-sub">Set grading period type, add notes and finalize each academic year's structure.</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Academic Years
+  </a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="val">{{ total_years }}</div>
+    <div class="lbl">Academic Years</div>
+  </div>
+  <div class="stat-card">
+    <div class="val">{{ finalized_count }}</div>
+    <div class="lbl">Finalized</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-diagram-project"></i> Structure Templates</div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Academic Year</th>
+          <th>Grading Period</th>
+          <th>Sections</th>
+          <th>Subjects</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.year.label }}</td>
+          <td>{{ row.grading_period_type|default:"—" }}</td>
+          <td>{{ row.section_count }}</td>
+          <td>{{ row.subject_count }}</td>
+          <td>
+            {% if row.is_finalized %}
+            <span class="pill active">Finalized</span>
+            {% else %}
+            <span class="pill pending">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="{% url 'academic:structure_finalize' row.year.pk %}">
+                <i class="fa-solid fa-flag-checkered"></i>
+                {% if row.version %}Manage{% else %}Finalize{% endif %}
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty-cell">No academic years found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

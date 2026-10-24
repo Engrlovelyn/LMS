@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.db import IntegrityError
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -86,8 +86,22 @@ def _session_stats(session):
 
 @perm_required("view_virtual_classroom")
 def classroom_list(request):
-    classrooms = _classrooms_for_user(request.user)
-    return render(request, "virtual_classrooms/classroom_list.html", {"classrooms": classrooms})
+    q = request.GET.get("q", "").strip()
+    classrooms = _classrooms_for_user(request.user).select_related(
+        "subject", "section", "academic_year", "teacher"
+    )
+    if q:
+        classrooms = classrooms.filter(
+            Q(subject__name__icontains=q)
+            | Q(section__name__icontains=q)
+            | Q(academic_year__label__icontains=q)
+            | Q(teacher__email__icontains=q)
+            | Q(teacher__employee_profile__first_name__icontains=q)
+            | Q(teacher__employee_profile__last_name__icontains=q)
+            | Q(grading_period__icontains=q)
+        )
+    classrooms = classrooms.order_by("subject__name", "section__name")
+    return render(request, "virtual_classrooms/classroom_list.html", {"classrooms": classrooms, "q": q})
 
 
 @role_required("registrar", "assistant_principal")
@@ -229,6 +243,19 @@ def classroom_detail(request, pk):
     except Exception:
         group_messages = []
 
+    # People this user may privately message within this classroom, using the
+    # same directional rule the messaging API and WebSocket consumer enforce
+    # (teacher <-> the class's students; staff both ways). Reusing that rule is
+    # what stops the panel from offering a peer the send path would then reject.
+    personal_contacts = []
+    try:
+        from apps.communication.access import messageable_contacts
+
+        _contacts, _by_classroom = messageable_contacts(request.user)
+        personal_contacts = _by_classroom.get(str(classroom.pk), [])
+    except Exception:
+        personal_contacts = []
+
     context = {
         "classroom": classroom,
         "now": timezone.now(),
@@ -245,6 +272,7 @@ def classroom_detail(request, pk):
         "session_rows": session_rows,
         "announcements": announcements,
         "group_messages": group_messages,
+        "personal_contacts": personal_contacts,
     }
     return render(request, "virtual_classrooms/classroom_detail.html", context)
 

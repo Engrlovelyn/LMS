@@ -10,7 +10,7 @@
   --tcal-soft: var(--gray-100, #f6f8fb);
   --tcal-text: var(--text-primary, #0f172a);
   --tcal-muted: var(--text-muted, #64748b);
-  --tcal-accent: var(--ict, var(--blue, #1e5faf));
+  --tcal-accent: var(--ict, var(--blue, #f59e0b));
   --tcal-radius: 14px;
 
   color: var(--tcal-text);

@@ -109,7 +109,7 @@
             <td>
               <div class="row-actions">
                 {% if placement.resource.file %}
-                <a class="btn btn-outline btn-sm" href="{{ placement.resource.file.url }}">
+                <a class="btn btn-outline btn-sm" href="{% url 'teaching:resource_download' placement.resource.pk %}">
                   <i class="fa-solid fa-download"></i> Download
                 </a>
                 {% elif placement.resource.external_link %}

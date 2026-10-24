@@ -10,21 +10,27 @@
 <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
 <style>
   :root {
-    --navy:#0a2463; --blue:#1e5faf; --sky:#3a86d4; --light-blue:#d6e8f7; --accent:#e8f0fc;
-    --white:#ffffff; --off-white:#f4f7fc; --gray-100:#eef2f8; --gray-200:#dde5f0;
-    --gray-400:#94a8c4; --gray-600:#4a637f; --gray-800:#1e2e42;
-    --success:#22a877; --warning:#e99b2a; --danger:#d94f4f; --info:#3a86d4;
-    --radius:16px; --shadow:0 4px 24px rgba(10,36,99,0.12); --shadow-sm:0 2px 10px rgba(10,36,99,0.07);
-    --transition:0.28s cubic-bezier(.4,0,.2,1);
-  }
+  --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
+  --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0;
+  --gray-400: #94a8c4; --gray-600: #4a637f; --gray-700: #5a78a0; --gray-800: #1e2e42;
+  --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #f59e0b;
+  --header-bg: #111111; --sidebar-bg: #111111; --sidebar-hover-bg: #1f2937;
+  --sidebar-active-bg: #f59e0b; --sidebar-text: rgba(255,255,255,0.85);
+  --sidebar-text-active: #111111; --body-bg: #f4f7fc; --card-bg: #ffffff;
+  --card-border: #dde5f0; --text-primary: #1e2e42; --text-muted: #94a8c4;
+  --input-bg: #ffffff; --input-border: #dde5f0;
+  --sidebar-w: 240px; --sidebar-collapsed: 64px; --header-h: 64px;
+  --radius: 14px; --shadow: 0 4px 24px rgba(17,17,17,0.12); --shadow-sm: 0 2px 10px rgba(17,17,17,0.07);
+  --transition: 0.28s cubic-bezier(.4,0,.2,1);
+}
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { width:100%; overflow-x:hidden; }
   body {
     font-family:'Plus Jakarta Sans',sans-serif;
     color:var(--gray-800);
     background:
-      radial-gradient(circle at 85% 6%, rgba(58,134,212,.10), transparent 26%),
-      linear-gradient(180deg, #fbfdff 0%, #f5f9fe 100%);
+      radial-gradient(circle at 85% 6%, rgba(251,191,36,.10), transparent 26%),
+      linear-gradient(180deg, #fffdf5 0%, #fffbeb 100%);
     min-height:100vh;
     display:flex; flex-direction:column;
   }
@@ -32,7 +38,7 @@
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     padding:16px 32px;
     background:var(--navy);
-    box-shadow:0 2px 20px rgba(7,24,50,0.45);
+    box-shadow:0 2px 20px rgba(17,17,17,0.45);
     position:sticky; top:0; z-index:100;
   }
   .brand-block { display:flex; align-items:center; gap:14px; }
@@ -100,6 +106,7 @@
     .grid { grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; }
   }
 </style>
+
 </head>
 <body>
 
@@ -128,7 +135,7 @@
 
   <section class="grid">
 
-    <a class="dash-card" href="{% url 'dashboards:ict' %}" style="--c:#0a2463;">
+    <a class="dash-card" href="{% url 'dashboards:ict' %}" style="--c:#111111;">
       <div class="dash-icon"><i class="fa-solid fa-user-gear"></i></div>
       <div>
         <div class="dash-role">System Administrator</div>
@@ -138,7 +145,7 @@
       <div class="dash-go">Open Portal <i class="fa-solid fa-arrow-right"></i></div>
     </a>
 
-    <a class="dash-card" href="{% url 'dashboards:principal' %}" style="--c:#1e5faf;">
+    <a class="dash-card" href="{% url 'dashboards:principal' %}" style="--c:#f59e0b;">
       <div class="dash-icon"><i class="fa-solid fa-landmark"></i></div>
       <div>
         <div class="dash-role">School Head</div>
@@ -148,7 +155,7 @@
       <div class="dash-go">Open Portal <i class="fa-solid fa-arrow-right"></i></div>
     </a>
 
-    <a class="dash-card" href="{% url 'dashboards:academic_coordinator' %}" style="--c:#3a86d4;">
+    <a class="dash-card" href="{% url 'dashboards:academic_coordinator' %}" style="--c:#fbbf24;">
       <div class="dash-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
       <div>
         <div class="dash-role">Academic Office</div>

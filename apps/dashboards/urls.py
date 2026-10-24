@@ -18,7 +18,15 @@ _DASHBOARDS = [
 ]
 
 urlpatterns = [
+    path("live-data/", views.live_dashboard_data, name="live_dashboard_data"),
     path("", views.hub, name="hub"),
+    # Registered before the <path:route> catch-alls below so it resolves to the
+    # JSON endpoint instead of the SPA.
+    path(
+        "academic-coordinator/data/",
+        views.academic_coordinator_data,
+        name="academic_coordinator_data",
+    ),
 ]
 for prefix, view, name in _DASHBOARDS:
     urlpatterns.append(path(prefix, view, name=name))

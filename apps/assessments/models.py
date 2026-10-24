@@ -381,6 +381,11 @@ class Submission(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
     is_late = models.BooleanField(default=False)
 
+    # The student's uploaded work for the whole assessment. Stored here (rather
+    # than only on a SubmissionResponse) so a file is still kept for
+    # assessments that have no parts.
+    attached_file = models.FileField(upload_to="submissions/", null=True, blank=True)
+
     # (g)/(h)/(i) total_score is an aggregate that is only finalized when
     # grading_status == GRADING_COMPLETE.
     total_score = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
@@ -640,3 +645,56 @@ class AssessmentNotification(models.Model):
 
     def __str__(self):
         return f"{self.get_event_type_display()} - {self.student} - {self.assessment}"
+
+
+# ---------------------------------------------------------------------------
+# Assessment integrity / proctoring
+# ---------------------------------------------------------------------------
+class AssessmentProctoringEvent(models.Model):
+    """A focus, visibility, or screenshot-signal event during an assessment.
+
+    The browser can only *notice* these signals and report them; it cannot
+    truly prevent a screenshot or a second monitor. So this model stores what
+    was detected rather than claiming a block: a student who leaves the paper
+    generates a row the teacher can review, exactly as the manuscript's
+    "record detected events" rule asks. ``event_type`` stays a loose choice
+    list so the client's vocabulary and the database cannot drift apart.
+    """
+
+    EVENT_FOCUS_LOST = "focus_lost"
+    EVENT_FOCUS_GAINED = "focus_gained"
+    EVENT_VISIBILITY_HIDDEN = "visibility_hidden"
+    EVENT_VISIBILITY_VISIBLE = "visibility_visible"
+    EVENT_SCREENSHOT_KEY = "screenshot_key"
+    EVENT_COPY_ATTEMPT = "copy_attempt"
+    EVENT_CONTEXT_MENU = "context_menu"
+    EVENT_TYPE_CHOICES = [
+        (EVENT_FOCUS_LOST, "Left the assessment window"),
+        (EVENT_FOCUS_GAINED, "Returned to the assessment window"),
+        (EVENT_VISIBILITY_HIDDEN, "Switched away from the assessment tab"),
+        (EVENT_VISIBILITY_VISIBLE, "Returned to the assessment tab"),
+        (EVENT_SCREENSHOT_KEY, "Screenshot-type key pressed"),
+        (EVENT_COPY_ATTEMPT, "Copy / cut attempt"),
+        (EVENT_CONTEXT_MENU, "Right-click on question content"),
+    ]
+
+    assessment = models.ForeignKey(
+        Assessment, on_delete=models.CASCADE, related_name="proctoring_events"
+    )
+    student = models.ForeignKey(
+        "accounts.StudentProfile", on_delete=models.CASCADE, related_name="proctoring_events"
+    )
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPE_CHOICES)
+    # Free-form context, e.g. {"source": "visibilitychange", "hidden_seconds": 12}.
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["assessment", "student"]),
+            models.Index(fields=["assessment", "event_type"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.student} @ {self.assessment}"

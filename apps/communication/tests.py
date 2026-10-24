@@ -10,12 +10,14 @@ since being enrolled and therefore has not joined the classroom room yet.
 import datetime
 
 from channels.testing import WebsocketCommunicator
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, Group
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.accounts.models import StudentProfile, User
 from apps.academic_structure.models import AcademicYear, Section, Subject
+from apps.communication.access import messageable_contacts
 from apps.communication.models import SchoolAnnouncement
 from apps.communication.realtime import (
     notify_classroom,
@@ -298,3 +300,309 @@ class SchoolAnnouncementAudienceTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("audience", form.errors)
+
+
+class NotificationBellTests(TestCase):
+    """The persistent bell: scoped recipients, idempotent creation, and
+    per-recipient read state, exercised through the service and the views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.year = AcademicYear.objects.create(
+            label="2026 NB",
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 12, 31),
+            status="ACTIVE",
+        )
+        cls.section = Section.objects.create(
+            academic_year=cls.year, name="NB - A", grade_level=7
+        )
+        cls.subject = Subject.objects.create(
+            academic_year=cls.year, name="Science", grade_level=7
+        )
+        cls.teacher = User.objects.create_user(email="nb_teacher@tass.local", password="pw")
+        cls.vc = VirtualClassroom.objects.create(
+            academic_year=cls.year,
+            section=cls.section,
+            subject=cls.subject,
+            teacher=cls.teacher,
+        )
+        cls.student_a, cls.profile_a = _student_user("nb_alice", cls.year, 11)
+        cls.student_b, cls.profile_b = _student_user("nb_bob", cls.year, 12)
+        cls.outsider, cls.profile_out = _student_user("nb_cara", cls.year, 13)
+        for u in (cls.student_a, cls.student_b, cls.outsider, cls.teacher):
+            u.status = "active"
+            u.save(update_fields=["status", "is_active"])
+        _enroll(cls.profile_a, cls.vc)
+        _enroll(cls.profile_b, cls.vc)
+
+    def _announcement(self, content="Hi class"):
+        from apps.communication.models import ClassAnnouncement
+
+        return ClassAnnouncement.objects.create(
+            virtual_classroom=self.vc, posted_by=self.teacher, content=content
+        )
+
+    def test_announcement_notifies_enrolled_students_only(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        ann = self._announcement()
+        self.assertEqual(svc.notify_class_announcement(ann), 2)
+        recipients = set(
+            Notification.objects.filter(
+                source_type="class_announcement", source_id=ann.pk
+            ).values_list("recipient_id", flat=True)
+        )
+        self.assertEqual(recipients, {self.student_a.pk, self.student_b.pk})
+        self.assertNotIn(self.outsider.pk, recipients)
+
+    def test_announcement_notification_is_idempotent(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        ann = self._announcement()
+        svc.notify_class_announcement(ann)
+        self.assertEqual(svc.notify_class_announcement(ann), 0)
+        self.assertEqual(
+            Notification.objects.filter(
+                source_type="class_announcement", source_id=ann.pk
+            ).count(),
+            2,
+        )
+
+    def test_summary_endpoint_is_recipient_scoped(self):
+        from apps.communication import notifications as svc
+
+        svc.notify_class_announcement(self._announcement())
+        self.client.login(username=self.student_a.email, password="pw")
+        resp = self.client.get(reverse("communication:notification_summary"))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["unread_count"], 1)
+        self.assertEqual(len(data["items"]), 1)
+        self.assertTrue(data["items"][0]["open_url"])
+
+    def test_notifications_page_renders_with_base_header(self):
+        from apps.communication import notifications as svc
+
+        svc.notify_class_announcement(self._announcement())
+        self.client.login(username=self.student_a.email, password="pw")
+        resp = self.client.get(reverse("communication:notifications"))
+        self.assertEqual(resp.status_code, 200)
+        # base.html's bell config + the shared script must be present.
+        self.assertContains(resp, "notifications.js")
+        self.assertContains(resp, "tassNotifyConfig")
+
+    def test_spa_api_endpoints(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        svc.notify_class_announcement(self._announcement())
+        self.client.login(username=self.student_a.email, password="pw")
+        resp = self.client.get(reverse("api_notifications"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["unread_count"], 1)
+        resp = self.client.post(reverse("api_notifications_mark_all_read"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.student_a, is_read=False).count(), 0
+        )
+
+    def test_open_marks_read_and_redirects(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        svc.notify_class_announcement(self._announcement())
+        n = Notification.objects.get(recipient=self.student_a)
+        self.client.login(username=self.student_a.email, password="pw")
+        resp = self.client.get(reverse("communication:notification_open", args=[n.pk]))
+        self.assertEqual(resp.status_code, 302)
+        n.refresh_from_db()
+        self.assertTrue(n.is_read)
+        self.assertIsNotNone(n.read_at)
+
+    def test_announcement_click_lands_on_the_specific_row(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        ann = self._announcement()
+        svc.notify_class_announcement(ann)
+        n = Notification.objects.get(recipient=self.student_a)
+
+        # The bell's own feed advertises the anchored URL...
+        self.client.login(username=self.student_a.email, password="pw")
+        data = self.client.get(reverse("communication:notification_summary")).json()
+        item = data["items"][0]
+        self.assertIn("#announcement-{}".format(ann.pk), item["url"])
+        self.assertIn("type=class", item["url"])
+
+        # ...and opening the notification redirects straight to that anchor,
+        # where the list page renders a matching id.
+        resp = self.client.get(reverse("communication:notification_open", args=[n.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("#announcement-{}".format(ann.pk), resp.url)
+
+        from django.contrib.auth.models import Permission
+
+        self.student_a.user_permissions.add(
+            Permission.objects.get(codename="view_announcements_custom")
+        )
+        listing = self.client.get("/communication/announcements/?type=class")
+        self.assertContains(
+            listing, 'id="announcement-{}"'.format(ann.pk)
+        )
+
+    def test_summary_exposes_in_page_target_for_announcement(self):
+        from apps.communication import notifications as svc
+
+        ann = self._announcement()
+        svc.notify_class_announcement(ann)
+        self.client.login(username=self.student_a.email, password="pw")
+        data = self.client.get(reverse("communication:notification_summary")).json()
+        item = data["items"][0]
+        # The dashboards anchor their own rows by these fields, so a click can
+        # open the exact announcement without a page load.
+        self.assertEqual(item["source_type"], "class_announcement")
+        self.assertEqual(item["source_id"], ann.pk)
+        self.assertEqual(item["classroom_id"], self.vc.pk)
+
+    def test_open_is_404_for_another_user(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        svc.notify_class_announcement(self._announcement())
+        n = Notification.objects.get(recipient=self.student_a)
+        self.client.login(username=self.outsider.email, password="pw")
+        resp = self.client.get(reverse("communication:notification_open", args=[n.pk]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_mark_all_read_clears_only_own_bell(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        svc.notify_class_announcement(self._announcement())
+        self.client.login(username=self.student_a.email, password="pw")
+        resp = self.client.post(reverse("communication:notification_mark_all_read"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.student_a, is_read=False).count(), 0
+        )
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.student_b, is_read=False).count(), 1
+        )
+
+    def test_assessment_assignment_notifies(self):
+        from apps.assessments.models import Assessment, AssessmentAssignment
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        assessment = Assessment.objects.create(
+            subject=self.subject,
+            academic_year=self.year,
+            created_by=self.teacher,
+            title="Quiz 1",
+            assessment_method=Assessment.METHOD_QUIZ,
+            assessment_type=Assessment.TYPE_WRITTEN_ORAL,
+            status=Assessment.STATUS_ACTIVE,
+            submission_deadline=timezone.now() + datetime.timedelta(days=3),
+        )
+        assignment = AssessmentAssignment.objects.create(
+            assessment=assessment, virtual_classroom=self.vc, assigned_by=self.teacher
+        )
+        self.assertEqual(svc.notify_assessment_assignment(assignment), 2)
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type="assessment", source_id=assessment.pk
+            ).count(),
+            2,
+        )
+
+    def test_future_assessment_does_not_notify_until_available(self):
+        from apps.assessments.models import Assessment, AssessmentAssignment
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+        from django.utils import timezone
+
+        assessment = Assessment.objects.create(
+            subject=self.subject,
+            academic_year=self.year,
+            created_by=self.teacher,
+            title="Scheduled Quiz",
+            assessment_method=Assessment.METHOD_QUIZ,
+            assessment_type=Assessment.TYPE_WRITTEN_ORAL,
+            status=Assessment.STATUS_ACTIVE,
+            submission_deadline=timezone.now() + datetime.timedelta(days=5),
+            available_at=timezone.now() + datetime.timedelta(days=2),
+        )
+        assignment = AssessmentAssignment.objects.create(
+            assessment=assessment, virtual_classroom=self.vc, assigned_by=self.teacher
+        )
+        self.assertEqual(svc.notify_assessment_assignment(assignment), 0)
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type="assessment", source_id=assessment.pk
+            ).count(),
+            0,
+        )
+
+
+class MessageableContactsTests(TestCase):
+    """The Personal picker offers every learner enrolled in the classroom.
+
+    Learners are created ``pending_verification`` until they activate their
+    account, so the picker (and the send path behind it) must key on enrollment
+    rather than account status; otherwise a teacher cannot reach the class she
+    actually runs. Archived accounts stay out.
+    """
+
+    def setUp(self):
+        self.year = AcademicYear.objects.create(
+            label="2026 GA",
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 12, 31),
+            status="ACTIVE",
+        )
+        self.section = Section.objects.create(
+            academic_year=self.year, name="JHS - A", grade_level=7
+        )
+        self.subject = Subject.objects.create(
+            academic_year=self.year, name="Mathematics", grade_level=7
+        )
+        self.teacher = User.objects.create_user(email="t_picker@tass.local", password="pw")
+        self.teacher.status = User.Status.ACTIVE
+        self.teacher.save()
+        teacher_group, _ = Group.objects.get_or_create(name="teacher")
+        self.teacher.groups.add(teacher_group)
+        self.vc = VirtualClassroom.objects.create(
+            academic_year=self.year,
+            section=self.section,
+            subject=self.subject,
+            teacher=self.teacher,
+        )
+        self.pending, self.pending_profile = _student_user("s_pending", self.year, 1)
+        _enroll(self.pending_profile, self.vc)
+        self.archived, self.archived_profile = _student_user("s_archived", self.year, 2)
+        self.archived.status = User.Status.ARCHIVED
+        self.archived.save()
+        _enroll(self.archived_profile, self.vc)
+
+    def test_picker_lists_pending_learner_and_scopes_to_the_classroom(self):
+        contacts, by_classroom = messageable_contacts(self.teacher)
+        self.assertIn(self.pending.pk, {c["id"] for c in contacts})
+        self.assertNotIn(self.archived.pk, {c["id"] for c in contacts})
+        bucket = by_classroom[str(self.vc.pk)]
+        self.assertIn(self.pending.pk, {c["id"] for c in bucket})
+
+    def test_rest_can_open_and_send_to_a_pending_learner(self):
+        self.client.force_login(self.teacher)
+        sent = self.client.post(
+            reverse("api_messages"),
+            data={"recipient_id": self.pending.pk, "body": "Please catch up."},
+        )
+        self.assertEqual(sent.status_code, 200)
+        self.assertTrue(sent.json()["ok"])
+        opened = self.client.get(reverse("api_messages"), {"peer": self.pending.pk})
+        self.assertEqual(opened.status_code, 200)
+        self.assertTrue(opened.json()["ok"])
+        self.assertNotIn(self.archived.pk, {c["id"] for c in messageable_contacts(self.teacher)[0]})

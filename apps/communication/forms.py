@@ -6,7 +6,7 @@ from .models import ClassAnnouncement, GroupMessage, SchoolAnnouncement
 class SchoolAnnouncementForm(forms.ModelForm):
     class Meta:
         model = SchoolAnnouncement
-        fields = ["title", "content", "audience", "status"]
+        fields = ["title", "content", "audience", "target_role", "status"]
 
     def __init__(self, *args, **kwargs):
         self._user = kwargs.pop("user", None)
@@ -32,7 +32,7 @@ class SchoolAnnouncementForm(forms.ModelForm):
 class ClassAnnouncementForm(forms.ModelForm):
     class Meta:
         model = ClassAnnouncement
-        fields = ["virtual_classroom", "content", "attachment", "status"]
+        fields = ["virtual_classroom", "content", "attachment", "target_role", "status"]
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)

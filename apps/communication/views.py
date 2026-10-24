@@ -2,10 +2,11 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from apps.accounts.campus import (
     ROLE_CAMPUS,
@@ -18,6 +19,7 @@ from apps.accounts.decorators import has_permission, perm_required
 from apps.accounts.models import User
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
+from . import notifications as notif_service
 from .access import can_message, display_name, messageable_contacts
 from .forms import (
     ClassAnnouncementForm,
@@ -28,8 +30,12 @@ from .forms import (
 from .models import (
     ClassAnnouncement,
     GroupMessage,
+    Notification,
     PrivateMessage,
     SchoolAnnouncement,
+    TARGET_ALL,
+    TARGET_STUDENTS,
+    TARGET_TEACHERS,
 )
 
 # Role codes whose visibility is bounded by a campus. Kept as the keys of
@@ -68,17 +74,45 @@ def _user_display(user):
     return display_name(user)
 
 
+def visible_target_roles(user):
+    """The ``target_role`` values ``user`` is allowed to read.
+
+    A teacher reads Everyone + Teachers Only, a student reads Everyone +
+    Students Only, and every other role (offices/admins) reads everything.
+    """
+    if user.is_superuser or user.is_staff:
+        return [TARGET_ALL, TARGET_STUDENTS, TARGET_TEACHERS]
+    roles = [TARGET_ALL]
+    if user.groups.filter(name="teacher").exists():
+        roles.append(TARGET_TEACHERS)
+    elif getattr(user, "student_profile", None) is not None:
+        roles.append(TARGET_STUDENTS)
+    else:
+        roles.extend([TARGET_STUDENTS, TARGET_TEACHERS])
+    return roles
+
+
+def _filter_by_target_role(queryset, user):
+    roles = visible_target_roles(user)
+    return queryset.filter(Q(target_role__in=roles) | Q(target_role=""))
+
+
 @perm_required("view_announcements_custom")
 def announcement_list(request):
     type_filter = request.GET.get("type", "")
     classrooms = _classrooms_for_user(request.user)
 
-    school_qs = filter_school_announcements(
-        SchoolAnnouncement.objects.select_related("posted_by"), request.user
+    school_qs = _filter_by_target_role(
+        filter_school_announcements(
+            SchoolAnnouncement.objects.select_related("posted_by"), request.user
+        ),
+        request.user,
     )
-    class_qs = (
-        ClassAnnouncement.objects.select_related("virtual_classroom", "posted_by")
-        .filter(virtual_classroom__in=classrooms)
+    class_qs = _filter_by_target_role(
+        ClassAnnouncement.objects.select_related("virtual_classroom", "posted_by").filter(
+            virtual_classroom__in=classrooms
+        ),
+        request.user,
     )
 
     allowed_type = type_filter in ("school", "class")
@@ -107,6 +141,10 @@ def school_announcement_add(request):
         announcement.posted_by = request.user
         announcement.audience_at_posted_at = campus_scope_for(request.user)
         announcement.save()
+        try:
+            notif_service.notify_school_announcement(announcement)
+        except Exception:  # a notification must never break the post
+            pass
         messages.success(request, "School-wide announcement published.")
         return redirect(reverse("communication:announcements"))
     return render(
@@ -185,6 +223,10 @@ def class_announcement_add(request, vc_pk=None):
             announcement.virtual_classroom = locked
         announcement.posted_by = request.user
         announcement.save()
+        try:
+            notif_service.notify_class_announcement(announcement)
+        except Exception:  # a notification must never break the post
+            pass
         messages.success(request, "Class announcement posted.")
         if locked is not None:
             return redirect(reverse("classrooms:classroom_detail", args=[locked.pk]))
@@ -415,3 +457,171 @@ def private_message_thread(request, user_pk):
             "form": form,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Persistent header-bell notifications
+# ---------------------------------------------------------------------------
+def _serialize_notification(n):
+    # Assessment notifications carry a student-facing result sheet ("View").
+    # Other types keep their existing single destination in ``url``.
+    view_url = ""
+    if (
+        n.notification_type == Notification.TYPE_ASSESSMENT
+        and n.source_type == "assessment"
+        and n.source_id
+    ):
+        try:
+            view_url = reverse("assessments:assessment_result", args=[n.source_id])
+        except NoReverseMatch:
+            view_url = ""
+    return {
+        "id": n.pk,
+        "type": n.notification_type,
+        "title": n.title,
+        "message": n.message,
+        "url": notif_service.notification_target(n),
+        "view_url": view_url,
+        "open_url": reverse("communication:notification_open", args=[n.pk]),
+        "is_read": n.is_read,
+        "classroom_id": n.virtual_classroom_id,
+        # Exposed so a dashboard can open the exact record in-page instead of
+        # following ``url`` to the server-rendered list; ``source_id`` is the
+        # announcement/source primary key, ``source_type`` tells school from
+        # class.
+        "source_type": n.source_type,
+        "source_id": n.source_id,
+        "created_at": n.created_at.isoformat(),
+        "created_label": timezone.localtime(n.created_at).strftime("%b %d, %Y · %I:%M %p"),
+    }
+
+
+def _notifications_for(user):
+    return Notification.objects.filter(recipient=user).select_related("virtual_classroom")
+
+
+@login_required
+def notification_list(request):
+    """Every notification this user has received, newest first."""
+    items = list(_notifications_for(request.user))
+    unread_count = sum(1 for n in items if not n.is_read)
+    return render(
+        request,
+        "communication/notifications.html",
+        {"notifications": items, "unread_count": unread_count},
+    )
+
+
+@login_required
+def notification_summary(request):
+    """JSON the bell polls: the unread count plus the most recent handful.
+
+    Only the recipient's own rows are ever returned, so one student's bell can
+    never reveal another's. A ``limit`` query parameter lets the header ask for
+    a short preview while a full page can request more.
+    """
+    try:
+        limit = int(request.GET.get("limit", 20))
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(limit, 100))
+    qs = _notifications_for(request.user)
+    unread_count = qs.filter(is_read=False).count()
+    items = [_serialize_notification(n) for n in qs[:limit]]
+    return JsonResponse(
+        {
+            "unread_count": unread_count,
+            "total": qs.count(),
+            "items": items,
+        }
+    )
+
+
+@login_required
+def notification_open(request, pk):
+    """Mark one notification read, then send the recipient to its target.
+
+    Access is re-checked here rather than trusted from the stored URL: a
+    student who was unenrolled after the notification was created cannot reach
+    a classroom they can no longer open. When there is no reachable target the
+    recipient gets a dedicated detail page with the notification's own content
+    (plus a result link for assessments) instead of a generic list page.
+    """
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save(update_fields=["is_read", "read_at"])
+
+    # A classroom announcement notification should open its content directly,
+    # rather than sending a student to the full classroom materials page.
+    class_announcement = None
+    if (
+        notification.notification_type == Notification.TYPE_ANNOUNCEMENT
+        and notification.virtual_classroom_id
+        and notif_service.can_access(notification, request.user)
+    ):
+        announcement_qs = ClassAnnouncement.objects.filter(
+            virtual_classroom_id=notification.virtual_classroom_id,
+            status=ClassAnnouncement.STATUS_ACTIVE,
+        )
+        if notification.source_type == "class_announcement":
+            announcement_qs = announcement_qs.filter(pk=notification.source_id)
+        elif notification.source_id:
+            announcement_qs = announcement_qs.filter(pk=notification.source_id)
+        elif notification.message:
+            # Older notifications may not have source metadata. Their message
+            # contains the announcement text (truncated to 140 characters).
+            prefix = notification.message.strip()
+            if len(prefix) > 140:
+                prefix = prefix[:140]
+            announcement_qs = announcement_qs.filter(
+                content__startswith=prefix,
+                posted_at__lte=notification.created_at,
+            )
+        class_announcement = announcement_qs.order_by("-posted_at", "-pk").first()
+
+    if class_announcement is not None:
+        return render(
+            request,
+            "communication/notification_detail.html",
+            {
+                "notification": notification,
+                "announcement": class_announcement,
+                "view_url": "",
+                "open_target": "",
+            },
+        )
+
+    target = notif_service.notification_target(notification)
+    if not target.startswith("/"):
+        target = ""
+    if target and notif_service.can_access(notification, request.user):
+        return redirect(target)
+    view_url = ""
+    if (
+        notification.notification_type == Notification.TYPE_ASSESSMENT
+        and notification.source_type == "assessment"
+        and notification.source_id
+    ):
+        try:
+            view_url = reverse("assessments:assessment_result", args=[notification.source_id])
+        except NoReverseMatch:
+            view_url = ""
+    return render(
+        request,
+        "communication/notification_detail.html",
+        {"notification": notification, "view_url": view_url, "open_target": target},
+    )
+
+
+@login_required
+@require_POST
+def notification_mark_all_read(request):
+    """Mark every unread notification for this user as read."""
+    count = _notifications_for(request.user).filter(is_read=False).update(
+        is_read=True, read_at=timezone.now()
+    )
+    if request.headers.get("Accept") == "application/json" or request.path.endswith(".json"):
+        return JsonResponse({"ok": True, "count": count})
+    return redirect(reverse("communication:notifications"))

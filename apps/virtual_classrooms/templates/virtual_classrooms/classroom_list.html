@@ -11,6 +11,19 @@
     <i class="fa-solid fa-plus"></i> Add Classroom
   </a>
   {% endif %}
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body">
+    <form method="get" action="" class="form-row" style="align-items:flex-end;margin:0;">
+      <div class="form-group" style="flex:2;min-width:220px;margin-bottom:0;">
+        <label class="form-label" for="vcSearch">Search</label>
+        <input type="search" id="vcSearch" name="q" value="{{ q }}" class="form-control" placeholder="Search subject, section, teacher, year...">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <button class="btn btn-outline"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+        {% if q %}<a class="btn btn-outline" href="{% url 'classrooms:classroom_list' %}">Clear</a>{% endif %}
+      </div>
+    </form>
+  </div>
 </div>
 
 {% if classrooms %}

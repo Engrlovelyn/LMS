@@ -69,6 +69,25 @@ class SubjectForm(forms.ModelForm):
         )
 
 
+class StudentEnrollmentUpdateForm(forms.ModelForm):
+    """Edit an existing student enrollment: move the learner to another section
+    in the same academic year, or archive the enrollment."""
+
+    class Meta:
+        model = StudentEnrollment
+        fields = ["section", "status"]
+
+    def __init__(self, *args, enrollment=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_control(self.fields)
+        self.enrollment = enrollment
+        if enrollment is not None:
+            self.fields["section"].queryset = Section.objects.filter(
+                academic_year=enrollment.academic_year,
+                status=Section.STATUS_ACTIVE,
+            )
+
+
 class StructureFinalizeForm(forms.ModelForm):
     class Meta:
         model = AcademicStructureVersion

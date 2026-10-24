@@ -14,6 +14,117 @@ AUDIENCE_CHOICES = [
     (AUDIENCE_HIGH_SCHOOL, "High School"),
 ]
 
+# Role-based audience. This is deliberately separate from the campus audience
+# above: a notice can be campus-scoped *and* addressed to students or teachers.
+# "all" keeps every older announcement behaving exactly as it did before the
+# column existed (the migration backfills existing rows to "all").
+TARGET_ALL = "all"
+TARGET_STUDENTS = "students"
+TARGET_TEACHERS = "teachers"
+TARGET_ROLE_CHOICES = [
+    (TARGET_ALL, "Everyone"),
+    (TARGET_STUDENTS, "Students Only"),
+    (TARGET_TEACHERS, "Teachers Only"),
+]
+
+
+def user_matches_target_role(user, target_role):
+    """True when ``user`` belongs to the role an announcement targets.
+
+    Administrators are treated as able to read every notice; the restriction is
+    aimed at students and teachers, not at the office that publishes it.
+    """
+    target_role = target_role or TARGET_ALL
+    if target_role == TARGET_ALL:
+        return True
+    is_teacher = bool(user and user.is_authenticated and user.groups.filter(name="teacher").exists())
+    is_student = bool(
+        user and user.is_authenticated and getattr(user, "student_profile", None) is not None
+    )
+    if user and user.is_authenticated and (user.is_superuser or user.is_staff):
+        return True
+    if target_role == TARGET_STUDENTS:
+        return is_student
+    if target_role == TARGET_TEACHERS:
+        return is_teacher
+    return True
+
+
+class Notification(models.Model):
+    """A persisted, per-user notification shown by the header bell.
+
+    This is the durable counterpart to the ephemeral realtime pings in
+    ``communication.realtime``: a realtime event tells an open dashboard to
+    repaint, while a ``Notification`` row is what makes the bell keep a red dot
+    and a readable list until *that* recipient opens it. Read state is stored on
+    the row itself, so it is per student and survives a reload or a new device.
+
+    The row deliberately does not hold a generic foreign key to the object that
+    caused it (an assessment, a material placement, an announcement). Because
+    the notification must be class-scoped and re-checked on open, a plain
+    ``(source_type, source_id)`` pair plus an optional ``virtual_classroom`` is
+    enough to resolve access at click time without importing those apps here and
+    creating a cycle -- ``assessments`` already imports ``communication``.
+    """
+
+    TYPE_ANNOUNCEMENT = "announcement"
+    TYPE_MATERIAL = "material"
+    TYPE_ASSESSMENT = "assessment"
+    TYPE_ATTENDANCE = "attendance"
+    TYPE_CHOICES = [
+        (TYPE_ANNOUNCEMENT, "Class Announcement"),
+        (TYPE_MATERIAL, "Learning Material"),
+        (TYPE_ASSESSMENT, "Assessment"),
+        (TYPE_ATTENDANCE, "Attendance"),
+    ]
+
+    recipient = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="notifications"
+    )
+    virtual_classroom = models.ForeignKey(
+        "virtual_classrooms.VirtualClassroom",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+
+    # Origin of the notification, e.g. ("class_announcement", 12) or
+    # ("assessment", 4). ``source_type`` is a loose string rather than a choice
+    # list so a new producer does not need a migration to be added.
+    source_type = models.CharField(max_length=40, blank=True)
+    source_id = models.PositiveIntegerField(null=True, blank=True)
+
+    title = models.CharField(max_length=200)
+    message = models.TextField(blank=True)
+    # Where opening the notification should take the recipient. Re-checked for
+    # access at click time; a recipient who has lost access is sent to the list.
+    url = models.CharField(max_length=500, blank=True)
+
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # One notification per recipient per source object. A teacher
+            # editing an announcement, or re-running a notification sweep, must
+            # not multiply the bell's red dot.
+            models.UniqueConstraint(
+                fields=["recipient", "notification_type", "source_type", "source_id"],
+                name="uniq_notification_per_recipient_source",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["recipient", "is_read"]),
+            models.Index(fields=["recipient", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.recipient} <- {self.notification_type}:{self.source_type}#{self.source_id}"
+
 
 class ClassAnnouncement(models.Model):
     STATUS_ACTIVE, STATUS_ARCHIVED = "active", "archived"
@@ -30,6 +141,13 @@ class ClassAnnouncement(models.Model):
     )
     content = models.TextField()
     attachment = models.FileField(upload_to="announcement_attachments/", null=True, blank=True)
+    target_role = models.CharField(
+        max_length=10,
+        choices=TARGET_ROLE_CHOICES,
+        default=TARGET_ALL,
+        blank=True,
+        help_text="Who in the classroom may read this announcement.",
+    )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     posted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -73,6 +191,13 @@ class SchoolAnnouncement(models.Model):
     # The author's resolved campus at the moment of posting, kept for audit.
     audience_at_posted_at = models.CharField(
         max_length=20, choices=AUDIENCE_CHOICES, default="", blank=True
+    )
+    target_role = models.CharField(
+        max_length=10,
+        choices=TARGET_ROLE_CHOICES,
+        default=TARGET_ALL,
+        blank=True,
+        help_text="Students Only, Teachers Only, or Everyone.",
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     posted_at = models.DateTimeField(auto_now_add=True)

@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import ClassAnnouncement, SchoolAnnouncement, GroupMessage, PrivateMessage
+from .models import ClassAnnouncement, GroupMessage, Notification, PrivateMessage, SchoolAnnouncement
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("recipient", "notification_type", "title", "is_read", "created_at")
+    list_filter = ("notification_type", "is_read")
+    search_fields = ("recipient__email", "title", "message")
+    date_hierarchy = "created_at"
 
 
 @admin.register(ClassAnnouncement)

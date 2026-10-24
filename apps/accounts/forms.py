@@ -142,6 +142,19 @@ class StudentRecordUpdateForm(forms.ModelForm):
         apply_form_control(self.fields)
 
 
+class UserAccountUpdateForm(forms.Form):
+    """Generic account editor keyed on a User, used by the View/Update User
+    Account screen. Covers both employee and student logins so an administrator
+    can change an email address or flip an account's status from one place."""
+
+    email = forms.EmailField(label="Email Address")
+    status = forms.ChoiceField(choices=User.Status.choices, label="Account Status")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_control(self.fields)
+
+
 class StudentRecordsImportForm(forms.Form):
     CSV_COLUMNS = [
         "lrn", "first_name", "last_name", "middle_initial", "suffix",

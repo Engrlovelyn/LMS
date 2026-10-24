@@ -37,16 +37,18 @@
           <th>Title</th>
           <th>Posted By</th>
           <th>Posted At</th>
+          <th>Audience</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for a in school_announcements %}
-        <tr>
+        <tr id="announcement-{{ a.pk }}">
           <td>{{ a.title }}</td>
           <td>{{ a.posted_by.email }}</td>
           <td>{{ a.posted_at|date:"M d, Y H:i" }}</td>
+          <td>{{ a.get_target_role_display }}</td>
           <td><span class="pill {{ a.status }}">{{ a.get_status_display }}</span></td>
           <td>
             <div class="row-actions">
@@ -68,7 +70,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5">
+          <td colspan="6">
             <div class="empty-state">
               <i class="fa-solid fa-school"></i>
               <p>No school announcements.</p>
@@ -93,17 +95,19 @@
           <th>Content</th>
           <th>Posted By</th>
           <th>Posted At</th>
+          <th>Audience</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for a in class_announcements %}
-        <tr>
+        <tr id="announcement-{{ a.pk }}">
           <td>{{ a.virtual_classroom.subject.name }} - {{ a.virtual_classroom.section.name }}</td>
           <td>{{ a.content|truncatechars:80 }}</td>
           <td>{{ a.posted_by.email }}</td>
           <td>{{ a.posted_at|date:"M d, Y H:i" }}</td>
+          <td>{{ a.get_target_role_display }}</td>
           <td><span class="pill {{ a.status }}">{{ a.get_status_display }}</span></td>
           <td>
             <div class="row-actions">
@@ -125,7 +129,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6">
+          <td colspan="7">
             <div class="empty-state">
               <i class="fa-solid fa-chalkboard-user"></i>
               <p>No class announcements for your classes.</p>
@@ -137,4 +141,30 @@
     </table>
   </div>
 </div>
+
+<style>
+  @keyframes announcementFlash {
+    0%, 45% { background: #fef3c7; }
+    100% { background: transparent; }
+  }
+  tr[id^="announcement-"] { scroll-margin-top: 96px; }
+  tr.announcement-flash > td { animation: announcementFlash 2.4s ease-out; }
+</style>
+<script>
+  (function () {
+    function focusAnnouncement() {
+      var m = window.location.hash.match(/^#announcement-(\d+)$/);
+      if (!m) return;
+      var el = document.getElementById("announcement-" + m[1]);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("announcement-flash");
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", focusAnnouncement);
+    } else {
+      focusAnnouncement();
+    }
+  })();
+</script>
 {% endblock %}

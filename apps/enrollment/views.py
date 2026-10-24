@@ -151,7 +151,7 @@ def remove_student(request, pk, enrollment_pk):
         enrollment.save()
         messages.success(request, "Student removed from the classroom.")
         _notify_enrollment(
-            classroom,
+            enrollment.virtual_classroom,
             request.user,
             student_ids=[enrollment.student.user_id] if enrollment.student else [],
             removed=True,

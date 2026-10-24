@@ -26,6 +26,8 @@ urlpatterns = [
     # emailed reset link needs the same fallback an employee does.
     path("reset-password/generate/", management_views.admin_reset_password_generate, name="admin_reset_password_generate"),
     path("accounts/<int:pk>/unlock/", management_views.account_unlock, name="account_unlock"),
+    path("accounts/<int:pk>/", management_views.account_detail, name="account_detail"),
+    path("accounts/<int:pk>/reactivate/", management_views.account_reactivate, name="account_reactivate"),
     path("students/", management_views.student_record_list, name="student_record_list"),
     path("students/add/", management_views.student_record_add, name="student_record_add"),
     path("students/generate/", management_views.student_record_generate, name="student_record_generate"),

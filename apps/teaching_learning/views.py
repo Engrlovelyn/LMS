@@ -1,3 +1,4 @@
+import mimetypes
 import os
 
 from django.contrib import messages
@@ -37,12 +38,31 @@ def resource_download(request, pk):
         as_teacher = VirtualClassroom.objects.filter(
             resource_placements__resource=resource, teacher=user,
         ).exists()
-        if not (as_student or as_teacher):
+        # A resource shared to the subject repository is also readable by a
+        # teacher who handles that subject, even before it is placed in one of
+        # their own classrooms. This mirrors the repository list rule.
+        shared_to_subject = (
+            resource.share_to_repository
+            and resource.status == LearningResource.STATUS_ACTIVE
+            and (
+                resource.uploaded_by_id == user.pk
+                or VirtualClassroom.objects.filter(
+                    subject=resource.subject, teacher=user
+                ).exists()
+            )
+        )
+        if not (as_student or as_teacher or shared_to_subject):
             return HttpResponseForbidden("You do not have access to this material.")
 
     try:
-        return FileResponse(resource.file.open("rb"), as_attachment=True,
-                            filename=os.path.basename(resource.file.name))
+        filename = os.path.basename(resource.file.name)
+        content_type, _ = mimetypes.guess_type(filename)
+        return FileResponse(
+            resource.file.open("rb"),
+            as_attachment=True,
+            filename=filename,
+            content_type=content_type or "application/octet-stream",
+        )
     except FileNotFoundError:
         return HttpResponse("The stored file is missing.", status=404)
 
@@ -72,7 +92,11 @@ def _teacher_subject_ids(user):
 @perm_required("access_subject_level_repository")
 def repository_list(request):
     q = request.GET.get("q", "").strip()
-    qs = LearningResource.objects.filter(share_to_repository=True)
+    subject_filter = request.GET.get("subject", "").strip()
+    qs = LearningResource.objects.filter(
+        share_to_repository=True,
+        status=LearningResource.STATUS_ACTIVE,
+    )
     is_teacher = (
         request.user.groups.filter(name="teacher").exists()
         and not request.user.is_superuser
@@ -82,16 +106,31 @@ def repository_list(request):
             Q(uploaded_by_id=request.user.id)
             | Q(subject__virtual_classrooms__teacher_id=request.user.id)
         ).distinct()
+    if subject_filter.isdigit():
+        qs = qs.filter(subject_id=int(subject_filter))
     if q:
-        qs = qs.filter(title__icontains=q)
+        qs = qs.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(subject__name__icontains=q)
+        )
     resources = (
         qs.select_related("subject", "uploaded_by", "academic_year")
         .order_by("-created_at")
     )
+    subjects = Subject.objects.filter(status=Subject.STATUS_ACTIVE)
+    if is_teacher:
+        subjects = subjects.filter(id__in=_teacher_subject_ids(request.user))
+    subjects = subjects.order_by("grade_level", "name")
     return render(
         request,
         "teaching_learning/repository_list.html",
-        {"resources": resources, "q": q},
+        {
+            "resources": resources,
+            "q": q,
+            "subject_filter": subject_filter,
+            "subjects": subjects,
+        },
     )
 
 
@@ -228,7 +267,7 @@ def resource_attach(request, vc_pk):
         created = 0
         for resource in form.cleaned_data["resources"]:
             try:
-                LearningResourcePlacement.objects.create(
+                placement = LearningResourcePlacement.objects.create(
                     resource=resource,
                     virtual_classroom=vc,
                     topic=topic,
@@ -238,6 +277,12 @@ def resource_attach(request, vc_pk):
                 created += 1
             except IntegrityError:
                 continue
+            try:
+                from apps.communication import notifications as notif_service
+
+                notif_service.notify_resource_placement(placement)
+            except Exception:
+                pass
         if created:
             messages.success(request, f"Attached {created} resource(s).")
             _notify_materials_changed(vc, request.user)

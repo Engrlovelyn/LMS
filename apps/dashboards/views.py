@@ -1,6 +1,6 @@
 ﻿from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -80,6 +80,47 @@ def academic_coordinator(request, route=None):
         return HttpResponseForbidden("You do not have access to this dashboard.")
     ctx = dashboards_context.assistant_principal_context(request.user)
     return render(request, "frontend/academic_coordinator.html", ctx)
+
+
+@never_cache
+@login_required
+def live_dashboard_data(request):
+    """Return the signed-in role dashboard data for in-place refreshes."""
+    user = request.user
+    if _require_role(user, "system_admin"):
+        ctx = dashboards_context.system_admin_context(user)
+    elif _require_role(user, "registrar"):
+        ctx = dashboards_context.registrar_context(user)
+    elif _require_role(user, "teacher"):
+        ctx = dashboards_context.teacher_context(user)
+    elif (
+        _require_role(user, "principal")
+        or _require_role(user, "elementary_principal")
+        or _require_role(user, "quality_audit")
+    ):
+        ctx = dashboards_context.principal_context(user)
+    elif _require_role(user, "assistant_principal"):
+        ctx = dashboards_context.assistant_principal_context(user)
+    elif _require_role(user, "student"):
+        ctx = dashboards_context.student_context(user)
+    else:
+        return HttpResponseForbidden("You do not have access to this dashboard.")
+    return JsonResponse(ctx.get("dashboard_json", ctx.get("qa_data", {})))
+
+
+@never_cache
+@login_required
+def academic_coordinator_data(request):
+    """Live payload for the Academic Coordinator dashboard's auto-refresh.
+
+    Returns exactly the same ``dashboard_json`` the page is seeded with, so the
+    front end can re-apply it in place and reflect new enrollments, grades,
+    attendance and announcements without a manual page refresh.
+    """
+    if not _require_role(request.user, "assistant_principal"):
+        return HttpResponseForbidden("You do not have access to this dashboard.")
+    ctx = dashboards_context.assistant_principal_context(request.user)
+    return JsonResponse(ctx["dashboard_json"])
 
 
 @ensure_csrf_cookie

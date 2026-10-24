@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Update Student Enrollment{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Update Student Enrollment</h1>
+    <p class="page-sub">{{ enrollment.student }} — {{ section }}</p>
+  </div>
+  <a class="btn btn-outline" href="{% url 'academic:section_students' section.pk %}">
+    <i class="fa-solid fa-arrow-left"></i> Back to Roster
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-user-graduate"></i> Enrollment Details</div>
+  </div>
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}
+          <div class="help-text">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <a class="btn btn-outline" href="{% url 'academic:section_students' section.pk %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-save"></i> Save Enrollment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

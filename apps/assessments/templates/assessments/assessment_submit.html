@@ -7,9 +7,21 @@
   .form-group ul li label { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1.5px solid var(--card-border); border-radius:9px; cursor:pointer; transition:all .2s; width:100%; font-size:13px; }
   .form-group ul li label:hover { border-color:var(--blue); background:var(--accent); }
   .form-group ul li { list-style:none; }
+  /* Question prompts are displayed, not copied. Inputs and textareas stay fully
+     selectable so a student can still type, paste and edit their answers. */
+  #assessmentForm .form-label,
+  #assessmentForm .card-title,
+  #assessmentForm .assessment-prompt { -webkit-user-select:none; user-select:none; }
 </style>
 {% endblock %}
 {% block content %}
+<div id="assessmentFocusWarning" style="display:none;position:fixed;top:0;left:0;right:0;z-index:5000;background:#dc2626;color:#fff;padding:12px 18px;align-items:center;gap:10px;font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <span>Warning! You have left the assessment page. Please return to your assessment.</span>
+</div>
+<div id="assessmentShotToast" style="display:none;position:fixed;bottom:24px;right:24px;z-index:5001;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.3);">
+  <i class="fa-solid fa-camera"></i> Screenshots and copying are not allowed during this assessment.
+</div>
 <div class="page-header">
   <div>
     <h1 class="page-title">Submit: {{ assessment.title }}</h1>
@@ -18,6 +30,16 @@
   <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">
     <i class="fa-solid fa-arrow-left"></i> Back
   </a>
+</div>
+
+<div class="card" style="margin-bottom:18px;border-left:4px solid #dc2626;">
+  <div class="card-body" style="font-size:12.5px;color:var(--text-muted);">
+    <strong style="color:var(--navy);"><i class="fa-solid fa-shield-halved"></i> Assessment Integrity</strong><br>
+    Stay on this page until you submit. Leaving the page, switching tabs, taking
+    screenshots or copying question content is recorded and reported to your
+    teacher. Your browser can only remind you about screenshots; it cannot fully
+    block them.
+  </div>
 </div>
 
 {% if assessment.instructions %}
@@ -40,7 +62,7 @@
 </div>
 {% endif %}
 
-<form method="post" novalidate>
+<form method="post" novalidate id="assessmentForm">
   {% csrf_token %}
   {% if form.non_field_errors %}
   <div class="messages">
@@ -63,7 +85,7 @@
     </div>
     <div class="card-body">
       {% if part.question_text %}
-      <p style="margin:0 0 12px;font-size:13px;color:var(--text-muted);">{{ part.question_text }}</p>
+      <p class="assessment-prompt" style="margin:0 0 12px;font-size:13px;color:var(--text-muted);">{{ part.question_text }}</p>
       {% endif %}
       {% for item_key, field, is_multi in entries %}
       <div class="form-group" style="margin-bottom:16px;">
@@ -93,4 +115,112 @@
     </button>
   </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Assessment integrity monitoring.
+ *
+ * A browser can detect that the student left the tab/window and can notice a
+ * PrintScreen / print / save key, but it cannot truly prevent a screenshot --
+ * so this records detected events for the teacher and warns the student, which
+ * is exactly what the requirement asks ("record detected ... when supported").
+ * It never touches answer inputs: typing, pasting and keyboard navigation keep
+ * working, and monitoring stops the moment the student submits.
+ */
+(function () {
+  var form = document.getElementById('assessmentForm');
+  if (!form) return;
+
+  var endpoint = "{% url 'assessments:record_proctoring_event' assessment.pk %}";
+  var csrfInput = document.querySelector('#assessmentForm input[name="csrfmiddlewaretoken"]');
+  var csrf = (csrfInput && csrfInput.value) || window.csrfToken || '';
+  var banner = document.getElementById('assessmentFocusWarning');
+  var shotToast = document.getElementById('assessmentShotToast');
+  var submitted = false;
+
+  // A single tab switch fires blur + visibilitychange within a few ms; the
+  // server also collapses rapid duplicates, but this keeps the client quiet.
+  var lastSent = {};
+  var COOLDOWN_MS = 4000;
+  function send(type, metadata) {
+    if (submitted) return;
+    var now = Date.now();
+    if (lastSent[type] && now - lastSent[type] < COOLDOWN_MS) return;
+    lastSent[type] = now;
+    try {
+      fetch(endpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ event_type: type, metadata: metadata || {} }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (e) { /* integrity signals must never break the form */ }
+  }
+
+  function showWarning() { if (banner) banner.style.display = 'flex'; }
+  function hideWarning() { if (banner) banner.style.display = 'none'; }
+
+  var hiddenStart = null;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      hiddenStart = Date.now();
+      showWarning();
+      send('visibility_hidden', { source: 'visibilitychange' });
+    } else {
+      hideWarning();
+      send('visibility_visible', {
+        source: 'visibilitychange',
+        hidden_seconds: hiddenStart ? Math.round((Date.now() - hiddenStart) / 1000) : null
+      });
+      hiddenStart = null;
+    }
+  });
+  window.addEventListener('blur', function () { send('focus_lost', { source: 'window_blur' }); });
+  window.addEventListener('focus', function () { send('focus_gained', { source: 'window_focus' }); });
+
+  // Screenshot / print / save keypresses: warned, not blocked (best effort).
+  document.addEventListener('keydown', function (e) {
+    var isShot = e.key === 'PrintScreen';
+    var isPrint = e.ctrlKey && (e.key === 'p' || e.key === 'P');
+    var isSave = e.ctrlKey && (e.key === 's' || e.key === 'S');
+    if (isShot || isPrint || isSave) {
+      send('screenshot_key', { detail: e.key });
+      if (shotToast) {
+        shotToast.style.display = 'block';
+        setTimeout(function () { shotToast.style.display = 'none'; }, 2600);
+      }
+    }
+  });
+
+  // Copy / cut / right-click are discouraged on question prompts only. Anything
+  // inside an input, textarea, select, button or link is left alone so pasting
+  // an answer and normal keyboard use still work.
+  function isProtected(e) {
+    var t = e.target;
+    if (!t || !t.closest) return false;
+    return !t.closest('input,textarea,select,button,a,label');
+  }
+  document.addEventListener('copy', function (e) {
+    if (isProtected(e)) { e.preventDefault(); send('copy_attempt', { detail: 'copy' }); }
+  });
+  document.addEventListener('cut', function (e) {
+    if (isProtected(e)) { e.preventDefault(); send('copy_attempt', { detail: 'cut' }); }
+  });
+  document.addEventListener('contextmenu', function (e) {
+    if (isProtected(e)) { e.preventDefault(); send('context_menu', {}); }
+  });
+
+  // Stop monitoring on submit; the page navigates away right after.
+  form.addEventListener('submit', function () {
+    submitted = true;
+    hideWarning();
+  });
+})();
+</script>
 {% endblock %}

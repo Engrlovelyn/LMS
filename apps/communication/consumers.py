@@ -81,7 +81,13 @@ class ChatConsumer(WebsocketConsumer):
         user = self.user
 
         if kind == "dm":
-            peer = User.objects.filter(pk=data.get("peer_id"), status=User.Status.ACTIVE).first()
+            # Same recipient rule as POST /api/messages/ and messageable_contacts:
+            # any enrolled learner, regardless of account status (archived aside).
+            peer = (
+                User.objects.filter(pk=data.get("peer_id"))
+                .exclude(status=User.Status.ARCHIVED)
+                .first()
+            )
             if peer is None or peer.pk == user.pk:
                 self._error("Recipient not found.")
                 return

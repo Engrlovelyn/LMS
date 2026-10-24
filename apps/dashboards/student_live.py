@@ -11,6 +11,8 @@ Everything here is scoped to a single ``VirtualClassroom`` that the student is
 actively enrolled in, so a student can never receive another classroom's work.
 """
 
+import re
+
 from django.utils import timezone
 
 RESOURCE_ICONS = {
@@ -30,6 +32,34 @@ ASSESSMENT_COLOURS = {
     "overdue": "#e11d48",
     "closed": "#64748b",
 }
+
+# The student quiz taker works in a small set of UI question kinds. Assessment
+# parts use the richer model vocabulary; map one to the other so an assessment
+# built by a teacher can be answered in the browser. Matching and numeric have
+# no dedicated UI kind, so they are surfaced as free-text (a numeric answer is
+# still entered as text).
+PART_TYPE_TO_QUIZ_KIND = {
+    "multiple_choice": "mc",
+    "true_false": "tf",
+    "short_answer": "sa",
+    "identification": "sa",
+    "numeric": "sa",
+    "matching_type": "sa",
+    "essay": "es",
+    "position_paper": "pp",
+    "case_study": "cs",
+    "narrative_report": "nr",
+}
+
+
+def quiz_assessment_key(title):
+    """Slug a title exactly like the student template does.
+
+    The front end keys its quiz bank off
+    ``title.toLowerCase().replace(/[^a-z0-9]+/g, '-')``; the same transform here
+    keeps the server-supplied questions matched to the button that opens them.
+    """
+    return re.sub(r"[^a-z0-9]+", "-", (title or "").lower())
 
 
 def _fmt_dt(value):
@@ -101,6 +131,7 @@ def assessments_for(vc, profile, now=None):
             virtual_classroom=vc, assessment__status=Assessment.STATUS_ACTIVE
         )
         .select_related("assessment", "assessment__subject", "virtual_classroom")
+        .prefetch_related("assessment__parts")
         .order_by("assessment__submission_deadline")
     )
     submitted_ids = set(
@@ -122,6 +153,10 @@ def assessments_for(vc, profile, now=None):
             status = "scheduled"
         else:
             status = "open"
+        attached = next(
+            (p for p in aa.assessment.parts.all() if p.attached_file),
+            None,
+        )
         out.append(
             {
                 "key": "assess-{}".format(aa.pk),
@@ -137,9 +172,64 @@ def assessments_for(vc, profile, now=None):
                 "period": vc.grading_period or "Quarter 1",
                 "instr": a.instructions or "",
                 "submitted": aa.pk in submitted_ids,
+                "attachmentUrl": attached.attached_file.url if attached else "",
+                "attachmentName": str(attached.attached_file.name).rsplit("/", 1)[-1] if attached else "",
             }
         )
     return out
+
+
+def quiz_banks_for(vc, profile, now=None):
+    """Objective questions for this classroom, shaped for the browser quiz taker.
+
+    Keyed by the slug of the assessment title (matching ``quizAssessmentKey`` in
+    the student template) so ``openQuizTaker`` can find the questions for the
+    card the student clicked. Only the parts a student can answer are included;
+    the ``correct`` index/answer is carried alongside so the taker can score
+    multiple-choice and true/false items immediately, but the server remains the
+    record of truth once the submission is posted.
+    """
+    from apps.assessments.models import Assessment, AssessmentAssignment
+
+    now = now or timezone.now()
+    rows = (
+        AssessmentAssignment.objects.filter(
+            virtual_classroom=vc, assessment__status=Assessment.STATUS_ACTIVE
+        )
+        .select_related("assessment")
+        .prefetch_related("assessment__parts")
+        .order_by("assessment__submission_deadline")
+    )
+
+    banks = {}
+    for aa in rows:
+        assessment = aa.assessment
+        questions = []
+        for part in assessment.parts.all():
+            kind = PART_TYPE_TO_QUIZ_KIND.get(part.question_type)
+            if kind is None:
+                continue
+            for item in (part.items or {}).values():
+                if not isinstance(item, dict):
+                    continue
+                question = item.get("question")
+                if not question:
+                    continue
+                pts = item.get("point", 1) or 1
+                entry = {"type": kind, "text": str(question), "pts": pts}
+                if kind == "mc":
+                    choices = list(item.get("choices") or [])
+                    entry["options"] = choices
+                    correct = item.get("correct_answer")
+                    if correct in choices:
+                        entry["correct"] = choices.index(correct)
+                elif kind == "tf":
+                    correct = str(item.get("correct_answer", "")).strip().lower()
+                    entry["correct"] = "true" if correct in ("true", "t", "yes") else "false"
+                questions.append(entry)
+        if questions:
+            banks[quiz_assessment_key(assessment.title)] = questions
+    return banks
 
 
 def announcements_for(vc):
@@ -154,6 +244,7 @@ def announcements_for(vc):
     return [
         {
             "key": "ann-{}".format(ca.pk),
+            "announcement_id": ca.pk,
             "classroom_id": vc.pk,
             "subject": _subj_label(ca.virtual_classroom.subject) if ca.virtual_classroom_id else "Class",
             "title": (ca.content[:60] if ca.content else "Class announcement"),
@@ -214,8 +305,11 @@ def student_classroom_payload(profile, vc, now=None):
         "section": vc.section.name if vc.section_id else "",
         "teacher": vc.teacher.get_full_name() if vc.teacher_id else "",
         "teacher_id": vc.teacher_id,
+        "themeColor": vc.theme_color or "#4F46E5",
+        "background": (vc.background_image.url if vc.background_image else ""),
         "materials": materials_for(vc),
         "assessments": assessments_for(vc, profile, now=now),
+        "quizBanks": quiz_banks_for(vc, profile, now=now),
         "announcements": announcements_for(vc),
         "attendance": attendance_for(vc, profile),
         "generated_at": timezone.localtime(now).isoformat(),

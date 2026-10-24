@@ -1,7 +1,9 @@
 from django.contrib import messages
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.urls import reverse
 
 from apps.academic_structure.models import AcademicYear, StudentEnrollment
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
@@ -12,7 +14,7 @@ from .account_admin import (
     issue_temporary_password,
     unlock_user_account,
 )
-from .decorators import perm_required
+from .decorators import has_permission, perm_required
 from .ordering import order_students
 from .forms import (
     EmployeeAccountForm,
@@ -23,6 +25,7 @@ from .forms import (
     VCStudentsImportForm,
     AdminResetPasswordForm,
     RoleAssignmentForm,
+    UserAccountUpdateForm,
     generate_password,
     parse_csv_rows,
 )
@@ -34,6 +37,7 @@ from .models import (
     RoleAssignment,
     StudentProfile,
     User,
+    _sync_user_groups,
 )
 
 
@@ -107,15 +111,23 @@ def _make_student(email, password, profile_fields, section, academic_year, reque
 
 @perm_required("view_employee_account")
 def employee_account_list(request):
-    employees = EmployeeProfile.objects.select_related("user").order_by(
-        "last_name", "first_name"
-    )
+    q = request.GET.get("q", "").strip()
+    employees = EmployeeProfile.objects.select_related("user")
+    if q:
+        employees = employees.filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(middle_initial__icontains=q)
+            | Q(user__email__icontains=q)
+        )
+    employees = employees.order_by("last_name", "first_name")
     context = {
         "employees": employees,
         "total_employees": employees.count(),
         "active_employees": employees.filter(
             user__status=User.Status.ACTIVE
         ).count(),
+        "q": q,
     }
     return render(request, "accounts/employee_account_list.html", context)
 
@@ -222,13 +234,125 @@ def employee_account_archive(request, pk):
     return redirect("accounts:employee_account_list")
 
 
+def _account_profile(user):
+    """Return the employee or student profile attached to ``user`` (or None)."""
+    return (
+        getattr(user, "employee_profile", None)
+        or getattr(user, "student_profile", None)
+    )
+
+
+@perm_required("view_user_account")
+def account_detail(request, pk):
+    """View/Update User Account -- one screen for any login.
+
+    Works for employees and students alike so an administrator has a single
+    place to inspect a login and change its email address or status without
+    having to know which of the two record lists it belongs to.
+    """
+    user = get_object_or_404(User, pk=pk)
+    profile = _account_profile(user)
+    assignments = (
+        RoleAssignment.objects.filter(user=user)
+        .select_related("role", "academic_year")
+        .order_by("-academic_year__start_date")
+    )
+    form = UserAccountUpdateForm(
+        request.POST or None,
+        initial={"email": user.email, "status": user.status},
+    )
+    if request.method == "POST":
+        if not has_permission(request.user, "update_user_account"):
+            return JsonResponse(
+                {"ok": False, "error": "You do not have permission to update this account."},
+                status=403,
+            )
+        if form.is_valid():
+            new_email = form.cleaned_data["email"].strip().lower()
+            if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+                form.add_error("email", "A user with this email already exists.")
+            else:
+                previous_status = user.status
+                user.email = new_email
+                user.status = form.cleaned_data["status"]
+                if (
+                    user.status == User.Status.ACTIVE
+                    and previous_status == User.Status.LOCKED
+                ):
+                    user.failed_login_attempts = 0
+                    user.locked_at = None
+                user.save()
+                if user.status == User.Status.ARCHIVED:
+                    user.groups.clear()
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action="user_account_updated",
+                    related_entity_type="User",
+                    related_entity_id=user.pk,
+                )
+                messages.success(request, f"Account updated for {user.email}.")
+                return redirect("accounts:account_detail", pk=user.pk)
+
+    context = {
+        "account_user": user,
+        "profile": profile,
+        "profile_type": "Employee" if hasattr(user, "employee_profile") else (
+            "Student" if hasattr(user, "student_profile") else "User"
+        ),
+        "assignments": assignments,
+        "form": form,
+        "can_update": has_permission(request.user, "update_user_account"),
+        "can_reactivate": has_permission(request.user, "reactivate_account"),
+    }
+    return render(request, "accounts/account_detail.html", context)
+
+
+@perm_required("reactivate_account")
+def account_reactivate(request, pk):
+    """Bring an archived account back: clear the archive and restore its role.
+
+    Archiving clears the user's role groups (see ``_deactivate_login_access``),
+    so reactivating has to re-run the group sync from the surviving
+    RoleAssignment rows rather than only flipping the status flag.
+    """
+    user = get_object_or_404(User, pk=pk)
+    if request.method == "POST":
+        user.status = User.Status.ACTIVE
+        user.failed_login_attempts = 0
+        user.locked_at = None
+        user.save()
+        _sync_user_groups(user)
+        ActivityLog.objects.create(
+            user=request.user,
+            action="user_account_reactivated",
+            related_entity_type="User",
+            related_entity_id=user.pk,
+        )
+        messages.success(request, f"Account reactivated: {user.email}.")
+        return redirect(_account_recovery_return_url(user))
+    return render(
+        request,
+        "accounts/account_reactivate.html",
+        {"account_user": user},
+    )
+
+
 @perm_required("view_student_record")
 def student_record_list(request):
+    q = request.GET.get("q", "").strip()
     students = order_students(
         StudentProfile.objects.select_related("user").prefetch_related(
             "enrollments__section"
         )
     )
+    if q:
+        students = students.filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(middle_initial__icontains=q)
+            | Q(lrn__icontains=q)
+            | Q(user__email__icontains=q)
+        )
 
     def current_section(student):
         enrollment = student.enrollments.filter(
@@ -243,6 +367,7 @@ def student_record_list(request):
         "total_enrolled": StudentEnrollment.objects.filter(
             status=StudentEnrollment.STATUS_ENROLLED
         ).count(),
+        "q": q,
     }
     return render(request, "accounts/student_record_list.html", context)
 

@@ -11,6 +11,28 @@
   </a>
 </div>
 
+<form method="get" class="card" style="margin-bottom:18px;">
+  <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div class="form-group" style="flex:2;min-width:220px;margin:0;">
+      <label class="form-label" for="repoSearch">Search</label>
+      <input class="form-control" id="repoSearch" type="search" name="q" value="{{ q }}" placeholder="Search title, subject, or type...">
+    </div>
+    <div class="form-group" style="flex:1;min-width:200px;margin:0;">
+      <label class="form-label" for="repoSubject">Subject</label>
+      <select class="form-control" id="repoSubject" name="subject">
+        <option value="">All subjects</option>
+        {% for s in subjects %}
+        <option value="{{ s.pk }}" {% if subject_filter == s.pk|stringformat:"s" %}selected{% endif %}>Grade {{ s.grade_level }} &middot; {{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Filter</button>
+    {% if q or subject_filter %}
+    <a class="btn btn-outline" href="{% url 'assessments:assessment_repository' %}">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
 {% if assessments %}
 <div class="card">
   <div class="card-header">
@@ -47,7 +69,7 @@
               <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_detail' a.pk %}">
                 <i class="fa-solid fa-eye"></i> View
               </a>
-              {% if perms.assessments.access_assessment_repository and a.status == "active" %}
+              {% if a.can_edit and a.status == "active" %}
               <a class="btn btn-outline btn-sm" href="{% url 'assessments:assessment_assign' a.pk %}">
                 <i class="fa-solid fa-share-nodes"></i> Assign
               </a>
@@ -65,7 +87,11 @@
   <div class="card-body">
     <div class="empty-state">
       <i class="fa-solid fa-folder-open"></i>
+      {% if q or subject_filter %}
+      <p>No assessments match your search. Try a different title, subject, or clear the filters.</p>
+      {% else %}
       <p>No assessments in your repository yet.</p>
+      {% endif %}
     </div>
   </div>
 </div>

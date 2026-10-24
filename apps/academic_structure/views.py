@@ -18,6 +18,7 @@ from .forms import (
     SectionForm,
     SectionStudentAssignForm,
     SectionStudentMoveForm,
+    StudentEnrollmentUpdateForm,
     StructureFinalizeForm,
     SubjectForm,
     assignable_students,
@@ -139,6 +140,44 @@ def academic_year_archive(request, pk):
     year.save()
     messages.success(request, "Academic year and its sections, subjects, and enrollments archived.")
     return redirect(reverse("academic:academic_year_list"))
+
+
+@perm_required("manage_academic_structure_template")
+def structure_template_list(request):
+    """Landing page for Manage Academic Structure Template.
+
+    Lists every academic year alongside its structure version so the registrar
+    can see which years have a finalized structure and jump straight to the
+    finalize form for the rest.
+    """
+    years = AcademicYear.objects.all().order_by("-start_date")
+    rows = []
+    for year in years:
+        version = getattr(year, "structure_version", None)
+        rows.append(
+            {
+                "year": year,
+                "version": version,
+                "grading_period_type": (
+                    version.get_grading_period_type_display() if version else None
+                ),
+                "is_finalized": bool(version and version.is_finalized),
+                "section_count": Section.objects.filter(
+                    academic_year=year, status=Section.STATUS_ACTIVE
+                ).count(),
+                "subject_count": Subject.objects.filter(
+                    academic_year=year, status=Subject.STATUS_ACTIVE
+                ).count(),
+            }
+        )
+    context = {
+        "rows": rows,
+        "finalized_count": sum(1 for row in rows if row["is_finalized"]),
+        "total_years": len(rows),
+    }
+    return render(
+        request, "academic_structure/structure_template_list.html", context
+    )
 
 
 @perm_required("manage_academic_structure_template")
@@ -424,6 +463,49 @@ def section_student_remove(request, pk, enrollment_pk):
             request, "{} was removed from {}.".format(enrollment.student, section)
         )
     return redirect(reverse("academic:section_students", args=[section.pk]))
+
+
+@perm_required("update_student_enrollment_inline")
+def student_enrollment_update(request, pk, enrollment_pk):
+    """Update one student enrollment: move the learner to another section or
+    archive the record, keeping the learner profile intact."""
+    section = get_object_or_404(Section, pk=pk)
+    enrollment = get_object_or_404(
+        StudentEnrollment.objects.select_related("student", "academic_year"),
+        pk=enrollment_pk,
+        section=section,
+    )
+    form = StudentEnrollmentUpdateForm(
+        request.POST or None, instance=enrollment, enrollment=enrollment
+    )
+    if request.method == "POST" and form.is_valid():
+        updated = form.save(commit=False)
+        if updated.status == StudentEnrollment.STATUS_ARCHIVED and not updated.archived_at:
+            updated.archived_at = timezone.now()
+        elif updated.status == StudentEnrollment.STATUS_ENROLLED:
+            updated.archived_at = None
+        try:
+            updated.save()
+        except IntegrityError:
+            form.add_error(
+                "section",
+                "This student is already enrolled in another section this year.",
+            )
+            return render(
+                request,
+                "academic_structure/student_enrollment_form.html",
+                {"form": form, "enrollment": enrollment, "section": section},
+            )
+        messages.success(
+            request,
+            "Enrollment updated for {}.".format(enrollment.student),
+        )
+        return redirect(reverse("academic:section_students", args=[section.pk]))
+    return render(
+        request,
+        "academic_structure/student_enrollment_form.html",
+        {"form": form, "enrollment": enrollment, "section": section},
+    )
 
 
 @require_POST

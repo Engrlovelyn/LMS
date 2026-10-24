@@ -3,6 +3,7 @@ from .models import (
     Assessment,
     AssessmentPart,
     AssessmentAssignment,
+    AssessmentProctoringEvent,
     Submission,
     SubmissionResponse,
     GradingFormula,
@@ -89,3 +90,11 @@ class AssessmentNotificationAdmin(admin.ModelAdmin):
     list_display = ("assessment", "student", "event_type", "is_read", "created_at")
     list_filter = ("event_type", "is_read")
     search_fields = ("student__last_name", "student__first_name")
+
+
+@admin.register(AssessmentProctoringEvent)
+class AssessmentProctoringEventAdmin(admin.ModelAdmin):
+    list_display = ("assessment", "student", "event_type", "created_at")
+    list_filter = ("event_type", "assessment")
+    search_fields = ("student__last_name", "student__first_name")
+    date_hierarchy = "created_at"

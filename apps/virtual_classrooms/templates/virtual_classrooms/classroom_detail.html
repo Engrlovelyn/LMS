@@ -135,7 +135,7 @@
                 <div class="material-name">{{ p.resource.title }}</div>
                 <div class="material-meta">{{ p.resource.get_resource_type_display }}{% if p.resource.external_link %} &middot; <a href="{{ p.resource.external_link }}" target="_blank" style="color:var(--blue);">{{ p.resource.external_link|truncatechars:40 }}</a>{% endif %}</div>
               </div>
-              {% if p.resource.file %}<a class="btn btn-outline btn-sm" href="{{ p.resource.file.url }}" download><i class="fa-solid fa-download"></i></a>{% endif %}
+              {% if p.resource.file %}<a class="btn btn-outline btn-sm" href="{% url 'teaching:resource_download' p.resource.pk %}"><i class="fa-solid fa-download"></i></a>{% endif %}
             </div>
             {% endfor %}
           </div>
@@ -295,6 +295,7 @@
 
 <!-- MESSAGES TAB -->
 <div class="tab-pane" id="tab-messages">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start;">
   <div class="card">
     <div class="card-header">
       <div class="card-title"><i class="fa-solid fa-comments" style="color:var(--blue)"></i> Class Messages</div>
@@ -336,6 +337,53 @@
         </div>
       </div>
     </div>
+    </div>
+
+    {% if perms.communication.send_private_message %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-user-group" style="color:var(--blue)"></i> Personal Messages</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div style="padding:12px 14px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--gray-100);">
+          Send a private message to one person in this class. Only the two of you can see it.
+        </div>
+        <form id="pmCompose" method="post" data-base="{% url 'communication:private_message_thread' 0 %}"
+              style="display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;"
+              onsubmit="var s=document.getElementById('pmRecipient');if(!s||!s.value){if(window.showToast)showToast('Choose a person to message first.','error');return false;}this.action=this.getAttribute('data-base').replace(/0\/$/,s.value+'/');return true;">
+          {% csrf_token %}
+          <select id="pmRecipient" class="msg-input" style="flex:0 0 38%;min-width:140px;" {% if not personal_contacts %}disabled{% endif %}>
+            {% if personal_contacts %}
+            <option value="">Choose person…</option>
+            {% for contact in personal_contacts %}
+            <option value="{{ contact.id }}">{{ contact.name }} · {{ contact.role }}</option>
+            {% endfor %}
+            {% else %}
+            <option value="">No one to message in this class</option>
+            {% endif %}
+          </select>
+          <input type="text" name="content" class="msg-input" placeholder="{% if personal_contacts %}Type a message...{% else %}No students enrolled yet{% endif %}" required maxlength="2000" autocomplete="off" style="min-width:140px;" {% if not personal_contacts %}disabled{% endif %}>
+          <button type="submit" class="btn btn-primary btn-sm" {% if not personal_contacts %}disabled{% endif %}><i class="fa-solid fa-paper-plane"></i> Send</button>
+        </form>
+        {% for contact in personal_contacts %}
+        <a href="{% url 'communication:private_message_thread' contact.id %}" style="display:flex;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--gray-100);text-decoration:none;color:inherit;">
+          <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">{{ contact.name|slice:":1"|upper }}</div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:12.5px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ contact.name }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ contact.role }}</div>
+          </div>
+          <span class="btn btn-outline btn-sm" style="margin:0;"><i class="fa-solid fa-paper-plane"></i> Message</span>
+        </a>
+        {% empty %}
+        <div class="empty-state" style="padding:24px 16px;">
+          <i class="fa-solid fa-user-group"></i>
+          <p>No one to message in this class yet.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 </div>
 

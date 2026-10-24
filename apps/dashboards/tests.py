@@ -735,6 +735,88 @@ class CoordinatorPanelPayloadTests(TestCase):
         self.assertContains(resp, "data.attendanceRows")
         self.assertContains(resp, "data.announcements")
 
+
+class StudentAnnouncementTargetTests(TestCase):
+    """The student dashboard anchors every announcement row by the raw
+    announcement id, so a bell notification can open the exact one in-page.
+    The payloads must expose `announcement_id`, kept separate from the
+    school row's prefixed display id and the class row's `key`, because the
+    notification's ``source_id`` is the bare primary key."""
+
+    @classmethod
+    def setUpTestData(cls):
+        import datetime
+
+        from apps.accounts.models import StudentProfile
+        from apps.academic_structure.models import AcademicYear, Section, Subject
+        from apps.communication.models import ClassAnnouncement, SchoolAnnouncement
+        from apps.virtual_classrooms.models import (
+            VirtualClassroom, VirtualClassroomEnrollment,
+        )
+
+        cls.year = AcademicYear.objects.create(
+            label="2026-SA",
+            start_date=datetime.date(2026, 6, 1),
+            end_date=datetime.date(2027, 5, 31),
+            status="ACTIVE",
+        )
+        cls.teacher = User.objects.create_user(
+            email="sa_faculty@tass.test", password="pass12345x"
+        )
+        cls.teacher.status = "active"
+        cls.teacher.save()
+        section = Section.objects.create(
+            academic_year=cls.year, name="SA", grade_level=9
+        )
+        subject = Subject.objects.create(
+            academic_year=cls.year, name="Science", grade_level=9
+        )
+        cls.vc = VirtualClassroom.objects.create(
+            academic_year=cls.year, section=section, subject=subject,
+            teacher=cls.teacher,
+        )
+        cls.student_user = User.objects.create_user(
+            email="sa_student@tass.test", password="pass12345x"
+        )
+        cls.student_user.status = "active"
+        cls.student_user.save()
+        cls.student_user.groups.add(Group.objects.get_or_create(name="student")[0])
+        cls.profile = StudentProfile.objects.create(
+            user=cls.student_user,
+            lrn="136100100099",
+            first_name="Ana",
+            last_name="Cruz",
+            sex="F",
+            birthdate=datetime.date(2012, 1, 1),
+        )
+        VirtualClassroomEnrollment.objects.create(
+            virtual_classroom=cls.vc,
+            student=cls.profile,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        )
+        cls.class_ann = ClassAnnouncement.objects.create(
+            virtual_classroom=cls.vc, posted_by=cls.teacher, content="Bring lab coats"
+        )
+        cls.school_ann = SchoolAnnouncement.objects.create(
+            title="Foundation Day", content="Parade", posted_by=cls.teacher
+        )
+
+    def _payload(self):
+        from apps.dashboards.context import student_context
+
+        return student_context(self.student_user)["dashboard_json"]
+
+    def test_school_announcement_rows_expose_raw_id(self):
+        rows = self._payload()["schoolAnnouncements"]
+        self.assertTrue(rows)
+        self.assertEqual(rows[0]["announcement_id"], self.school_ann.pk)
+
+    def test_class_announcement_rows_expose_raw_id(self):
+        rows = self._payload()["announcements_by_classroom"][str(self.vc.pk)]
+        self.assertTrue(rows)
+        self.assertEqual(rows[0]["announcement_id"], self.class_ann.pk)
+
+
 class RegistrarCalendarWriteTests(TestCase):
     """The Registrar keeps the Calendar of Activities up to date: the dashboard
     payload has to say so (the front end gates the Add/Edit controls on it), and

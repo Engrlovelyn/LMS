@@ -31,7 +31,7 @@
     <div class="card-title"><i class="fa-solid fa-calculator"></i> Compute Grades</div>
   </div>
   <div class="card-body">
-    <form method="post">
+    <form method="post" action="{% url 'assessments:compute_grades' vc.pk %}">
       {% csrf_token %}
       <p class="help-text">
         Weighted average across all graded assessments in this classroom, using the

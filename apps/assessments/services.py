@@ -74,6 +74,16 @@ def trigger_availability_notifications(assessment=None):
             )
             summary["created"] += len(new_ids)
         summary["already"] += len(existing)
+        # Mirror the assessment-specific rows into the persistent header-bell
+        # notification. Keyed on the assessment, so an assessment that was
+        # already available at assign time (and therefore already has a bell
+        # row) stays a single notification.
+        try:
+            from apps.communication import notifications as notif_service
+
+            notif_service.notify_assessment_available(item)
+        except Exception:
+            pass
     return summary
 
 

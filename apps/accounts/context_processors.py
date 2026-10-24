@@ -64,7 +64,25 @@ def context_get_user_role(request):
         "user_email": email,
         "user_initials": _initials(request.user),
         "user_avatar_url": _avatar_url(request.user),
+        "unread_notification_count": _unread_notification_count(request.user),
     }
+
+
+def _unread_notification_count(user):
+    """Unread bell notifications for the header badge.
+
+    Anonymous requests (login page, static) get 0 without touching the
+    database. The query is indexed on ``(recipient, is_read)`` and is only run
+    for authenticated users, so it is safe on every rendered page.
+    """
+    if not getattr(user, "is_authenticated", False):
+        return 0
+    try:
+        from apps.communication.models import Notification
+
+        return Notification.objects.filter(recipient=user, is_read=False).count()
+    except Exception:  # pragma: no cover - a missing table must not break a page
+        return 0
 
 
 def avatar_url(avatar_field):

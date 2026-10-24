@@ -8,10 +8,16 @@ urlpatterns = [
     path("list/", views.assessment_list, name="assessment_list"),
     path("add/", views.assessment_add, name="assessment_add"),
     path("<int:pk>/", views.assessment_detail, name="assessment_detail"),
+    path("<int:pk>/result/", views.assessment_result, name="assessment_result"),
     path("<int:pk>/update/", views.assessment_update, name="assessment_update"),
     path("<int:pk>/archive/", views.assessment_archive, name="assessment_archive"),
     path("<int:pk>/assign/", views.assessment_assign, name="assessment_assign"),
     path("<int:pk>/submit/", views.assessment_submit, name="assessment_submit"),
+    path(
+        "<int:pk>/proctoring/event/",
+        views.record_proctoring_event,
+        name="record_proctoring_event",
+    ),
     path("<int:pk>/parts/add/", views.assessment_part_add, name="assessment_part_add"),
     path(
         "<int:pk>/parts/<int:part_pk>/update/",
@@ -39,6 +45,11 @@ urlpatterns = [
         name="grade_submission",
     ),
     path(
+        "<int:pk>/submissions/<int:submission_pk>/auto-grade/",
+        views.auto_grade_submission,
+        name="auto_grade_submission",
+    ),
+    path(
         "formula/<int:vc_pk>/",
         views.grading_formula,
         name="grading_formula",
@@ -47,6 +58,11 @@ urlpatterns = [
         "gradebook/<int:vc_pk>/",
         views.grade_book,
         name="grade_book",
+    ),
+    path(
+        "gradebook/<int:vc_pk>/compute/",
+        views.compute_grades,
+        name="compute_grades",
     ),
     path(
         "performance/",

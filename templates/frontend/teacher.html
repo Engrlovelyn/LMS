@@ -16,44 +16,43 @@
      aborts the rest of that block and blanks the view. -->
 <script src="{% static 'js/empty_state.js' %}"></script>
 <script src="{% static 'js/demographics.js' %}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
 <style>
 :root {
-  --navy: #0a2463; --blue: #1e5faf; --sky: #3a86d4; --light-blue: #d6e8f7; --accent: #e8f0fc;
+  --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
   --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0;
   --gray-400: #94a8c4; --gray-600: #4a637f; --gray-700: #5a78a0; --gray-800: #1e2e42;
-  --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #3a86d4;
-  --header-bg: #0a2463; --sidebar-bg: #0a2463; --sidebar-hover-bg: #1e3f7a;
-  --sidebar-active-bg: #1e5faf; --sidebar-text: rgba(255,255,255,0.75);
-  --sidebar-text-active: #ffffff; --body-bg: #f4f7fc; --card-bg: #ffffff;
+  --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #f59e0b;
+  --header-bg: #111111; --sidebar-bg: #111111; --sidebar-hover-bg: #1f2937;
+  --sidebar-active-bg: #f59e0b; --sidebar-text: rgba(255,255,255,0.85);
+  --sidebar-text-active: #111111; --body-bg: #f4f7fc; --card-bg: #ffffff;
   --card-border: #dde5f0; --text-primary: #1e2e42; --text-muted: #94a8c4;
   --input-bg: #ffffff; --input-border: #dde5f0;
   --sidebar-w: 240px; --sidebar-collapsed: 64px; --header-h: 64px;
-  --radius: 14px; --shadow: 0 4px 24px rgba(10,36,99,0.12); --shadow-sm: 0 2px 10px rgba(10,36,99,0.07);
-  --transition: 0.28s cubic-bezier(.4,0,.2,1);
-}
+  --radius: 14px; --shadow: 0 4px 24px rgba(17,17,17,0.12); --shadow-sm: 0 2px 10px rgba(17,17,17,0.07);
+  --transition: 0.28s cubic-bezier(.4,0,.2,1); --red: #e11d48; --gray-300: #b9c8dd; --gray-500: #6f86a8; --radius-sm: 10px; }
 [data-theme="dark"] {
-  --navy: #1a3a7a; --blue: #3a7fd4; --light-blue: #1a2e4a; --accent: #1e2d42;
-  --gray-100: #1e2a3a; --gray-200: #2a3a4e; --gray-400: #6a88a4; --gray-600: #8aaccc; --gray-700: #9db8d6; --gray-800: #d0dce8;
-  --success: #2acc88; --warning: #f0ac3a; --danger: #e96060;
-  --header-bg: #071832; --sidebar-bg: #071832; --sidebar-hover-bg: #0d2545; --sidebar-active-bg: #1a4580;
-  --body-bg: #0e1620; --card-bg: #1a2332; --card-border: #2a3a4e; --text-primary: #d0dce8; --text-muted: #6a88a4;
-  --input-bg: #1e2a3a; --input-border: #2a3a4e; --shadow: 0 4px 24px rgba(0,0,0,0.3); --shadow-sm: 0 2px 10px rgba(0,0,0,0.2);
+  --navy: #0b0b0b; --blue: #f59e0b; --light-blue: #2a2416; --accent: #1f1a12;
+  --gray-100: #1e1e1e; --gray-200: #2a2a2a; --gray-400: #9a9a9a; --gray-600: #bfbfbf; --gray-700: #d4d4d4; --gray-800: #f5f5f5;
+  --success: #2acc88; --warning: #f0ac3a; --danger: #e96060; --info: #fbbf24;
+  --header-bg: #000000; --sidebar-bg: #000000; --sidebar-hover-bg: #111111; --sidebar-active-bg: #f59e0b;
+  --body-bg: #0e0e0e; --card-bg: #161616; --card-border: #2a2a2a; --text-primary: #f5f5f5; --text-muted: #a3a3a3;
+  --input-bg: #1e1e1e; --input-border: #2a2a2a; --shadow: 0 4px 24px rgba(0,0,0,0.45); --shadow-sm: 0 2px 10px rgba(0,0,0,0.35);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:100%; overflow-x:hidden; }
 body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--body-bg); color:var(--text-primary); min-height:100vh; display:flex; flex-direction:column; transition:background var(--transition),color var(--transition); }
 
 /* HEADER */
-header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--header-h); background:var(--header-bg); display:flex; align-items:center; padding:0; box-shadow:0 2px 20px rgba(7,24,50,0.45); transition:background var(--transition); }
+header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--header-h); background:var(--header-bg); display:flex; align-items:center; padding:0; box-shadow:0 2px 20px rgba(17,17,17,0.45); transition:background var(--transition); }
 .brand-block { display:flex; align-items:center; gap:12px; padding-left:18px; padding-right:22px; height:100%; }
 .brand-logos { display:flex; align-items:center; gap:-8px; }
 .brand-icon-img { width:42px; height:42px; border-radius:50%; object-fit:contain; }
 .brand-icon-img + .brand-icon-img { margin-left:4px; }
 .brand-text { font-family:'Fraunces',serif; font-size:14px; font-weight:600; color:#fff; line-height:1.2; white-space:nowrap; letter-spacing:.2px; }
 .brand-text span { display:block; font-family:'Plus Jakarta Sans',sans-serif; font-size:9.5px; color:rgba(255,255,255,0.55); font-weight:500; letter-spacing:.6px; margin-top:2px; text-transform:uppercase; }
-.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); border:2px solid rgba(255,255,255,0.4); }
-.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#1e5faf,#3a86d4); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
+.profile-img { width:32px; height:32px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#f59e0b,#fbbf24); border:2px solid rgba(255,255,255,0.4); }
+.profile-img-lg { width:64px; height:64px; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#f59e0b,#fbbf24); margin:0 auto 10px; display:block; border:3px solid var(--card-border); }
 .q-media-preview { margin-top:8px; padding:8px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; display:flex; align-items:center; gap:10px; font-size:12px; }
 .q-media-preview img { max-width:100px; max-height:70px; border-radius:6px; object-fit:cover; }
 .q-media-btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
@@ -71,7 +70,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .badge { position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#f97316; border:1.5px solid var(--header-bg); }
 .profile-btn { display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.1); border:none; border-radius:9px; padding:5px 10px 5px 5px; cursor:pointer; color:#fff; transition:background .2s; }
 .profile-btn:hover { background:rgba(255,255,255,0.2); }
-.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#f59e0b,#fbbf24); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 .profile-name { font-size:12.5px; font-weight:600; }
 .profile-role { font-size:10px; color:rgba(255,255,255,0.55); margin-top:1px; }
 .dark-toggle { width:38px; height:38px; border-radius:9px; background:rgba(255,255,255,0.1); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:14px; transition:background .2s; }
@@ -79,7 +78,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 
 /* SIDEBAR */
 .sidebar { position:fixed; top:var(--header-h); left:0; bottom:0; width:var(--sidebar-collapsed); background:var(--sidebar-bg); z-index:150; display:flex; flex-direction:column; overflow:hidden; transition:width var(--transition),box-shadow var(--transition),background var(--transition); border-right:1px solid rgba(255,255,255,0.06); }
-.sidebar:hover, body.sidebar-expanded .sidebar { width:var(--sidebar-w); box-shadow:4px 0 32px rgba(7,24,50,0.4); }
+.sidebar:hover, body.sidebar-expanded .sidebar { width:var(--sidebar-w); box-shadow:4px 0 32px rgba(17,17,17,0.4); }
 .sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
 .sidebar-section-label, .sidebar-label { font-size:9.5px; line-height:1.2; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:12px 10px 4px; white-space:nowrap; overflow:hidden; text-overflow:clip; opacity:0; max-height:0; transition:opacity 0.15s, max-height 0.15s; }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label,
@@ -90,14 +89,14 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
 .nav-item:hover { background:var(--sidebar-hover-bg); color:#fff; }
 .nav-item.active { background:var(--sidebar-active-bg); color:var(--sidebar-text-active); font-weight:600; }
-.nav-item.active .nav-item-icon { color:#7eb8f7; }
+.nav-item.active .nav-item-icon { color:#fbbf24; }
 .nav-item-badge { background:#f97316; color:#fff; font-size:9px; font-weight:700; border-radius:20px; padding:2px 6px; margin-left:auto; margin-right:12px; opacity:0; transition:opacity 0.15s; }
 .sidebar:hover .nav-item-badge, body.sidebar-expanded .sidebar .nav-item-badge { opacity:1; transition-delay:0.07s; }
 .sidebar-spacer { flex:1; }
 .sidebar-footer { padding:12px 8px; border-top:1px solid rgba(255,255,255,0.08); }
 .sidebar-user { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; overflow:hidden; }
 .sidebar-user-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; }
-.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#1e5faf,#3a86d4); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+.sidebar-user-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#f59e0b,#fbbf24); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
 
 /* LAYOUT */
 .layout { display:flex; margin-top:var(--header-h); min-height:calc(100vh - var(--header-h)); }
@@ -118,8 +117,8 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 /* BUTTONS */
 .btn { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:9px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; }
 .btn-primary { background:var(--navy); color:#fff; }
-.btn-primary:hover { background:var(--blue); transform:translateY(-1px); box-shadow:0 4px 12px rgba(10,36,99,0.25); }
-.btn-outline { background:var(--card-bg); color:var(--navy); border:1.5px solid var(--card-border); }
+.btn-primary:hover { background:var(--blue); transform:translateY(-1px); box-shadow:0 4px 12px rgba(17,17,17,0.25); }
+.btn-outline { background:var(--card-bg); color:var(--text-primary); border:1.5px solid var(--card-border); }
 .btn-outline:hover { border-color:var(--blue); color:var(--blue); }
 .btn-sm { padding:6px 12px; font-size:12px; }
 .btn-danger { background:var(--danger); color:#fff; }
@@ -138,10 +137,10 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
 .stat-card { background:var(--card-bg); border-radius:var(--radius); padding:20px; border:1px solid var(--card-border); box-shadow:var(--shadow-sm); transition:transform .2s,box-shadow .2s; cursor:pointer; position:relative; overflow:hidden; }
 .stat-card::before { content:''; position:absolute; right:-16px; top:-16px; width:80px; height:80px; border-radius:50%; opacity:0.07; }
-.stat-card.blue::before{background:#2563eb}.stat-card.green::before{background:#16a34a}.stat-card.orange::before{background:#ea580c}.stat-card.purple::before{background:#7c3aed}
+.stat-card.blue::before{background:#d97706}.stat-card.green::before{background:#16a34a}.stat-card.orange::before{background:#ea580c}.stat-card.purple::before{background:#7c3aed}
 .stat-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); }
 .stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; margin-bottom:12px; }
-.stat-icon.blue{background:#dbeafe;color:#2563eb}.stat-icon.green{background:#dcfce7;color:#16a34a}.stat-icon.orange{background:#ffedd5;color:#ea580c}.stat-icon.purple{background:#ede9fe;color:#7c3aed}.stat-icon.red{background:#fee2e2;color:#dc2626}
+.stat-icon.blue{background:#fef3c7;color:#d97706}.stat-icon.green{background:#dcfce7;color:#16a34a}.stat-icon.orange{background:#ffedd5;color:#ea580c}.stat-icon.purple{background:#fef3c7;color:#7c3aed}.stat-icon.red{background:#fee2e2;color:#dc2626}
 .stat-val { font-size:28px; font-weight:800; color:var(--navy); }
 [data-theme="dark"] .stat-val { color:#d0dce8; }
 .stat-label { font-size:12px; color:var(--text-muted); margin-top:2px; font-weight:500; }
@@ -215,7 +214,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .att-pill.P{background:#dcfce7;color:#16a34a}
 .att-pill.A{background:#fee2e2;color:#dc2626}
 .att-pill.L{background:#fef3c7;color:#d97706}
-.att-pill.E{background:#dbeafe;color:#2563eb}
+.att-pill.E{background:#fef3c7;color:#d97706}
 .att-pill.nd{background:var(--gray-100);color:var(--text-muted)}
 
 /* ATTENDANCE CHECKING — status panels */
@@ -230,9 +229,9 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .att-sub-btn.on.green{background:#dcfce7;border-color:#16a34a;color:#15803d}
 .att-sub-btn.off.green{border-color:var(--card-border);color:var(--gray-600)}
 .att-sub-btn.off.green:hover{border-color:#16a34a;color:#16a34a}
-.att-sub-btn.on.blue{background:#dbeafe;border-color:#2563eb;color:#1d4ed8}
+.att-sub-btn.on.blue{background:#fef3c7;border-color:#d97706;color:#b45309}
 .att-sub-btn.off.blue{border-color:var(--card-border);color:var(--gray-600)}
-.att-sub-btn.off.blue:hover{border-color:#2563eb;color:#2563eb}
+.att-sub-btn.off.blue:hover{border-color:#d97706;color:#d97706}
 .att-sub-btn.on.red{background:#fee2e2;border-color:#dc2626;color:#b91c1c}
 .att-sub-btn.off.red{border-color:var(--card-border);color:var(--gray-600)}
 .att-sub-btn.off.red:hover{border-color:#dc2626;color:#dc2626}.att-note{padding:9px 12px;border-radius:8px;font-size:11.5px;margin-top:14px}
@@ -284,7 +283,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 
 /* ASSESSMENT */
 .assess-badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
-.assess-badge.quiz{background:#ede9fe;color:#7c3aed}
+.assess-badge.quiz{background:#fef3c7;color:#7c3aed}
 .assess-badge.exam{background:#fee2e2;color:#dc2626}
 .assess-badge.activity{background:#dcfce7;color:#16a34a}
 .assess-status{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap}
@@ -292,13 +291,13 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .assess-status.scheduled{background:#fef3c7;color:#d97706}
 .assess-status.closed{background:var(--gray-100);color:var(--text-muted)}
 .assess-status.awaiting{background:#fef3c7;color:#d97706}
-.assess-status.grading{background:#ede9fe;color:#7c3aed}
-.assess-status.completed{background:#dbeafe;color:#2563eb}
+.assess-status.grading{background:#fef3c7;color:#7c3aed}
+.assess-status.completed{background:#fef3c7;color:#d97706}
 .assess-badge.seatwork{background:#dcfce7;color:#16a34a}
 .assess-badge.exam{background:#fee2e2;color:#dc2626}
 .assess-badge.assignment{background:#ffe4e6;color:#db2777}
-.assess-badge.project{background:#e0f2fe;color:#0284c7}
-.assess-badge.quiz{background:#ede9fe;color:#7c3aed}
+.assess-badge.project{background:#fef3c7;color:#d97706}
+.assess-badge.quiz{background:#fef3c7;color:#7c3aed}
 .fr-mode-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
 .fr-mode-badge.auto{background:#dcfce7;color:#16a34a}
 .fr-mode-badge.manual{background:#fff3cd;color:#b45309}
@@ -343,14 +342,14 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .at-risk-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .at-risk-chip{font-size:11px;font-weight:700;background:#fff;border:1.5px solid #fca5a5;color:#dc2626;border-radius:20px;padding:3px 10px}
 [data-theme="dark"] .at-risk-chip{background:#2a1010}
-.report-export-section{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:var(--radius);padding:20px;margin-top:20px}
-[data-theme="dark"] .report-export-section{background:linear-gradient(135deg,#0c1e30,#0e2540);border-color:#1a4a6e}
-.report-export-title{font-size:13.5px;font-weight:700;color:#0369a1;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.report-export-section{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:var(--radius);padding:20px;margin-top:20px}
+[data-theme="dark"] .report-export-section{background:linear-gradient(135deg,#111111,#111111);border-color:#1f1a12}
+.report-export-title{font-size:13.5px;font-weight:700;color:#b45309;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .report-export-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.report-export-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;background:var(--card-bg);border:1.5px solid #bae6fd;border-radius:12px;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif}
-.report-export-btn:hover{border-color:#0284c7;background:#f0f9ff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(2,132,199,0.15)}
-.report-export-btn i{font-size:22px;color:#0284c7}
-.report-export-btn span{font-size:11px;font-weight:700;color:#0369a1;text-align:center}
+.report-export-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;background:var(--card-bg);border:1.5px solid #fde68a;border-radius:12px;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif}
+.report-export-btn:hover{border-color:#d97706;background:#fffbeb;transform:translateY(-2px);box-shadow:0 4px 12px rgba(217,119,6,0.15)}
+.report-export-btn i{font-size:22px;color:#d97706}
+.report-export-btn span{font-size:11px;font-weight:700;color:#b45309;text-align:center}
 
 /* PERFORMANCE */
 .perf-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100)}
@@ -361,25 +360,25 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 [data-theme="dark"] .perf-score{color:#d0dce8}
 
 /* MESSAGING */
-.msg-layout{display:grid;grid-template-columns:230px 1fr;gap:0;height:520px;border:1px solid var(--card-border);border-radius:var(--radius);overflow:hidden;background:var(--card-bg)}
-.msg-sidebar{border-right:1px solid var(--card-border);display:flex;flex-direction:column}
+.msg-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;height:520px;border:1px solid var(--card-border);border-radius:var(--radius);overflow:hidden;background:var(--card-bg)}
+.msg-sidebar{border-right:1px solid var(--card-border);display:flex;flex-direction:column;min-height:0}
 .msg-sidebar-header{padding:12px 14px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);border-bottom:1px solid var(--gray-100)}
 .msg-thread{padding:11px 13px;cursor:pointer;display:flex;gap:9px;align-items:center;border-bottom:1px solid var(--gray-100);transition:background .15s}
 .msg-thread:hover{background:var(--accent)}
 .msg-thread.active{background:var(--light-blue)}
-.msg-thread-name{font-size:12.5px;font-weight:600;color:var(--text-primary)}
+.msg-thread-name{font-size:12.5px;font-weight:600;color:var(--text-primary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msg-thread-preview{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;margin-top:2px}
 .msg-unread{display:inline-block;background:var(--red,#e11d48);color:#fff;font-size:9.5px;font-weight:700;border-radius:9px;padding:0 5px;line-height:14px;vertical-align:1px;margin-left:3px}
-.msg-main{display:flex;flex-direction:column;background:var(--body-bg);min-height:0;min-width:0}
-.msg-main-header{padding:12px 16px;border-bottom:1px solid var(--gray-100);font-weight:700;font-size:13.5px;color:var(--navy);background:var(--card-bg);display:flex;align-items:center;justify-content:space-between}
+.msg-main{display:flex;flex-direction:column;background:var(--body-bg);min-width:0;min-height:0}
+.msg-main-header{padding:12px 16px;border-bottom:1px solid var(--gray-100);font-weight:700;font-size:13.5px;color:var(--navy);background:var(--card-bg);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 [data-theme="dark"] .msg-main-header{color:#d0dce8}
-.msg-messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px;display:flex;flex-direction:column;gap:10px}
-.msg{max-width:70%}
+.msg-messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:70%;min-width:0}
 .msg.sent{margin-left:auto}
-.msg-bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
+.msg-bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word;min-width:0}
 .msg.received .msg-bubble{background:var(--card-bg);border:1px solid var(--card-border);color:var(--text-primary);border-radius:4px 12px 12px 12px}
 .msg.sent .msg-bubble{background:var(--navy);color:#fff;border-radius:12px 4px 12px 12px}
-.msg-time{font-size:10px;color:var(--text-muted);margin-top:3px}
+.msg-time{font-size:10px;color:var(--text-muted);margin-top:3px;overflow-wrap:anywhere}
 .msg.sent .msg-time{text-align:right}
 .msg-input-area{padding:12px 14px;border-top:1px solid var(--gray-100);display:flex;gap:8px;background:var(--card-bg);flex-shrink:0}
 .msg-input{flex:1;border:1.5px solid var(--card-border);border-radius:9px;padding:9px 13px;font-size:13px;outline:none;font-family:'Plus Jakarta Sans',sans-serif;transition:border-color .2s;background:var(--input-bg);color:var(--text-primary)}
@@ -387,15 +386,15 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .msg-tab-bar{display:flex;border-bottom:1px solid var(--gray-100)}
 .msg-tab{flex:1;padding:10px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;color:var(--text-muted);border-bottom:2.5px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Plus Jakarta Sans',sans-serif}
 .msg-tab.active{color:var(--navy);border-bottom-color:var(--blue)}
-.msg-tab-list{overflow-y:auto;flex:1}
+.msg-tab-list{overflow-y:auto;flex:1;min-height:0}
 
 /* LOG */
 .log-list{display:flex;flex-direction:column}
 .log-item{display:flex;gap:13px;padding:12px 0;border-bottom:1px solid var(--gray-100);align-items:flex-start}
 .log-dot{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px}
-.log-dot.download{background:#dbeafe;color:#2563eb}
+.log-dot.download{background:#fef3c7;color:#d97706}
 .log-dot.visit{background:#dcfce7;color:#16a34a}
-.log-dot.submit{background:#ede9fe;color:#7c3aed}
+.log-dot.submit{background:#fef3c7;color:#7c3aed}
 .log-dot.announce{background:#ffedd5;color:#ea580c}
 .log-text{font-size:13px;color:var(--text-primary)}
 .log-time{font-size:11px;color:var(--text-muted);margin-top:3px}
@@ -433,8 +432,8 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .material-item.clickable:hover{border-color:var(--blue);background:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
 .material-icon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
 .material-icon.pdf{background:#fee2e2;color:#dc2626}
-.material-icon.vid{background:#ede9fe;color:#7c3aed}
-.material-icon.doc{background:#dbeafe;color:#2563eb}
+.material-icon.vid{background:#fef3c7;color:#7c3aed}
+.material-icon.doc{background:#fef3c7;color:#d97706}
 .material-icon.lnk{background:#dcfce7;color:#16a34a}
 .material-icon.img{background:#fef3c7;color:#d97706}
 .material-icon.aud{background:#f0fdf4;color:#16a34a}
@@ -462,8 +461,8 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .upload-type-btn .ut-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .upload-type-btn .ut-label{font-size:10.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;}
 .upload-type-btn.selected .ut-label{color:var(--navy);}
-.upload-drop-zone{border:2px dashed var(--blue);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:rgba(30,95,175,0.04);transition:background .2s;}
-.upload-drop-zone:hover{background:rgba(30,95,175,0.08);}
+.upload-drop-zone{border:2px dashed var(--blue);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:rgba(245,158,11,0.04);transition:background .2s;}
+.upload-drop-zone:hover{background:rgba(245,158,11,0.08);}
 .topic-materials-area{padding:14px 16px;}
 
 /* SUBMISSION */
@@ -476,9 +475,9 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .sub-progress-fill{height:100%;border-radius:99px;background:var(--success);transition:width .6s}
 
 /* MODALS */
-.modal-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(7,24,50,0.5);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:16px}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(17,17,17,0.5);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:16px}
 .modal-overlay.open{display:flex}
-.modal-box{background:var(--card-bg);border-radius:18px;padding:28px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(10,36,99,0.3);animation:slideUp .25s ease;max-height:90vh;overflow-y:auto}
+.modal-box{background:var(--card-bg);border-radius:18px;padding:28px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(17,17,17,0.3);animation:slideUp .25s ease;max-height:90vh;overflow-y:auto}
 .modal-box.wide{width:760px}
 .modal-box.fullw{width:900px}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -496,7 +495,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 
 /* PANELS */
-.notif-panel{position:fixed;top:calc(var(--header-h) + 8px);right:20px;width:330px;background:var(--card-bg);border-radius:14px;box-shadow:0 8px 40px rgba(10,36,99,0.2);border:1px solid var(--card-border);z-index:300;display:none;animation:fadeDown .2s ease}
+.notif-panel{position:fixed;top:calc(var(--header-h) + 8px);right:20px;width:330px;background:var(--card-bg);border-radius:14px;box-shadow:0 8px 40px rgba(17,17,17,0.2);border:1px solid var(--card-border);z-index:300;display:none;animation:fadeDown .2s ease}
 @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 .notif-panel.open{display:block}
 .notif-header{padding:13px 15px;border-bottom:1px solid var(--gray-100);font-weight:700;font-size:13.5px;color:var(--navy);display:flex;align-items:center;justify-content:space-between}
@@ -508,10 +507,10 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .notif-text{font-size:12px;color:var(--text-primary);line-height:1.5}
 .notif-time{font-size:10px;color:var(--text-muted);margin-top:2px}
 .notif-unread{background:var(--accent)}
-.profile-panel{position:fixed;top:calc(var(--header-h) + 8px);right:20px;width:250px;background:var(--card-bg);border-radius:14px;box-shadow:0 8px 40px rgba(10,36,99,0.2);border:1px solid var(--card-border);z-index:300;display:none;animation:fadeDown .2s ease}
+.profile-panel{position:fixed;top:calc(var(--header-h) + 8px);right:20px;width:250px;background:var(--card-bg);border-radius:14px;box-shadow:0 8px 40px rgba(17,17,17,0.2);border:1px solid var(--card-border);z-index:300;display:none;animation:fadeDown .2s ease}
 .profile-panel.open{display:block}
 .profile-panel-header{padding:18px;text-align:center;border-bottom:1px solid var(--gray-100)}
-.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#1e5faf,#3a86d4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
+.profile-panel-avatar{width:56px;height:56px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#f59e0b,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 10px}
 .profile-panel-name{font-weight:700;font-size:14px;color:var(--navy)}
 [data-theme="dark"] .profile-panel-name{color:#d0dce8}
 .profile-panel-role{font-size:11.5px;color:var(--text-muted)}
@@ -536,12 +535,12 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .q-card-header{display:flex;align-items:center;gap:10px;padding:11px 15px;background:var(--gray-100);border-bottom:1px solid var(--card-border)}
 .q-num{width:26px;height:26px;border-radius:7px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .q-type-badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px}
-.q-type-badge.mc{background:#dbeafe;color:#2563eb}
+.q-type-badge.mc{background:#fef3c7;color:#d97706}
 .q-type-badge.tf{background:#dcfce7;color:#16a34a}
 .q-type-badge.sa{background:#f0fdf4;color:#166534}
 .q-type-badge.es{background:#ffedd5;color:#ea580c}
 .q-type-badge.mt{background:#fce7f3;color:#db2777}
-.q-type-badge.id{background:#e0f2fe;color:#0284c7}
+.q-type-badge.id{background:#fef3c7;color:#d97706}
 .q-form{background:var(--accent);border-radius:12px;border:2px solid var(--blue);padding:18px;margin-top:14px}
 .q-type-select{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .q-type-btn{padding:6px 13px;border-radius:8px;border:1.5px solid var(--card-border);font-size:12px;font-weight:600;cursor:pointer;background:var(--card-bg);font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;color:var(--gray-600)}
@@ -570,7 +569,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .builder-step.done .builder-step-label{color:var(--success);}
 .builder-step-line{height:2px;flex:1;background:var(--card-border);margin:0 8px;}
 .builder-step.done+.builder-step-line{background:var(--success);}
-.builder-head{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;background:linear-gradient(120deg,#1e3a8a,#2563eb);color:#fff;margin-bottom:20px}
+.builder-head{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;background:linear-gradient(120deg,#78350f,#d97706);color:#fff;margin-bottom:20px}
 .builder-head .bh-icn{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .builder-head .bh-title{font-size:16px;font-weight:800}
 .builder-head .bh-sub{font-size:12px;opacity:.85;margin-top:2px}
@@ -594,7 +593,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .invite-chip{display:flex;align-items:center;gap:5px;background:var(--light-blue);color:var(--navy);border-radius:20px;padding:3px 9px;font-size:11.5px;font-weight:600}
 .invite-chip-remove{cursor:pointer;color:var(--blue);font-size:10px;margin-left:2px}
 .invite-status{padding:11px;background:var(--gray-100);border-radius:9px;font-size:12px;color:var(--gray-600)}
-.invite-status.sending{background:#dbeafe;color:#2563eb}
+.invite-status.sending{background:#fef3c7;color:#d97706}
 .invite-status.sent{background:#dcfce7;color:#16a34a}
 
 /* CONFIRM */
@@ -613,7 +612,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .grid-2{display:grid;grid-template-columns:2fr 1fr;gap:20px}
 
 /* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;box-shadow:0 8px 24px rgba(10,36,99,0.28);transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);max-width:320px}
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;box-shadow:0 8px 24px rgba(17,17,17,0.28);transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);max-width:320px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.success{background:var(--success)}
 .toast.error{background:var(--danger)}
@@ -630,16 +629,17 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 
 /* RESPONSIVE */
 @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr)}.analytics-grid{grid-template-columns:repeat(2,1fr)}.analytics-row.three{grid-template-columns:1fr 1fr}.class-grid{grid-template-columns:repeat(3,1fr)}.upload-type-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:900px){.grid-2,.analytics-row{grid-template-columns:1fr}.class-grid{grid-template-columns:repeat(2,1fr)}.msg-layout{grid-template-columns:1fr;height:auto}.msg-sidebar{max-height:200px}.main{padding:16px}.report-export-grid{grid-template-columns:repeat(2,1fr)}.upload-type-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.grid-2,.analytics-row{grid-template-columns:1fr}.class-grid{grid-template-columns:repeat(2,1fr)}.msg-layout{grid-template-columns:1fr;grid-template-rows:200px minmax(320px,1fr);height:520px;min-height:520px}.msg-sidebar{height:200px;max-height:none}.msg-main{height:320px;min-height:320px}.main{padding:16px}.report-export-grid{grid-template-columns:repeat(2,1fr)}.upload-type-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.stats-grid,.analytics-grid,.class-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.main{padding:12px}.classroom-tabs{flex-wrap:nowrap;overflow-x:auto}.tab-btn{min-width:100px;flex:0 0 auto}.analytics-row.three{grid-template-columns:1fr}.report-export-grid{grid-template-columns:1fr 1fr}.upload-type-grid{grid-template-columns:repeat(2,1fr)}}
 
 /* ── SETTINGS: THEME SWITCH ── */
 .theme-switch { display:flex; background:var(--gray-100); border:1px solid var(--card-border); border-radius:11px; padding:4px; gap:4px; }
 .theme-option { display:flex; align-items:center; gap:7px; padding:8px 14px; border:none; background:transparent; color:var(--text-muted); font-size:12.5px; font-weight:600; border-radius:8px; cursor:pointer; transition:all .18s; font-family:'Plus Jakarta Sans',sans-serif; }
 .theme-option:hover { color:var(--navy); }
-.theme-option.active { background:var(--white); color:var(--navy); box-shadow:0 2px 6px rgba(7,24,50,0.1); }
+.theme-option.active { background:var(--white); color:var(--navy); box-shadow:0 2px 6px rgba(17,17,17,0.1); }
 [data-theme="dark"] .theme-option.active { background:var(--card-bg); color:#d0dce8; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
 </style>
+
 </head>
 <body>
 
@@ -651,8 +651,8 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
   <button class="hamburger-btn" style="margin-left:14px;" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
   <div class="brand-block">
     <div class="brand-logos">
-      <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#1e5faf,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
-      <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#3a86d4)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
+      <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI" onerror="this.style.background='linear-gradient(135deg,#f59e0b,#fbbf24)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%231e5faf%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2214%22>SVI</text></svg>'">
+      <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS" onerror="this.style.background='linear-gradient(135deg,#22a877,#fbbf24)';this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2322a877%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22800%22 font-size=%2213%22>TASS</text></svg>'">
     </div>
     <div class="brand-text">San Vicente Institute<span>Learning Management System</span></div>
   </div>
@@ -660,7 +660,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="header-right">
       <button class="icon-btn" onclick="toggleNotif()"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
       <button class="profile-btn" onclick="toggleProfile()">
-        <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+        <img src="{{ user_avatar_url|default:'/static/dashboards/img/profile-placeholder.jpg' }}" class="profile-img" alt="Profile" id="headerProfileImg" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
         <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label }}</div></div>
         <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px;"></i>
       </button>
@@ -674,7 +674,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
   <!-- Profile Panel -->
   <div class="profile-panel" id="profilePanel">
     <div class="profile-panel-header">
-      <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22><circle cx=%2240%22 cy=%2240%22 r=%2240%22 fill=%22%233a86d4%22/><text x=%2240%22 y=%2253%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2230%22>{{ user_initials }}</text></svg>" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
+      <img src="{{ user_avatar_url|default:'/static/dashboards/img/profile-placeholder.jpg' }}" class="profile-img-lg" alt="Profile" onerror="this.onerror=null;this.src='{% static "dashboards/img/profile-placeholder.jpg" %}'">
       <div class="profile-panel-name">{{ user_display_name }}</div>
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
@@ -699,7 +699,6 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     
     <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
     <button class="nav-item" onclick="showView('analytics')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></button>
-    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-users-viewfinder"></i></div><span class="nav-item-label">Demographics</span></button>
     
     <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
     <div class="sidebar-spacer"></div>
@@ -808,7 +807,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
         <div><div class="page-title">Class-Level Analytics &amp; Reports</div><div class="page-sub">Data-driven insights for your assigned Virtual Classrooms</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <select class="form-control" style="width:180px;" id="analyticsClassFilter" onchange="refreshAnalytics()">
-            <option value="g10">Grade 10 – Science</option><option value="g9">Grade 9 – Chemistry</option><option value="g11">Grade 11 – Biology</option><option value="g8">Grade 8 – Physics</option>
+            <option value="all">All My Classes</option>
           </select>
           <select class="form-control" style="width:140px;" id="analyticsPeriodFilter" onchange="refreshAnalytics()"><option value="">All Grading Periods</option><option>Quarter 1</option><option>Quarter 2</option><option>Quarter 3</option><option>Quarter 4</option></select>
           <select class="form-control" style="width:140px;" id="analyticsYearFilter" onchange="refreshAnalytics()"><option value="">All Years</option><option>2025-2026</option><option>2026-2027</option></select>
@@ -919,7 +918,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
               <div style="background:#fef3c7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#d97706;" id="statAssessScheduled">—</div><div style="font-size:11px;color:#92400e;">Scheduled</div></div>
               <div style="background:#fef3c7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#b45309;" id="statAssessAwaiting">—</div><div style="font-size:11px;color:#92400e;">Awaiting Grading</div></div>
               <div style="background:var(--gray-100);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--gray-600);" id="statAssessClosed">—</div><div style="font-size:11px;color:var(--text-muted);">Closed</div></div>
-              <div style="background:#dbeafe;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#2563eb;" id="statAssessCompleted">—</div><div style="font-size:11px;color:#1e40af;">Completed</div></div>
+              <div style="background:#fef3c7;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:#d97706;" id="statAssessCompleted">—</div><div style="font-size:11px;color:#92400e;">Completed</div></div>
             </div>
             <div style="overflow-x:auto;">
               <table class="score-table">
@@ -1039,7 +1038,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
               <div class="msg-main">
                 <div class="msg-main-header"><span id="msgChatTitle">Class Chat</span></div>
                 <div class="msg-messages" id="msgMessages"></div>
-                <div class="msg-input-area"><label class="btn btn-outline btn-sm" style="cursor:pointer" title="Attach file"><i class="fa-solid fa-paperclip"></i><input id="frontendMessageAttachment" type="file" style="display:none" onchange="showMessageAttachment(this)"></label><input class="msg-input" id="msgInput" type="text" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn btn-primary btn-sm" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button></div>
+                <div class="msg-input-area"><label class="btn btn-outline btn-sm" style="cursor:pointer" title="Attach file"><i class="fa-solid fa-paperclip"></i><input id="frontendMessageAttachment" type="file" style="display:none" onchange="showMessageAttachment(this)"></label><textarea class="msg-input" id="msgInput" rows="1" placeholder="Type a message..." style="resize:none;max-height:120px;line-height:1.4;overflow-y:auto;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea><button class="btn btn-primary btn-sm" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button></div>
               </div>
             </div>
           </div>
@@ -1152,7 +1151,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       </div>
       <div class="card"><div class="card-body">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <select class="form-control" id="assessRepoSubjectPage" style="width:150px" onchange="renderAssessmentLibrary()"><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select>
+          <select class="form-control" id="assessRepoSubjectPage" style="width:150px" onchange="renderAssessmentLibrary()"><option value="">All Subjects</option><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select>
           <select class="form-control" id="assessRepoGradePage" style="width:130px" onchange="renderAssessmentLibrary()"><option value="">All Grades</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
           <select class="form-control" id="assessRepoTypePage" style="width:160px" onchange="renderAssessmentLibrary()"><option value="">All Types</option><option>Quiz</option><option>Seatwork</option><option>Assignment</option><option>Project</option><option>Examination</option></select>
           <input class="form-control" id="assessRepoSearchPage" placeholder="Search assessment..." style="flex:1;min-width:220px" oninput="renderAssessmentLibrary()">
@@ -1295,18 +1294,18 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px;"></i>Report Preview</div>
     <div class="modal-sub" id="reportPreviewSub">Full Academic Report</div>
     <div style="background:#f9fafb;border-radius:10px;border:1.5px solid #e0e0e0;padding:20px;margin-bottom:14px;color:#1e2e42;">
-      <div style="font-family:'Fraunces',serif;font-size:17px;color:#0a2463;text-align:center;margin-bottom:3px;" id="reportPreviewTitle">Full Academic Report</div>
+      <div style="font-family:'Fraunces',serif;font-size:17px;color:#111111;text-align:center;margin-bottom:3px;" id="reportPreviewTitle">Full Academic Report</div>
       <div style="font-size:11px;color:#666;text-align:center;margin-bottom:12px;">San Vicente Institute · <span id="reportPreviewPeriod">Current Period</span></div>
-      <div id="reportPreviewScope" style="background:#eef4fd;border:1px solid #cddff7;border-radius:8px;padding:9px 12px;margin-bottom:16px;font-size:11.5px;color:#1e3a8a;">
+      <div id="reportPreviewScope" style="background:#eef4fd;border:1px solid #cddff7;border-radius:8px;padding:9px 12px;margin-bottom:16px;font-size:11.5px;color:#78350f;">
         <div><strong>Virtual Classroom:</strong> <span id="reportPreviewScopeName">&mdash;</span></div>
         <div id="reportPreviewScopeDetail" style="color:#475569;margin-top:3px;font-size:10.5px;"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="reportPreviewStats">
-        <div style="background:#fff;border-radius:9px;padding:12px;text-align:center;border:1px solid #e0e0e0;"><div style="font-size:22px;font-weight:800;color:#0a2463;">—</div><div style="font-size:10.5px;color:#666;">—</div></div>
+        <div style="background:#fff;border-radius:9px;padding:12px;text-align:center;border:1px solid #e0e0e0;"><div style="font-size:22px;font-weight:800;color:#111111;">—</div><div style="font-size:10.5px;color:#666;">—</div></div>
       </div>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-        <thead id="reportPreviewHead"><tr style="background:#e8f0fc;"><th style="padding:7px;text-align:left;border:1px solid #dde5f0;">Student</th></tr></thead>
+        <thead id="reportPreviewHead"><tr style="background:#fff7ed;"><th style="padding:7px;text-align:left;border:1px solid #dde5f0;">Student</th></tr></thead>
       <tbody id="reportPreviewBody">
         <tr><td style="padding:28px 12px;text-align:center;border:1px solid #dde5f0;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>
       </tbody></table>
@@ -1449,7 +1448,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="form-group"><label class="form-label">Section</label><select class="form-control" id="newSection" data-required><option value="">Select Section</option><option>Section A</option><option>Section B</option><option>Section C</option><option>Section D</option></select></div>
     <div class="form-group"><label class="form-label">Class Color</label>
       <div class="class-color-selector">
-        <div class="class-color-opt selected" style="background:linear-gradient(135deg,#1e5faf,#3a86d4);" onclick="selectClassColor(this,'linear-gradient(90deg,#1e5faf,#3a86d4)')"></div>
+        <div class="class-color-opt selected" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);" onclick="selectClassColor(this,'linear-gradient(90deg,#f59e0b,#fbbf24)')"></div>
         <div class="class-color-opt" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);" onclick="selectClassColor(this,'linear-gradient(90deg,#7c3aed,#a78bfa)')"></div>
         <div class="class-color-opt" style="background:linear-gradient(135deg,#16a34a,#4ade80);" onclick="selectClassColor(this,'linear-gradient(90deg,#16a34a,#4ade80)')"></div>
         <div class="class-color-opt" style="background:linear-gradient(135deg,#ea580c,#fb923c);" onclick="selectClassColor(this,'linear-gradient(90deg,#ea580c,#fb923c)')"></div>
@@ -1700,8 +1699,8 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="modal-sub">Share an assessment with other teachers handling the same subject.</div>
     <div class="form-group"><label class="form-label">Assessment Title</label><input class="form-control" id="feAssessTitle" placeholder="e.g. Cell Division Quiz" data-required data-minlen="3" data-maxlength="200"></div>
     <div class="fr-modal-grid">
-      <div class="form-group"><label class="form-label">Subject</label><select class="form-control"><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select></div>
-      <div class="form-group"><label class="form-label">Assessment Type</label><select class="form-control"><option>Quiz</option><option>Seatwork</option><option>Assignment</option><option>Project</option><option>Examination</option></select></div>
+      <div class="form-group"><label class="form-label">Subject</label><select class="form-control" id="feAssessSubject"><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select></div>
+      <div class="form-group"><label class="form-label">Assessment Type</label><select class="form-control" id="feAssessType"><option>Quiz</option><option>Seatwork</option><option>Assignment</option><option>Project</option><option>Examination</option></select></div>
     </div>
     <div class="form-group"><label class="form-label">File (optional)</label><input class="form-control" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx"></div>
     <div id="assessmentUploadStatus" class="invite-status" style="display:none"></div>
@@ -1763,7 +1762,8 @@ let selectedQType='mc', tfSelected='true';
 let builderQuestions=[], msgThreadActiveId='class';
    let builderParts=[], currentPartId=null, managedEditTitle=null;
 const QTYPE_MODE={mc:'objective',tf:'objective',mt:'objective',id:'objective',sa:'objective',es:'subjective',pp:'subjective',cs:'subjective',nr:'subjective',pt:'subjective'};
-let topics=[], inviteEmails=[], selectedClassColor='linear-gradient(90deg,#1e5faf,#3a86d4)';
+let topics=[], inviteEmails=[], selectedClassColor='linear-gradient(90deg,#f59e0b,#fbbf24)';
+let activityFeed=[];
 
 // ── SIDEBAR / DARK ──
 function toggleSidebar(){sidebarExpanded=!sidebarExpanded;document.body.classList.toggle('sidebar-expanded',sidebarExpanded);}
@@ -1831,8 +1831,8 @@ function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.
 // pickers scope themselves to it so a class chat can never show another
 // classroom's messages. null while the user is outside a classroom.
 let currentVCId=null;window.currentVCId=null;
-function openClassroom(title,sub,color,vcId){currentVCId=(vcId===undefined||vcId===null||vcId==='')?null:String(vcId);window.currentVCId=currentVCId;document.getElementById('classroomTitle').textContent=title;document.getElementById('classroomSub').textContent=sub;if(color)document.getElementById('classroomHeaderEl').style.background='linear-gradient(135deg,'+color+' 0%,'+color+'bb 100%)';document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.getElementById('tab-students').classList.add('active');document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-btn')[0].classList.add('active');showView('classroom');renderCalendar();if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();renderTopics();buildSF2();if(typeof renderStudentList==='function')renderStudentList();if(typeof renderAnnouncements==='function')renderAnnouncements();}
-function switchTab(id,el){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');el.classList.add('active');if(id==='messages')initMsgTab();if(id==='attendance'){switchAttendView();renderCalendar();}if(id==='submissions'){if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();}if(id==='performance'&&typeof renderPerformance==='function')renderPerformance();if(id==='announcements'&&typeof renderAnnouncements==='function')renderAnnouncements();}
+function openClassroom(title,sub,color,vcId){currentVCId=(vcId===undefined||vcId===null||vcId==='')?null:String(vcId);window.currentVCId=currentVCId;document.getElementById('classroomTitle').textContent=title;document.getElementById('classroomSub').textContent=sub;if(color)document.getElementById('classroomHeaderEl').style.background='linear-gradient(135deg,'+color+' 0%,'+color+'bb 100%)';document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.getElementById('tab-students').classList.add('active');document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-btn')[0].classList.add('active');showView('classroom');renderCalendar();if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();renderTopics();buildSF2();if(typeof renderStudentList==='function')renderStudentList();if(typeof renderAnnouncements==='function')renderAnnouncements();if(typeof renderTeacherAssessments==='function')renderTeacherAssessments();if(typeof loadClassroomContent==='function')loadClassroomContent(vcId);}
+function switchTab(id,el){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');el.classList.add('active');if(id==='messages')initMsgTab();if(id==='attendance'){switchAttendView();renderCalendar();}if(id==='submissions'){if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();}if(id==='performance'&&typeof renderPerformance==='function')renderPerformance();if(id==='announcements'&&typeof renderAnnouncements==='function')renderAnnouncements();if(id==='assessment'&&typeof renderTeacherAssessments==='function')renderTeacherAssessments();}
 
 // ── MODALS ──
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -1983,12 +1983,12 @@ function renderSFTplBadge(){
   }
   var e=function(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
   badge.style.display='block';
-  badge.innerHTML='<i class="fa-solid fa-file-circle-check" style="color:#1e5faf;margin-right:6px;"></i>'+
+  badge.innerHTML='<i class="fa-solid fa-file-circle-check" style="color:#f59e0b;margin-right:6px;"></i>'+
     '<strong>Official template in use:</strong> '+e(tpl.name)+
     (tpl.at?' <span style="color:var(--gray-500);">(uploaded '+e(tpl.at)+')</span>':'')+
     (tpl.url?' <a href="'+e(tpl.url)+'" class="btn btn-outline btn-sm" style="margin-left:8px;vertical-align:middle;"><i class="fa-solid fa-download"></i> Download Template</a>':'');
 }
-function buildSF2(){const students=[];const tbody=document.getElementById('sf2Tbody');if(!tbody)return;if(!students.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}tbody.innerHTML=students.map((s,i)=>{const cells=s.data.map(status=>{if(status==='P')return'<td style="border:1px solid #000;background:#dcfce7;font-weight:900;text-align:center;color:#166534;font-size:12px;">/</td>';if(status==='L')return'<td style="border:1px solid #000;background:#fef3c7;font-weight:900;text-align:center;color:#d97706;font-size:12px;">/</td>';if(status==='E')return'<td style="border:1px solid #000;background:#dbeafe;font-weight:900;text-align:center;color:#2563eb;font-size:12px;">-</td>';return'<td style="border:1px solid #000;background:#fee2e2;text-align:center;color:#dc2626;font-weight:900;font-size:12px;">-</td>';}).join('');return'<tr><td style="border:1px solid #000;padding:2px 4px;text-align:center;font-size:8.5px;background:#f9f9f9;">'+(i+1)+'</td><td style="border:1px solid #000;padding:2px 6px;text-align:left;font-size:8.5px;white-space:nowrap;">'+s.name+'</td>'+cells+'<td style="border:1px solid #000;background:#a5d6a7;font-weight:700;text-align:center;font-size:9px;">'+s.p+'</td><td style="border:1px solid #000;background:#ef9a9a;font-weight:700;text-align:center;font-size:9px;">'+s.a+'</td><td style="border:1px solid #000;background:#fff59d;font-weight:700;text-align:center;font-size:9px;">'+s.l+'</td></tr>';}).join('');}
+function buildSF2(){const students=[];const tbody=document.getElementById('sf2Tbody');if(!tbody)return;if(!students.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}tbody.innerHTML=students.map((s,i)=>{const cells=s.data.map(status=>{if(status==='P')return'<td style="border:1px solid #000;background:#dcfce7;font-weight:900;text-align:center;color:#166534;font-size:12px;">/</td>';if(status==='L')return'<td style="border:1px solid #000;background:#fef3c7;font-weight:900;text-align:center;color:#d97706;font-size:12px;">/</td>';if(status==='E')return'<td style="border:1px solid #000;background:#fef3c7;font-weight:900;text-align:center;color:#d97706;font-size:12px;">-</td>';return'<td style="border:1px solid #000;background:#fee2e2;text-align:center;color:#dc2626;font-weight:900;font-size:12px;">-</td>';}).join('');return'<tr><td style="border:1px solid #000;padding:2px 4px;text-align:center;font-size:8.5px;background:#f9f9f9;">'+(i+1)+'</td><td style="border:1px solid #000;padding:2px 6px;text-align:left;font-size:8.5px;white-space:nowrap;">'+s.name+'</td>'+cells+'<td style="border:1px solid #000;background:#a5d6a7;font-weight:700;text-align:center;font-size:9px;">'+s.p+'</td><td style="border:1px solid #000;background:#ef9a9a;font-weight:700;text-align:center;font-size:9px;">'+s.a+'</td><td style="border:1px solid #000;background:#fff59d;font-weight:700;text-align:center;font-size:9px;">'+s.l+'</td></tr>';}).join('');}
 
 // ── TAKE ATTENDANCE (PATCHED) ──
 const attendStudents=[];
@@ -2041,15 +2041,15 @@ function subBtnStyle(cur,active){
   return 'class="att-sub-btn '+(cur===active?'on':'off')+' '+color+'"';
 }
 
-function gradStops(g){const m=(g||'').match(/#[0-9a-fA-F]{3,6}/g);const cs=(m&&m.length>=2)?m:['#3b82f6','#60a5fa'];return '<stop offset="0%" stop-color="'+cs[0]+'"/><stop offset="100%" stop-color="'+cs[cs.length-1]+'"/>';}
+function gradStops(g){const m=(g||'').match(/#[0-9a-fA-F]{3,6}/g);const cs=(m&&m.length>=2)?m:['#f59e0b','#fcd34d'];return '<stop offset="0%" stop-color="'+cs[0]+'"/><stop offset="100%" stop-color="'+cs[cs.length-1]+'"/>';}
 function stuAvatar(s){
-  if(s.photo)return '<img src="'+s.photo+'" style="width:44px;height:44px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(7,24,50,.12);" alt="'+s.name+'"/>';
+  if(s.photo)return '<img src="'+s.photo+'" style="width:44px;height:44px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(17,17,17,.12);" alt="'+s.name+'"/>';
   const svg='<svg xmlns="http://www.w3.org/2000/svg" width="88" height="88" viewBox="0 0 88 88">'+
     '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">'+gradStops(s.grad)+'</linearGradient></defs>'+
     '<rect width="88" height="88" rx="16" fill="url(#g)"/>'+
     '<circle cx="44" cy="34" r="15" fill="rgba(255,255,255,.92)"/>'+
     '<path d="M19 74c0-14 11-21 25-21s25 7 25 21z" fill="rgba(255,255,255,.92)"/></svg>';
-  return '<img src="data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'" style="width:44px;height:44px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(7,24,50,.12);" alt="'+s.name+'"/>';
+  return '<img src="data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'" style="width:44px;height:44px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(17,17,17,.12);" alt="'+s.name+'"/>';
 }
 function renderAttendList(){
   const list=document.getElementById('studentAttendList');
@@ -2070,7 +2070,7 @@ function renderAttendList(){
         ?'<span class="att-rodone present">'+((sb==='late'||sb==='ontime')?(sb==='late'?'Late':'Present'):'Present')+'</span>'
         :'<span class="att-rodone absent">Absent</span>')
       :btns;
-    return '<div style="border:1px solid var(--card-border);border-radius:14px;overflow:hidden;margin-top:12px;box-shadow:0 1px 2px rgba(7,24,50,.06);">'+
+    return '<div style="border:1px solid var(--card-border);border-radius:14px;overflow:hidden;margin-top:12px;box-shadow:0 1px 2px rgba(17,17,17,.06);">'+
       '<div class="att-row">'+
       '<div class="att-row-info">'+
       stuAvatar(s)+
@@ -2090,7 +2090,6 @@ function buildDetailPanel(sid,status){
     const lateConfirmed=!!(attendSub[sid]||{}).lateConfirmed;
     return '<div class="att-panel present">'+
       '<div class="att-sub-row">'+
-      '<button onclick="setAttendSub(\''+sid+'\',\'ontime\')" '+subBtnStyle(sub,'ontime')+'><i class="fa-solid fa-clock"></i> On Time</button>'+
       '<button onclick="setAttendSub(\''+sid+'\',\'late\')" '+subBtnStyle(sub,'late')+'><i class="fa-solid fa-clock-rotate-left"></i> Late</button>'+
       '</div>'+
       (late?('<div class="att-helper">'+
@@ -2107,7 +2106,6 @@ function buildDetailPanel(sid,status){
   return '<div class="att-panel absent">'+
     '<div class="att-sub-row">'+
     '<button onclick="setAttendSub(\''+sid+'\',\'excused\')" '+subBtnStyle(sub,'excused')+'><i class="fa-solid fa-file-shield"></i> Excused</button>'+
-    '<button onclick="setAttendSub(\''+sid+'\',\'unexcused\')" '+subBtnStyle(sub,'unexcused')+'><i class="fa-solid fa-file-circle-xmark"></i> Unexcused</button>'+
     '</div>'+
     (excused?('<div class="att-helper">'+
       '<div class="att-helper-label" style="margin-top:0;">JUSTIFICATION (REQUIRED)</div>'+
@@ -2182,7 +2180,7 @@ function saveAttend(){
 const submissionData={
   quiz1:[],midterm:[],activity2:[]
 };
-function renderSubmissionTracker(){const key=document.getElementById('submissionAssessSelect')?.value||'quiz1';const data=submissionData[key]||[];const sub=data.filter(s=>s.status!=='not-submitted').length;const pct=data.length?Math.round((sub/data.length)*100):0;const pf=document.getElementById('subProgressFill');if(pf)pf.style.width=pct+'%';const pl=document.getElementById('subProgressLabel');if(pl)pl.textContent=data.length?(sub+' / '+data.length+' Submitted'):'—';const tbody=document.getElementById('submissionTbody');if(!tbody)return;if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}tbody.innerHTML=data.map(s=>{const st=s.status==='submitted'?'<span class="sub-status submitted"><i class="fa-solid fa-check"></i> Submitted</span>':s.status==='late'?'<span class="sub-status late"><i class="fa-solid fa-clock"></i> Late</span>':'<span class="sub-status not-submitted"><i class="fa-solid fa-xmark"></i> Not Submitted</span>';return'<tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="student-avatar-sm" style="background:'+s.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+s.id+'</div>'+s.name+'</div></td><td>'+st+'</td><td style="font-size:12px;color:var(--text-muted);">'+s.time+'</td><td><strong>'+s.score+'</strong></td><td>'+(s.status==='not-submitted'?'<button class="btn btn-outline btn-sm" onclick="showToast(\'Reminder sent!\',\'success\')"><i class="fa-solid fa-bell"></i> Remind</button>':'')+'</td></tr>';}).join('');}
+function renderSubmissionTracker(){const key=document.getElementById('submissionAssessSelect')?.value||'quiz1';const data=submissionData[key]||[];const sub=data.filter(s=>s.status!=='not-submitted').length;const pct=data.length?Math.round((sub/data.length)*100):0;const pf=document.getElementById('subProgressFill');if(pf)pf.style.width=pct+'%';const pl=document.getElementById('subProgressLabel');if(pl)pl.textContent=data.length?(sub+' / '+data.length+' Submitted'):'—';const tbody=document.getElementById('submissionTbody');if(!tbody)return;if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}tbody.innerHTML=data.map(s=>{const st=s.status==='submitted'?'<span class="sub-status submitted"><i class="fa-solid fa-check"></i> Submitted</span>':s.status==='late'?'<span class="sub-status late"><i class="fa-solid fa-clock"></i> Late</span>':'<span class="sub-status not-submitted"><i class="fa-solid fa-xmark"></i> Not Submitted</span>';return'<tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="student-avatar-sm" style="background:'+s.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+s.id+'</div>'+s.name+'</div></td><td>'+st+'</td><td style="font-size:12px;color:var(--text-muted);">'+s.time+'</td><td><strong>'+s.score+'</strong></td><td>'+(s.status==='not-submitted'?'<button class="btn btn-outline btn-sm" onclick="remindStudent('+(s.studentId!=null?s.studentId:'null')+','+(s.assessId!=null?s.assessId:'null')+',this)"><i class="fa-solid fa-bell"></i> Remind</button>':(s.fileUrl?'<a class="btn btn-outline btn-sm" href="'+e(s.fileUrl)+'" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> File</a>':''))+'</td></tr>';}).join('');}
 
 // ── SCORES & RANKING ──
 function openScoresModal(title){document.getElementById('scoresTitle').textContent=title+' · Scores';openModal('scoresModal');}
@@ -2195,7 +2193,7 @@ function renderPerformance(){
     // be four fixed scores (88 / 86 / 85 / 82) for assessments that may not exist.
     const avg=Array.isArray(window.perfAssessAverages)?window.perfAssessAverages:[];
     if(!avg.length){TASS.empty.list(grid,{message:'No graded assessments yet.',hint:'Class averages appear once assessments have recorded scores.'});}
-    else grid.innerHTML=avg.map(a=>'<div style="background:var(--accent);border-radius:12px;padding:14px 16px;"><div style="font-size:22px;font-weight:800;color:'+(a.color||'#1e5faf')+';">'+a.score+'%</div><div style="font-size:11.5px;color:var(--text-muted);font-weight:600;margin-top:4px;">'+e(a.name)+'</div></div>').join('');
+    else grid.innerHTML=avg.map(a=>'<div style="background:var(--accent);border-radius:12px;padding:14px 16px;"><div style="font-size:22px;font-weight:800;color:'+(a.color||'#f59e0b')+';">'+a.score+'%</div><div style="font-size:11.5px;color:var(--text-muted);font-weight:600;margin-top:4px;">'+e(a.name)+'</div></div>').join('');
   }
   const list=document.getElementById('perfStudentList');if(!list)return;
   const recs=(typeof studentRecords!=='undefined'?studentRecords:[]);
@@ -2203,7 +2201,7 @@ function renderPerformance(){
   list.innerHTML=recs.map(r=>{
     const hasScore=/^\d+(\.\d+)?%$/.test(String(r.score||''));
     const pct=hasScore?parseFloat(r.score)||0:0;
-    const barColor=pct>=90?'#22a877':pct>=75?'#1e5faf':pct>=60?'#e99b2a':'#d94f4f';
+    const barColor=pct>=90?'#22a877':pct>=75?'#f59e0b':pct>=60?'#e99b2a':'#d94f4f';
     return '<div style="margin-bottom:12px;">'+
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div class="student-avatar-sm" style="background:'+r.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+r.initials+'</div><div style="flex:1;font-weight:600;font-size:13px;color:var(--navy);min-width:0;">'+e(r.name)+'<div style="font-size:11px;color:var(--text-muted);font-weight:400;">'+e(r.status||'Active')+'</div></div><div style="font-size:13px;font-weight:800;color:'+(hasScore?barColor:'var(--text-muted)')+';">'+(hasScore?r.score:'—')+'</div></div>'+
       (hasScore?'<div style="background:var(--gray-100);border-radius:8px;height:8px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:8px;"></div></div>':'')+'</div>';
@@ -2241,7 +2239,7 @@ function renderPerfSubmissionTracker(){
       {l:'Submitted',v:tSu,ic:'fa-file-circle-check',c:'#16a34a',bg:'#dcfce7',gr:'linear-gradient(90deg,#22a877,#34d399)'},
       {l:'Late',v:tLa,ic:'fa-clock',c:'#a16207',bg:'#fef9c3',gr:'linear-gradient(90deg,#e99b2a,#fbbf24)'},
       {l:'Not Submitted',v:tMi,ic:'fa-circle-xmark',c:'#dc2626',bg:'#fee2e2',gr:'linear-gradient(90deg,#d94f4f,#f87171)'},
-      {l:'Submission Rate',v:rate+'%',ic:'fa-chart-pie',c:'var(--navy)',bg:'var(--light-blue)',gr:'linear-gradient(90deg,var(--blue),#3b82f6)'}
+      {l:'Submission Rate',v:rate+'%',ic:'fa-chart-pie',c:'var(--navy)',bg:'var(--light-blue)',gr:'linear-gradient(90deg,var(--blue),#f59e0b)'}
     ];
     sumEl.innerHTML=chips.map(c=>'<div style="position:relative;overflow:hidden;background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+c.gr+';"></div>'+
       '<div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:11px;background:'+c.bg+';color:'+c.c+';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fa-solid '+c.ic+'"></i></div>'+
@@ -2257,7 +2255,7 @@ function renderPerfSubmissionTracker(){
       const nm=d.name.replace(/'/g,"\\'");
       return '<div style="border:1px solid var(--card-border);background:var(--card-bg);box-shadow:var(--shadow-sm);border-radius:14px;padding:16px;margin-bottom:12px;">'+
         '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'+
-          '<div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--blue),#3b82f6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 6px 14px -6px rgba(29,91,212,.6);"><i class="fa-solid fa-file-circle-check"></i></div>'+
+          '<div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--blue),#f59e0b);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 6px 14px -6px rgba(217,119,6,.6);"><i class="fa-solid fa-file-circle-check"></i></div>'+
           '<div style="flex:1;min-width:180px;"><div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+e(d.name)+'</div>'+
             '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Submission rate: <strong style="color:'+(rate>=75?'#16a34a':rate>=50?'#a16207':'#dc2626')+';">'+rate+'%</strong> · '+(d.su+d.la)+' of '+d.total+' students submitted</div></div>'+
           '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">'+
@@ -2283,13 +2281,38 @@ function renderPerfSubmissionTracker(){
     }).join('');
   }
 }
+function postRemind(payload){
+  return fetch('/api/remind/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)}).then(function(r){
+    return r.text().then(function(t){
+      var d={};try{d=t?JSON.parse(t):{};}catch(e){d={};}
+      if(d.ok===undefined)d.ok=r.ok;
+      d.status=r.status;
+      return d;
+    });
+  });
+}
+function remindMsg(d,fallback){
+  if(d&&d.message)return d.message;
+  if(d&&d.error)return d.error;
+  if(d&&d.status===403)return 'Your session expired or you do not have access. Please reload and try again.';
+  if(d&&d.status>=500)return 'The server could not send the reminder. Please try again.';
+  return fallback;
+}
+function remindStudent(studentId, assignmentId, btn){
+  if(studentId==null){showToast('Student not identified.','error');return;}
+  if(assignmentId==null){showToast('This assessment is not linked yet. Reload the page and try again.','error');return;}
+  if(btn)btn.disabled=true;
+  postRemind({assignment_id:assignmentId,student_ids:[studentId]}).then(function(d){
+    if(btn)btn.disabled=false;
+    if(d&&d.ok){showToast('Reminder sent.', 'success');}
+    else{showToast(remindMsg(d,'Could not send the reminder.'),'error');}
+  }).catch(function(){if(btn)btn.disabled=false;showToast('Could not send the reminder.','error');});
+}
 function sendMissedReminders(name){
-  const recs=(typeof studentRecords!=='undefined'?studentRecords:[]);
-  const missed=recs.filter(r=>{
-    const a=(r.assess||[]).find(x=>x[0]===name);
-    return !a||a[2]==='Late'||a[2]==='Failed'||a[2]==='Missing'||a[2]==='Not Submitted';
-  }).map(r=>r.name);
-  showToast('Reminder sent to '+missed.length+' student(s) for "'+name+'": '+(missed.join(', ')||'none'),'success');
+  postRemind({title:name}).then(function(d){
+    if(d&&d.ok){showToast('Reminder sent to '+(d.sent||0)+' student(s) for "'+name+'".','success');}
+    else{showToast(remindMsg(d,'Could not send reminders.'),'error');}
+  }).catch(function(){showToast('Could not send reminders.','error');});
 }
 
 // ── STUDENT LIST (search + filter) ──
@@ -2301,7 +2324,7 @@ function renderStudentList(){
     const rate=makeAttendance(r.absent||[],r.late||[],r.excuses||{});
     const present=rate.filter(a=>a[2]==='Present').length;
     const pct=rate.length?Math.round((present/rate.length)*100):96;
-    return '<tr data-name="'+e(r.name).toLowerCase()+'" data-status="'+(isRisk?'At Risk':'Enrolled')+'"><td><div style="display:flex;align-items:center;gap:10px;"><div class="student-avatar-sm" style="background:'+r.grad+';width:32px;height:32px;border-radius:8px;font-size:11px;flex-shrink:0;">'+e(r.initials)+'</div><div style="min-width:0;"><div style="font-weight:600;font-size:13px;">'+e(r.name)+'</div><div style="font-size:11px;color:var(--text-muted);">'+e(String(r.sub).replace(/\s*·\s*LRN\s+[\d-]+/i,''))+'</div></div></div></td><td>'+stPill+'</td><td style="font-weight:600;color:'+(pct<85?'#e99b2a':'#16a34a')+';">'+pct+'%</td><td style="font-weight:600;">'+e(r.score)+'</td><td style="text-align:right;"><button class="btn btn-outline btn-sm" onclick="openStudentRecord('+i+')"><i class="fa-solid fa-eye"></i> View</button></td></tr>';
+    return '<tr data-name="'+e(r.name).toLowerCase()+'" data-status="'+(isRisk?'At Risk':'Enrolled')+'"><td><div style="display:flex;align-items:center;gap:10px;"><div class="student-avatar-sm" style="background:'+r.grad+';width:32px;height:32px;border-radius:8px;font-size:11px;flex-shrink:0;">'+e(r.initials)+'</div><div style="min-width:0;"><div style="font-weight:600;font-size:13px;">'+e(r.name)+'</div><div style="font-size:11px;color:var(--text-muted);">'+e(String(r.sub).replace(/\s*·\s*LRN\s+[\d-]+/i,''))+'</div></div></div></td><td>'+stPill+'</td><td style="font-weight:600;color:'+(pct<85?'#e99b2a':'#16a34a')+';">'+pct+'%</td><td style="font-weight:600;">'+e(r.score)+'</td><td style="text-align:right;">'+(r.id!=null?'<button class="btn btn-outline btn-sm" style="margin-right:6px;" onclick="openPersonalMessageForStudent('+i+')"><i class="fa-solid fa-comment"></i> Message</button>':'')+'<button class="btn btn-outline btn-sm" onclick="openStudentRecord('+i+')"><i class="fa-solid fa-eye"></i> View</button></td></tr>';
   }).join('');
 }
 function filterStudentList(){
@@ -2392,8 +2415,8 @@ function viewSDAttachment(enc){
     const ext=(d.file||'').split('.').pop().toLowerCase();
     const escReason=(d.reason||'').replace(/</g,'&lt;');
     if(d.type==='photo'||['jpg','jpeg','png','gif','webp'].indexOf(ext)>-1){
-      const glyph='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 130" width="280" height="180"><rect width="200" height="130" rx="10" fill="#e3ecfa"/><rect x="78" y="34" width="44" height="34" rx="6" fill="#1e5faf"/><circle cx="100" cy="51" r="9" fill="#fff"/><rect x="56" y="76" width="88" height="6" rx="3" fill="#9db8dd"/><rect x="68" y="90" width="64" height="6" rx="3" fill="#c3d6ef"/><rect x="76" y="104" width="48" height="6" rx="3" fill="#c3d6ef"/></svg>';
-      preview.innerHTML='<div style="text-align:center;"><div style="background:#fff;border:1px solid var(--card-border);border-radius:10px;padding:12px;box-shadow:0 2px 10px rgba(10,36,99,.08);">'+glyph+'</div><div style="margin-top:12px;font-size:12px;color:var(--text-muted);"><i class="fa-solid fa-image"></i> Photo preview of the medical / supporting document</div></div>';
+      const glyph='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 130" width="280" height="180"><rect width="200" height="130" rx="10" fill="#e3ecfa"/><rect x="78" y="34" width="44" height="34" rx="6" fill="#f59e0b"/><circle cx="100" cy="51" r="9" fill="#fff"/><rect x="56" y="76" width="88" height="6" rx="3" fill="#9db8dd"/><rect x="68" y="90" width="64" height="6" rx="3" fill="#c3d6ef"/><rect x="76" y="104" width="48" height="6" rx="3" fill="#c3d6ef"/></svg>';
+      preview.innerHTML='<div style="text-align:center;"><div style="background:#fff;border:1px solid var(--card-border);border-radius:10px;padding:12px;box-shadow:0 2px 10px rgba(17,17,17,.08);">'+glyph+'</div><div style="margin-top:12px;font-size:12px;color:var(--text-muted);"><i class="fa-solid fa-image"></i> Photo preview of the medical / supporting document</div></div>';
     }else if(['pdf','doc','docx','txt'].indexOf(ext)>-1){
       preview.innerHTML='<div class="sd-letter-paper"><div class="sd-letter-head">SAN VICENTE INSTITUTE</div><div class="sd-letter-head-sub">Excuse Letter / Supporting Document — '+d.date+'</div><div class="sd-letter-body">Dear Class Adviser,<br><br>Please excuse <strong>'+d.student+'</strong> from class on <strong>'+d.date+'</strong>.<br><br>'+escReason+'<br><br>Thank you for your kind consideration.<div style="margin-top:26px;font-weight:600;">Respectfully,<br><br><span style="border-bottom:1px solid #333;">Signature of Parent / Guardian</span></div></div></div>';
     }else{
@@ -2418,12 +2441,12 @@ function backToStudents(){
 // ── ANNOUNCEMENTS ──
 function openAnnounceModal(){openModal('announceModal');}
 let announcementsFeed=[];
-function postAnnouncement(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('announceModal')))return;const title=document.getElementById('announceTitle').value.trim();const body=document.getElementById('announceBody').value.trim();if(!title||!body){showToast('Please fill in all fields','error');return;}announcementsFeed.unshift({kind:'class',title,body,createdAt:new Date().toISOString(),meta:'Posted just now'});window._lastAnnouncement={title,body};closeModal('announceModal');document.getElementById('announceTitle').value='';document.getElementById('announceBody').value='';if(typeof renderAnnouncements==='function')renderAnnouncements();showToast('Announcement posted!','success');if(typeof logActivity==='function')logActivity('Posted announcement "'+title+'" to your Virtual Classroom.','fa-bullhorn','#dbeafe','#2563eb');}
+function postAnnouncement(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('announceModal')))return;const title=document.getElementById('announceTitle').value.trim();const body=document.getElementById('announceBody').value.trim();if(!title||!body){showToast('Please fill in all fields','error');return;}announcementsFeed.unshift({kind:'class',title,body,createdAt:new Date().toISOString(),meta:'Posted just now'});window._lastAnnouncement={title,body};closeModal('announceModal');document.getElementById('announceTitle').value='';document.getElementById('announceBody').value='';if(typeof renderAnnouncements==='function')renderAnnouncements();showToast('Announcement posted!','success');if(typeof logActivity==='function')logActivity('Posted announcement "'+title+'" to your Virtual Classroom.','fa-bullhorn','#fef3c7','#d97706');}
 
 // ── CREATE CLASS ──
-function openCreateClassModal(){selectedClassColor='linear-gradient(90deg,#1e5faf,#3a86d4)';document.getElementById('createClassStatus').style.display='none';openModal('createClassModal');}
+function openCreateClassModal(){selectedClassColor='linear-gradient(90deg,#f59e0b,#fbbf24)';document.getElementById('createClassStatus').style.display='none';openModal('createClassModal');}
 function selectClassColor(el,color){selectedClassColor=color;document.querySelectorAll('.class-color-opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');}
-function saveNewClass(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('createClassModal')))return;const subj=document.getElementById('newSubject').value.trim();const grade=document.getElementById('newGrade').value.trim();const sect=document.getElementById('newSection').value.trim();if(!subj||!grade||!sect){showToast('Please fill in Subject, Grade, and Section','error');return;}const status=document.getElementById('createClassStatus');status.className='invite-status sending';status.style.display='block';status.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Creating class...';setTimeout(()=>{const grid=document.getElementById('classGrid');const title=grade+' \u2013 '+subj;const card=document.createElement('div');card.className='class-card';card.innerHTML='<div class="class-banner" style="background:'+selectedClassColor+';"></div><div class="class-body"><div class="class-subject">'+e(title)+'</div><div class="class-section">'+e(sect)+'</div><div class="class-meta"><div class="class-meta-item"><i class="fa-solid fa-users"></i> 0 students</div></div></div><div class="class-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openClassroom(\''+e(title)+'\',\''+e(sect)+'\',\'#1e5faf\',null)"><i class="fa-solid fa-arrow-right"></i> Open</button></div>';card.onclick=()=>openClassroom(title,sect,'#1e5faf',null);grid.appendChild(card);status.className='invite-status sent';status.innerHTML='<i class="fa-solid fa-check-circle"></i> Class created!';showToast('New class created!','success');setTimeout(()=>closeModal('createClassModal'),1500);},1200);}
+function saveNewClass(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('createClassModal')))return;const subj=document.getElementById('newSubject').value.trim();const grade=document.getElementById('newGrade').value.trim();const sect=document.getElementById('newSection').value.trim();if(!subj||!grade||!sect){showToast('Please fill in Subject, Grade, and Section','error');return;}const status=document.getElementById('createClassStatus');status.className='invite-status sending';status.style.display='block';status.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Creating class...';setTimeout(()=>{const grid=document.getElementById('classGrid');const title=grade+' \u2013 '+subj;const card=document.createElement('div');card.className='class-card';card.innerHTML='<div class="class-banner" style="background:'+selectedClassColor+';"></div><div class="class-body"><div class="class-subject">'+e(title)+'</div><div class="class-section">'+e(sect)+'</div><div class="class-meta"><div class="class-meta-item"><i class="fa-solid fa-users"></i> 0 students</div></div></div><div class="class-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openClassroom(\''+e(title)+'\',\''+e(sect)+'\',\'#f59e0b\',null)"><i class="fa-solid fa-arrow-right"></i> Open</button></div>';card.onclick=()=>openClassroom(title,sect,'#f59e0b',null);grid.appendChild(card);status.className='invite-status sent';status.innerHTML='<i class="fa-solid fa-check-circle"></i> Class created!';showToast('New class created!','success');setTimeout(()=>closeModal('createClassModal'),1500);},1200);}
 
 // ── BULK IMPORT STUDENTS TO VIRTUAL CLASSROOM ──
 let bulkImportRows=[];
@@ -2611,11 +2634,11 @@ function msgScopedThreads(list){if(!currentVCId)return list||[];return (list||[]
 function msgScopedContacts(){if(!currentVCId)return msgContacts||[];var b=msgContactsByClassroom[String(currentVCId)];return b?b.slice():[];}
 function msgApi(path,opts){return fetch(path,opts||{}).then(r=>r.json()).catch(()=>({ok:false}));}
 function msgCsrf(){const m=document.cookie.match(/csrftoken=([^;]+)/);return m?m[1]:'';}
-function msgGradFor(name){const palette=['linear-gradient(135deg,#1e5faf,#3a86d4)','linear-gradient(135deg,#e11d48,#f43f5e)','linear-gradient(135deg,#7c3aed,#a78bfa)','linear-gradient(135deg,#16a34a,#4ade80)','linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#0891b2,#22d3ee)','linear-gradient(135deg,#dc2626,#f87171)','linear-gradient(135deg,#4f46e5,#818cf8)'];let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return palette[h%palette.length];}
+function msgGradFor(name){const palette=['linear-gradient(135deg,#f59e0b,#fbbf24)','linear-gradient(135deg,#e11d48,#f43f5e)','linear-gradient(135deg,#7c3aed,#a78bfa)','linear-gradient(135deg,#16a34a,#4ade80)','linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#0891b2,#22d3ee)','linear-gradient(135deg,#dc2626,#f87171)','linear-gradient(135deg,#4f46e5,#818cf8)'];let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return palette[h%palette.length];}
 function msgIcon(name){const parts=name.replace(/[^0-9A-Za-z]/g,' ').split(' ').filter(Boolean).slice(0,2);return parts.map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';}
 function msgEmptyScreen(){return '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';}
 function msgEmptyChat(){return '<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-comments" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No messages yet. Say hi!</div>';}
-function msgThreadFromData(t,kind){return {id:t.id,name:t.name,grad:kind==='class'?'linear-gradient(135deg,#1e5faf,#3a86d4)':msgGradFor(t.name),icon:msgIcon(t.name),sub:t.sub,unread:t.unread||0,peer_id:t.peer_id,classroom_id:t.classroom_id,_at:t.ts?Date.parse(t.ts)||0:0,msgs:[],_loaded:false};}
+function msgThreadFromData(t,kind){return {id:t.id,name:t.name,grad:kind==='class'?'linear-gradient(135deg,#f59e0b,#fbbf24)':msgGradFor(t.name),icon:msgIcon(t.name),sub:t.sub,unread:t.unread||0,peer_id:t.peer_id,classroom_id:t.classroom_id,_at:t.ts?Date.parse(t.ts)||0:0,msgs:[],_loaded:false};}
 // Mark a thread as the most recently active one and park it at the head of
 // its list, so sending/receiving bubbles it to the top like a real messenger.
 function msgTouchThread(t){
@@ -2661,7 +2684,27 @@ function syncMsgThreads(){
     return true;
   });
 }
-function initMsgTab(){syncMsgThreads().then(function(){renderMsgThreads();const t=msgScopedThreads(classThreads)[0];if(t){setMsgThread(t);}else{document.getElementById('msgChatTitle').innerHTML='Class Chat';const msgs=document.getElementById('msgMessages');if(msgs)msgs.innerHTML=msgEmptyScreen();}});}
+function initMsgTab(){syncMsgThreads().then(function(){renderMsgThreads();const threads=msgScopedThreads(currentMsgTab==='personal'?personalThreads:classThreads);const t=threads.find(x=>x.id===msgThreadActiveId)||threads[0];if(t){setMsgThread(t);}else if(currentMsgTab==='class'){document.getElementById('msgChatTitle').innerHTML='Class Chat';const msgs=document.getElementById('msgMessages');if(msgs)msgs.innerHTML=msgEmptyScreen();}});}
+function openPersonalMessageForStudent(index){
+  const student=studentRecords[index];
+  if(!student||student.id==null){showToast('This student cannot be messaged from the roster.','error');return;}
+  const messageButton=Array.from(document.querySelectorAll('.tab-btn')).find(function(b){return b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'messages'");});
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('tab-messages').classList.add('active');
+  if(messageButton)messageButton.classList.add('active');
+  currentMsgTab='personal';
+  document.getElementById('msgTabClass').classList.remove('active');
+  document.getElementById('msgTabPersonal').classList.add('active');
+  syncMsgThreads().then(function(){
+    const peerId=String(student.id);
+    let thread=personalThreads.find(function(t){return String(t.peer_id)===peerId;});
+    if(!thread){thread={id:'p-'+peerId,name:student.name,grad:msgGradFor(student.name),icon:msgIcon(student.name),sub:'No messages yet',unread:0,peer_id:student.id,classroom_id:currentVCId,_at:0,msgs:[],_loaded:false};msgTouchThread(thread);}
+    setMsgThread(thread);
+    renderMsgThreads();
+    const input=document.getElementById('msgInput');if(input)input.focus();
+  });
+}
 // Personal tab lists everyone the teacher can reach (scoped to the open
 // classroom when the dashboard was opened on one). Threads that already have
 // history sit at the top in recency order; never-contacted students follow
@@ -2742,7 +2785,7 @@ function sendMsg(){
   if(!t)return;
   const now=new Date();const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const optimistic={sent:true,text,time};
-  t.msgs.push(optimistic);t.unread=0;t.sub='You: '+text.substring(0,30);inp.value='';
+  t.msgs.push(optimistic);t.unread=0;t.sub='You: '+text.substring(0,30);inp.value='';inp.style.height='auto';
   msgTouchThread(t);
   renderMsgThreadContent(t);renderMsgThreads();
   if(!msgRealLoaded)return;
@@ -2833,7 +2876,7 @@ function startMsgPoll(){if(window.__msgPollStarted)return;window.__msgPollStarte
 // ── TLA — Upload Type Selector ──
 const uploadTypes=[
   {key:'pdf',label:'Documents (PDF)',icon:'fa-file-pdf',bg:'#fdeaea',color:'#d94f4f',accept:'.pdf'},
-  {key:'doc',label:'Documents (Word)',icon:'fa-file-word',bg:'#e7f0fe',color:'#2563eb',accept:'.doc,.docx,.txt,.rtf'},
+  {key:'doc',label:'Documents (Word)',icon:'fa-file-word',bg:'#e7f0fe',color:'#d97706',accept:'.doc,.docx,.txt,.rtf'},
   {key:'ppt',label:'Presentations',icon:'fa-file-powerpoint',bg:'#fdf2e7',color:'#ea580c',accept:'.ppt,.pptx'},
   {key:'img',label:'Images',icon:'fa-image',bg:'#e7fbf3',color:'#16a34a',accept:'.png,.jpg,.jpeg,.gif,.webp'},
   {key:'vid',label:'Videos',icon:'fa-film',bg:'#f1eafd',color:'#7c3aed',accept:'.mp4,.mov,.avi,.mkv,.webm'},
@@ -2863,9 +2906,46 @@ function tassApiPost(url, formData){
   });
 }
 
-function addGeneralFiles(input){const files=Array.from(input.files);if(!files.length)return;const typeMap={pdf:'pdf',ppt:'ppt',pptx:'ppt',png:'img',jpg:'img',jpeg:'img',gif:'img',webp:'img',mp4:'vid',mov:'vid',avi:'vid',mkv:'vid',mp3:'aud',wav:'aud',m4a:'aud',aac:'aud'};files.forEach(f=>{const ext=f.name.split('.').pop().toLowerCase();const type=typeMap[ext]||'doc';addMaterialToList({type,name:f.name,meta:type.toUpperCase()+' · '+fmt(f.size)});const fd=new FormData();fd.append('action','file');fd.append('type',type);fd.append('file',f);tassApiPost('/api/teacher-content/',fd).then((r)=>{showToast('Uploaded "'+f.name+'"','success');}).catch(function(err){showToast('Upload of "'+f.name+'" failed. File kept locally.','error');});});showToast(files.length+' file(s) uploaded!','success');input.value='';}
+function addGeneralFiles(input){
+  const files=Array.from(input.files||[]);if(!files.length)return;
+  const vcId=window.currentVCId;
+  if(!vcId){showToast('Open a Virtual Classroom before uploading materials.','error');input.value='';return;}
+  const typeMap={pdf:'pdf',ppt:'ppt',pptx:'ppt',png:'img',jpg:'img',jpeg:'img',gif:'img',webp:'img',mp4:'vid',mov:'vid',avi:'vid',mkv:'vid',mp3:'aud',wav:'aud',m4a:'aud',aac:'aud'};
+  Promise.all(files.map(function(f){
+    const ext=(f.name.split('.').pop()||'').toLowerCase();
+    const fd=new FormData();fd.append('action','file');fd.append('type',typeMap[ext]||'doc');fd.append('file',f);fd.append('virtual_classroom_id',vcId);
+    return tassApiPost('/api/teacher-content/',fd).then(function(r){
+      if(!r||!r.resource_id)throw new Error('The server did not save the material.');
+      return f;
+    });
+  })).then(function(saved){
+    if(typeof loadClassroomContent==='function')loadClassroomContent(vcId);
+    showToast(saved.length+' file(s) uploaded to this Virtual Classroom.','success');
+  }).catch(function(err){showToast((err&&err.message)||'Upload failed. Please try again.','error');})
+    .finally(function(){input.value='';});
+}
 function openAddLinkModal(){const sel=document.getElementById('linkTopicSelect');sel.innerHTML='<option value="">-- None / General --</option>'+topics.map((t,i)=>'<option value="'+i+'">'+e(t.title)+'</option>').join('');document.getElementById('linkTitle').value='';document.getElementById('linkUrl').value='';openModal('addLinkModal');}
-function saveLink(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('addLinkModal')))return;const title=document.getElementById('linkTitle').value.trim();const url=document.getElementById('linkUrl').value.trim();if(!title||!url){showToast('Please enter a title and URL','error');return;}const topicIdx=document.getElementById('linkTopicSelect').value;const item={type:'lnk',name:title,meta:'Link \u00b7 '+url,url};if(topicIdx!==''){topics[parseInt(topicIdx)].materials.push(item);renderTopics();}else{addMaterialToList(item);}closeModal('addLinkModal');showToast('Link added!','success');}
+function saveLink(){
+  if(typeof tassValidate==='function'&&!tassValidate(document.getElementById('addLinkModal')))return;
+  const title=document.getElementById('linkTitle').value.trim();
+  const url=document.getElementById('linkUrl').value.trim();
+  if(!title||!url){showToast('Please enter a title and URL','error');return;}
+  const topicIdx=document.getElementById('linkTopicSelect').value;
+  const topicName=topicIdx!==''&&topics[parseInt(topicIdx)]?topics[parseInt(topicIdx)].title:'';
+  saveResourceLink(title,url,topicName,function(){closeModal('addLinkModal');});
+}
+function saveResourceLink(title,url,topicName,onSaved){
+  const vcId=window.currentVCId;
+  if(!vcId){showToast('Open a Virtual Classroom before adding a resource link.','error');return;}
+  const fd=new FormData();fd.append('action','resource');fd.append('type','link');fd.append('title',title);fd.append('url',url);fd.append('virtual_classroom_id',vcId);
+  if(topicName)fd.append('topic',topicName);
+  tassApiPost('/api/teacher-content/',fd).then(function(r){
+    if(!r||!r.resource_id)throw new Error('The server did not save the resource link.');
+    if(typeof loadClassroomContent==='function')loadClassroomContent(vcId);
+    if(typeof onSaved==='function')onSaved();
+    showToast('Resource link saved to this Virtual Classroom.','success');
+  }).catch(function(err){showToast((err&&err.message)||'Could not save the resource link.','error');});
+}
 
 function addMaterialToList(item){const icons={pdf:'fa-file-pdf',vid:'fa-film',doc:'fa-file',img:'fa-image',aud:'fa-headphones',ppt:'fa-file-powerpoint',lnk:'fa-link'};const list=document.getElementById('uploadedFilesList');const el=document.createElement('div');el.className='material-item clickable';el.innerHTML='<div class="material-icon '+item.type+'"><i class="fa-solid '+(icons[item.type]||'fa-file')+'"></i></div><div style="flex:1;"><div class="material-name">'+e(item.name)+'</div><div class="material-meta">'+e(item.meta)+'</div></div><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();this.closest(\'.material-item\').remove();showToast(\'Removed\',\'success\')"><i class="fa-solid fa-trash"></i></button>';if(item.url)el.onclick=()=>showToast('Opening: '+item.name,'success');list.appendChild(el);}
 function fmt(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
@@ -2930,12 +3010,14 @@ function uploadToTopicTyped(input,idx,type){
   const sync=new FormData();
   sync.append('action','topic');
   sync.append('name',topic.title||'General Resources');
+  if(window.currentVCId)sync.append('virtual_classroom_id',window.currentVCId);
   tassApiPost('/api/teacher-content/',sync).then(function(r){
     const topicId=(r&&r.topic_id)?String(r.topic_id):'';
     const up=new FormData();
     up.append('action','file');
     up.append('type',type);
     up.append('topic_id',topicId);
+    if(window.currentVCId)up.append('virtual_classroom_id',window.currentVCId);
     files.forEach(f=>up.append('file',f));
     tassApiPost('/api/teacher-content/',up).then(function(){
       files.forEach(f=>{topic.materials.push({type:type,name:f.name,meta:type.toUpperCase()+' \u00b7 '+fmt(f.size)});});
@@ -2943,7 +3025,7 @@ function uploadToTopicTyped(input,idx,type){
     }).catch(function(err){resetInput();showToast((err&&err.message)||'Upload failed. Please try again.','error');});
   }).catch(function(){resetInput();showToast('Could not sync the topic. Please try again.','error');});
 }
-function addLinkToTopic(idx){const title=prompt('Link Title:');const url=prompt('URL:');if(title&&url){topics[idx].materials.push({type:'lnk',name:title,meta:'Link \u00b7 '+url,url});topics[idx].showUploadSelector=false;renderTopics();showToast('Link added!','success');}}
+function addLinkToTopic(idx){const title=prompt('Link Title:');const url=prompt('URL:');if(title&&url){const topicName=topics[idx]&&topics[idx].title||'';saveResourceLink(title,url,topicName,function(){topics[idx].open=true;topics[idx].showUploadSelector=false;renderTopics();});}}
 
 // ── ASSESSMENT BUILDER (2-step enforced) ──
 const BUILDER_QTYPE={mc:'Multiple Choice',tf:'True / False',mt:'Matching Type',id:'Identification',sa:'Short Answer',es:'Essay',pp:'Position Paper',cs:'Case Study',nr:'Narrative Report',pt:'Performance-Based Task'};
@@ -3044,7 +3126,7 @@ function resetQuestionForm(){document.getElementById('qText').value='';const pts
 function editQuestion(idx){const q=builderQuestions[idx];if(!q)return;document.getElementById('qText').value=q.text||'';const pts=document.getElementById('qPoints');if(pts)pts.value=q.points||2;if(builderParts.length){const p=builderParts.find(x=>x.id===q.partId);if(p){currentPartId=p.id;selectedQType=p.qtype||'mc';}}syncBuilderForm();if(q.type==='mc'){const opts=(q.options&&q.options.length)?q.options:['','','',''];['A','B','C','D'].forEach((L,i)=>{const el=document.getElementById('optText'+L);if(el)el.value=opts[i]||'';});optImgAttached={};if(q.optImgs){['A','B','C','D'].forEach(L=>{if(q.optImgs[L])optImgAttached[L]=q.optImgs[L];});}const radios=document.getElementsByName('mcCorrect');const ci=(typeof q.correct==='number')?q.correct:0;for(let i=0;i<radios.length;i++)radios[i].checked=i===ci;mcChoiceGuard();}else if(q.type==='tf'){tfSelected=q.tf===false?'false':'true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn'+(tfSelected==='true'?' sel-true':'');if(tF)tF.className='tf-btn'+(tfSelected==='false'?' sel-false':'');}else if(q.type==='mt'){const mi=document.getElementById('mtItems');if(mi)mi.value=q.match||'';}else if(q.type==='id'){const ia=document.getElementById('idAnswer');if(ia)ia.value=q.idAns||'';}else if(q.type==='sa'){const sa=document.getElementById('saAnswer');if(sa)sa.value=q.saAns||'';}else if(q.type==='es'||['pp','cs','nr','pt'].includes(q.type)){const er=document.getElementById('esRubric');if(er)er.value=q.rubric||'';}if(q.media)qMediaAttached=q.media;editingQuestionIdx=idx;const ab=document.getElementById('qAddBtn');if(ab){ab.innerHTML='<i class="fa-solid fa-pen"></i> Update Question';const form=ab.closest('.q-form');if(form)form.scrollIntoView({behavior:'smooth',block:'center'});}const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='inline-flex';showToast('Editing question '+(idx+1)+' — update the fields then click Save.','info');}
 function cancelEditQuestion(){editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question edit cancelled.','info');}
 function deleteQ(idx){builderQuestions.splice(idx,1);if(editingQuestionIdx===idx)editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Removed','success');}
-function publishAssessment(){if(builderQuestions.length===0){showToast('Add at least one question first','error');return;}const nq=builderQuestions.length;closeModal('assessBuilderModal');builderQuestions=[];showToast('Assessment published successfully!','success');if(typeof logActivity==='function')logActivity('Created and published an assessment with '+nq+' question(s) in the Builder.','fa-file-pen','#ede9fe','#7c3aed');}
+function publishAssessment(){if(builderQuestions.length===0){showToast('Add at least one question first','error');return;}const nq=builderQuestions.length;closeModal('assessBuilderModal');builderQuestions=[];showToast('Assessment published successfully!','success');if(typeof logActivity==='function')logActivity('Created and published an assessment with '+nq+' question(s) in the Builder.','fa-file-pen','#fef3c7','#7c3aed');}
 
 // ── ANALYTICS ──
 // ── ANALYTICS ──
@@ -3093,26 +3175,40 @@ function refreshAnalytics(){
   initAnalyticsCharts();
 }
 function initAnalyticsCharts(){
+  // Chart.js is self-hosted at /static/js/chart.umd.min.js, but if it ever fails
+  // to load, Chart.defaults below would throw before any mk() ran and every
+  // canvas would stay a literal blank box. Render the shared empty state instead.
+  if(typeof Chart==='undefined'){
+    ['attendanceTrendChart','attendanceBreakdownChart','scoreDistChart','submissionRateChart','studentPerfChart','downloadActivityChart','passFailChart']
+      .forEach(id=>TASS.empty.chart(id,{message:'Charts unavailable.',hint:'The chart library could not be loaded.',source:'chartjs.load'}));
+    return;
+  }
   const f=document.getElementById('analyticsClassFilter')?.value||'all';
   const period=document.getElementById('analyticsPeriodFilter')?.value||'';
   const year=document.getElementById('analyticsYearFilter')?.value||'';
   const d=analyticsBucket(f,period,year);
   Chart.defaults.font.family="'Plus Jakarta Sans', sans-serif";
-  Chart.defaults.color=isDarkMode?'#8aaccc':'#4a637f';
+  Chart.defaults.color=isDarkMode?'#d4d4d4':'#4a637f';
   // mk() draws the chart only when the backend supplied points, otherwise it
   // leaves the canvas untouched and shows the shared empty state.
   const mk=(id,cfg,source)=>{
     destroyChart(id);
     const points=cfg.data.datasets.reduce((n,ds)=>n+((ds.data&&ds.data.length)||0),0);
     if(!points){TASS.empty.chart(id,{source:source});return;}
-    const ctx=document.getElementById(id)?.getContext('2d');
+    const el=document.getElementById(id);
+    if(!el)return;
+    // A slot can already be showing the shared empty state from an earlier paint
+    // (e.g. showView ran before the backend bridge delivered the bucket). Fill it
+    // before drawing, or the absolute "No data yet." overlay covers the canvas.
+    TASS.empty.fillChart(id);
+    const ctx=el.getContext('2d');
     if(ctx)charts[id]=new Chart(ctx,cfg);
   };
-  mk('attendanceTrendChart',{type:'line',data:{labels:d.attL,datasets:[{label:'Attendance %',data:d.attV,borderColor:'#1e5faf',backgroundColor:'rgba(30,95,175,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#1e5faf',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:70,max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.attendance_trend');
-  mk('attendanceBreakdownChart',{type:'doughnut',data:{labels:d.brL,datasets:[{data:d.brV,backgroundColor:['#22a877','#d94f4f','#e99b2a','#3a86d4']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}},(d.brL||[]).join('|')||'analytics.attendance_breakdown');
-  mk('scoreDistChart',{type:'bar',data:{labels:d.sdL,datasets:[{data:d.sdV,backgroundColor:['#d94f4f','#f97316','#e99b2a','#3a86d4','#22a877'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}},'analytics.score_distribution');
+  mk('attendanceTrendChart',{type:'line',data:{labels:d.attL,datasets:[{label:'Attendance %',data:d.attV,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#f59e0b',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:70,max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.attendance_trend');
+  mk('attendanceBreakdownChart',{type:'doughnut',data:{labels:d.brL,datasets:[{data:d.brV,backgroundColor:['#22a877','#d94f4f','#e99b2a','#fbbf24']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}},(d.brL||[]).join('|')||'analytics.attendance_breakdown');
+  mk('scoreDistChart',{type:'bar',data:{labels:d.sdL,datasets:[{data:d.sdV,backgroundColor:['#d94f4f','#f97316','#e99b2a','#fbbf24','#22a877'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}},'analytics.score_distribution');
   mk('submissionRateChart',{type:'bar',data:{labels:d.srL,datasets:[{label:'%',data:d.srV,backgroundColor:'#22a877',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.submission_rate');
-  mk('studentPerfChart',{type:'bar',data:{labels:d.spL,datasets:[{data:d.spV,backgroundColor:['#3a86d4','#7c3aed','#ea580c','#16a34a'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.student_performance');
+  mk('studentPerfChart',{type:'bar',data:{labels:d.spL,datasets:[{data:d.spV,backgroundColor:['#fbbf24','#7c3aed','#ea580c','#16a34a'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.student_performance');
   mk('downloadActivityChart',{type:'line',data:{labels:d.dlL,datasets:[{data:d.dlV,borderColor:'#e99b2a',backgroundColor:'rgba(233,155,42,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#e99b2a',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}},'analytics.download_activity');
   mk('passFailChart',{type:'bar',data:{labels:d.pfL,datasets:[{label:'Passed',data:d.pfP,backgroundColor:'#22a877',borderRadius:6},{label:'Failed',data:d.pfF,backgroundColor:'#d94f4f',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}}}},'analytics.pass_fail');
 }
@@ -3152,7 +3248,12 @@ const REAL_VCS=[];
 // pattern: a demo seed plus a real-data buffer that wins when populated.
 const ASSESSMENT_LIBRARY_PAGE=[];
 const REAL_ASSESSMENTS=[];
-function assessmentSource(){return REAL_ASSESSMENTS.length?REAL_ASSESSMENTS:ASSESSMENT_LIBRARY_PAGE;}
+// Assessments added through "Upload Assessment to Repository" live apart from
+// REAL_ASSESSMENTS because the real-time poll refills REAL_ASSESSMENTS from the
+// backend every few seconds — anything pushed there would vanish instantly.
+// This array is never cleared, so a session upload stays visible until reload.
+const REAL_ASSESSMENTS_EXTRA=[];
+function assessmentSource(){const base=REAL_ASSESSMENTS.length?REAL_ASSESSMENTS:ASSESSMENT_LIBRARY_PAGE;return base.concat(REAL_ASSESSMENTS_EXTRA);}
 // Real per-student metrics from teacher_context().report_data. The six
 // Analytics & Reports tiles read these; `studentRecords` is enriched from them
 // so the student list, ranking and at-risk banner agree with the reports.
@@ -3170,12 +3271,12 @@ function buildClassCard(c){
   card.setAttribute('data-section',c.section||'');
   card.setAttribute('data-year',c.year||'');
   card.setAttribute('data-status',c.status||'Active');
-  const color=c.color||'#1e5faf';
+  const color=c.color||'#f59e0b';
   const bg=c.background?(';background-image:url(\''+c.background+'\');background-size:cover;background-position:center;'):'';
   const title=String(c.title||''), section=String(c.section||'');
   const tq=title.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const sq=section.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  card.innerHTML='<div class="class-banner" style="background:'+color+bg+'"></div><div class="class-body"><div class="class-subject">'+title+'</div><div class="class-section">'+section+'</div><div class="class-meta"><div class="class-meta-item"><i class="fa-solid fa-users"></i> '+(c.students||0)+' students</div><div class="class-meta-item" style="color:var(--text-muted);"><i class="fa-solid fa-chalkboard-user"></i> '+(c.teacher||'')+'</div></div></div><div class="class-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openClassroom(\''+tq+'\',\''+sq+'\',\''+color+'\','+(c.id!==undefined&&c.id!==null?c.id:'')+'\')"><i class="fa-solid fa-arrow-right"></i> Open</button></div>';
+  card.innerHTML='<div class="class-banner" style="background:'+color+bg+'"></div><div class="class-body"><div class="class-subject">'+title+'</div><div class="class-section">'+section+'</div><div class="class-meta"><div class="class-meta-item"><i class="fa-solid fa-users"></i> '+(c.students||0)+' students</div><div class="class-meta-item" style="color:var(--text-muted);"><i class="fa-solid fa-chalkboard-user"></i> '+(c.teacher||'')+'</div></div></div><div class="class-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openClassroom(\''+tq+'\',\''+sq+'\',\''+color+'\','+(c.id!==undefined&&c.id!==null?c.id:'')+')"><i class="fa-solid fa-arrow-right"></i> Open</button></div>';
   card.onclick=()=>openClassroom(c.title,c.section,c.color,c.id);
   return card;
 }
@@ -3202,13 +3303,13 @@ function seedTeacherSampleData(){
     card.setAttribute('data-section',c.section||'');
     card.setAttribute('data-year',c.year||'');
     card.setAttribute('data-status',c.status||'Active');
-    card.innerHTML='<div class="class-banner" style="background:'+c.color+';"></div><div class="class-body"><div class="class-subject">'+c.title+'</div><div class="class-section">'+c.section+'</div><div class="class-meta"><div class="class-meta-item"><i class="fa-solid fa-users"></i> '+c.students+' students</div><div class="class-meta-item" style="color:var(--text-muted);"><i class="fa-solid fa-chalkboard-user"></i> '+c.teacher+'</div></div></div><div class="class-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openClassroom(\''+c.title+'\',\''+c.section+'\',\''+c.color+'\','+(c.id!==undefined&&c.id!==null?c.id:'')+'\')"><i class="fa-solid fa-arrow-right"></i> Open</button></div>';
+    card.innerHTML='<div class="class-banner" style="background:'+c.color+';"></div><div class="class-body"><div class="class-subject">'+c.title+'</div><div class="class-section">'+c.section+'</div><div class="class-meta"><div class="class-meta-item"><i class="fa-solid fa-users"></i> '+c.students+' students</div><div class="class-meta-item" style="color:var(--text-muted);"><i class="fa-solid fa-chalkboard-user"></i> '+c.teacher+'</div></div></div><div class="class-actions"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openClassroom(\''+c.title+'\',\''+c.section+'\',\''+c.color+'\','+(c.id!==undefined&&c.id!==null?c.id:'')+')"><i class="fa-solid fa-arrow-right"></i> Open</button></div>';
     card.onclick=()=>openClassroom(c.title,c.section,c.color,c.id);
     return card;
   };
   window.buildClassCard = buildClassCard;
   const classes=[
-    {title:'Grade 7 – Science',section:'Section A',teacher:'Ms. Lovelyn C. Malanot',color:'#1e5faf',students:35,grade:'Grade 7',subject:'Science',year:'2025-2026',status:'Active'},
+    {title:'Grade 7 – Science',section:'Section A',teacher:'Ms. Lovelyn C. Malanot',color:'#f59e0b',students:35,grade:'Grade 7',subject:'Science',year:'2025-2026',status:'Active'},
     {title:'Grade 9 – Science',section:'Section C',teacher:'Ms. Lovelyn C. Malanot',color:'#16a34a',students:32,grade:'Grade 9',subject:'Science',year:'2025-2026',status:'Active'},
     {title:'Grade 11 – Earth Science',section:'STEM-A',teacher:'Ms. Lovelyn C. Malanot',color:'#e11d48',students:28,grade:'Grade 11',subject:'Science',year:'2026-2027',status:'Active'},
     {title:'Grade 12 – Research',section:'STEM-A',teacher:'Ms. Lovelyn C. Malanot',color:'#7c3aed',students:25,grade:'Grade 12',subject:'Research',year:'2026-2027',status:'Active'}
@@ -3279,7 +3380,7 @@ function seedTeacherSampleData(){
   // Message threads
   if(classThreads.length===0){
     classThreads.push(
-      {id:'g9c',name:'Grade 9 – Section C',icon:'9C',grad:'linear-gradient(135deg,#1e5faf,#3a86d4)',sub:'Class group chat',msgs:[
+      {id:'g9c',name:'Grade 9 – Section C',icon:'9C',grad:'linear-gradient(135deg,#f59e0b,#fbbf24)',sub:'Class group chat',msgs:[
         {sent:false,text:'Good morning class! Our Science quiz will be this Friday.',time:'8:00 AM'},
         {sent:true,text:'Good morning Ms. Malanot! Noted.',time:'8:05 AM'}
       ]},
@@ -3299,23 +3400,23 @@ function seedTeacherSampleData(){
     RESOURCE_LIBRARY_PAGE.push(
       {type:'pdf',icon:'fa-solid fa-file-pdf',color:'#d94f4f',title:'Cell Structure Lesson Plan',subject:'Science',topic:'Cells',meta:'PDF · 2.4 MB'},
       {type:'ppt',icon:'fa-solid fa-file-powerpoint',color:'#e99b2a',title:'Photosynthesis Slides',subject:'Science',topic:'Photosynthesis',meta:'PPTX · 8.1 MB'},
-      {type:'doc',icon:'fa-solid fa-file-word',color:'#3a86d4',title:'Lab Worksheet: Microscope',subject:'Science',topic:'Laboratory',meta:'DOCX · 180 KB'},
+      {type:'doc',icon:'fa-solid fa-file-word',color:'#fbbf24',title:'Lab Worksheet: Microscope',subject:'Science',topic:'Laboratory',meta:'DOCX · 180 KB'},
       {type:'vid',icon:'fa-solid fa-video',color:'#f97316',title:'Cells Under the Microscope',subject:'Science',topic:'Cells',meta:'MP4 · 45 MB'},
-      {type:'doc',icon:'fa-solid fa-file-word',color:'#3a86d4',title:'Chemical Bonding Summary Notes',subject:'Science',topic:'Compounds',meta:'DOCX · 220 KB'},
+      {type:'doc',icon:'fa-solid fa-file-word',color:'#fbbf24',title:'Chemical Bonding Summary Notes',subject:'Science',topic:'Compounds',meta:'DOCX · 220 KB'},
       {type:'xls',icon:'fa-solid fa-file-excel',color:'#16a34a',title:'Earth Layers Data Table',subject:'Science',topic:'Geology',meta:'XLSX · 95 KB'},
       {type:'ppt',icon:'fa-solid fa-file-powerpoint',color:'#e99b2a',title:'Cell Division (Mitosis & Meiosis) PPT',subject:'Biology',topic:'Cell Division',meta:'PPTX · 6.3 MB'},
       {type:'pdf',icon:'fa-solid fa-file-pdf',color:'#d94f4f',title:'Photosynthesis Lab Worksheet',subject:'Biology',topic:'Photosynthesis',meta:'PDF · 1.1 MB'},
-      {type:'doc',icon:'fa-solid fa-file-word',color:'#3a86d4',title:'DNA Structure Activity Sheet',subject:'Biology',topic:'Genetics',meta:'DOCX · 310 KB'},
+      {type:'doc',icon:'fa-solid fa-file-word',color:'#fbbf24',title:'DNA Structure Activity Sheet',subject:'Biology',topic:'Genetics',meta:'DOCX · 310 KB'},
       {type:'ppt',icon:'fa-solid fa-file-powerpoint',color:'#e99b2a',title:'Human Body Systems PowerPoint',subject:'Biology',topic:'Organ Systems',meta:'PPTX · 12.4 MB'},
       {type:'xls',icon:'fa-solid fa-file-excel',color:'#16a34a',title:'Microscope Lab Observation Log',subject:'Biology',topic:'Laboratory',meta:'XLSX · 88 KB'},
-      {type:'doc',icon:'fa-solid fa-file-word',color:'#3a86d4',title:'Parts of Speech Lesson Plan',subject:'English',topic:'Grammar',meta:'DOCX · 245 KB'},
+      {type:'doc',icon:'fa-solid fa-file-word',color:'#fbbf24',title:'Parts of Speech Lesson Plan',subject:'English',topic:'Grammar',meta:'DOCX · 245 KB'},
       {type:'ppt',icon:'fa-solid fa-file-powerpoint',color:'#e99b2a',title:'Figurative Language Slides',subject:'English',topic:'Literature',meta:'PPTX · 4.8 MB'},
       {type:'pdf',icon:'fa-solid fa-file-pdf',color:'#d94f4f',title:'Essay Writing Rubric',subject:'English',topic:'Composition',meta:'PDF · 590 KB'},
-      {type:'doc',icon:'fa-solid fa-file-word',color:'#3a86d4',title:'Noli Me Tangere Character Study Worksheet',subject:'English',topic:'Philippine Literature',meta:'DOCX · 432 KB'},
+      {type:'doc',icon:'fa-solid fa-file-word',color:'#fbbf24',title:'Noli Me Tangere Character Study Worksheet',subject:'English',topic:'Philippine Literature',meta:'DOCX · 432 KB'},
       {type:'vid',icon:'fa-solid fa-video',color:'#f97316',title:'Public Speaking Techniques (Video)',subject:'English',topic:'Oral Communication',meta:'MP4 · 62 MB'},
       {type:'ppt',icon:'fa-solid fa-file-powerpoint',color:'#e99b2a',title:'Algebra: Linear Equations',subject:'Mathematics',topic:'Algebra',meta:'PPTX · 5.2 MB'},
       {type:'pdf',icon:'fa-solid fa-file-pdf',color:'#d94f4f',title:'Geometry Formulas Cheat Sheet',subject:'Mathematics',topic:'Geometry',meta:'PDF · 760 KB'},
-      {type:'doc',icon:'fa-solid fa-file-word',color:'#3a86d4',title:'Fraction Operations Worksheet',subject:'Mathematics',topic:'Numbers',meta:'DOCX · 190 KB'},
+      {type:'doc',icon:'fa-solid fa-file-word',color:'#fbbf24',title:'Fraction Operations Worksheet',subject:'Mathematics',topic:'Numbers',meta:'DOCX · 190 KB'},
       {type:'xls',icon:'fa-solid fa-file-excel',color:'#16a34a',title:'Statistics: Data Organizer Template',subject:'Mathematics',topic:'Statistics',meta:'XLSX · 72 KB'},
       {type:'vid',icon:'fa-solid fa-video',color:'#f97316',title:'Trigonometry Basics Tutorial',subject:'Mathematics',topic:'Trigonometry',meta:'MP4 · 38 MB'}
     );
@@ -3384,7 +3485,7 @@ function timeAgoText(iso){if(!iso)return'Just now';const t=new Date(iso).getTime
 function assessDateTsMs(v,endOfDay){if(!v)return NaN;const s=String(v);return new Date(s.length<=10?s+'T'+(endOfDay?'23:59:59':'00:00:00'):s).getTime();}
 function logActivity(text,icon,bg,color){
   if(!document.getElementById('recentActivityList'))return;
-  activityFeed.unshift({icon:icon||'fa-flag',bg:bg||'#dbeafe',color:color||'#2563eb',text:text,time:'Just now'});
+  activityFeed.unshift({icon:icon||'fa-flag',bg:bg||'#fef3c7',color:color||'#d97706',text:text,time:'Just now'});
   if(activityFeed.length>8)activityFeed.length=8;
   renderRecentActivity();
 }
@@ -3422,14 +3523,103 @@ function renderNotifs(){
   const icons={'available':'fa-play','opening_soon':'fa-clock','deadline_nearing':'fa-hourglass-half','missed_assessment':'fa-triangle-exclamation','assessment_completed':'fa-check-double','assessment_updated':'fa-pen','manual_grade':'fa-user-pen'};
   el.innerHTML=list.slice(0,12).map(n=>{
     const ic=icons[n.type]||'fa-bell';
-    return '<div class="log-item'+(n.unread?' notif-unread':'')+'" style="padding:11px 14px;cursor:pointer;" onclick="showNotifDetail(\''+n.id+'\',this)"><div class="notif-dot-icon" style="background:#dbeafe;color:#2563eb;"><i class="fa-solid '+ic+'"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">'+e(n.msg||n.title||'Notification')+'</div><div class="notif-time">'+timeAgoText(n.createdAt)+'</div></div></div>';
+    return '<div class="log-item'+(n.unread?' notif-unread':'')+'" style="padding:11px 14px;cursor:pointer;" onclick="showNotifDetail(\''+n.id+'\',this)"><div class="notif-dot-icon" style="background:#fef3c7;color:#d97706;"><i class="fa-solid '+ic+'"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">'+e(n.msg||n.title||'Notification')+'</div><div class="notif-time">'+timeAgoText(n.createdAt)+'</div></div></div>';
   }).join('');
 }
 function populateSubmissionSelect(){
-  const sel=document.getElementById('submissionAssessSelect');if(!sel||sel.options.length>1)return;
+  const sel=document.getElementById('submissionAssessSelect');if(!sel)return;
+  const real=(window.__classroomAssessments||[]);
+  if(real.length){
+    const keep=sel.value;
+    sel.innerHTML='<option value="">Select an assessment</option>'+real.map(a=>'<option value="'+e(a.id)+'">'+e(a.title)+'</option>').join('');
+    if(keep&&sel.querySelector('option[value="'+keep+'"]'))sel.value=keep;else sel.value=String(real[0].id);
+    return;
+  }
+  if(sel.options.length>1)return;
   const opts={'quiz1':'Quiz 1: Cell Structure & Function','midterm':'Midterm Examination','activity2':'Activity 3: Lab Worksheet'};
   sel.innerHTML='<option value="">Select an assessment</option>'+Object.keys(opts).map(k=>'<option value="'+k+'"'+(k==='quiz1'?' selected':'')+'>'+opts[k]+'</option>').join('');
 }
+
+// ── My Class: hydrate Teaching & Learning Activities and Submissions from the
+// backend classroom payload so a fresh browser shows real content instead of
+// the empty localStorage stub. Loaded when a class card is opened.
+function materialTypeForResource(r){
+  const label=String((r&&r.typeLabel)||'').toLowerCase();
+  if(label.indexOf('presentation')>=0)return 'ppt';
+  if(label.indexOf('pdf')>=0)return 'pdf';
+  if(label.indexOf('image')>=0)return 'img';
+  if(label.indexOf('video')>=0)return 'vid';
+  if(label.indexOf('audio')>=0)return 'aud';
+  if(label.indexOf('link')>=0)return 'lnk';
+  return 'doc';
+}
+function materialMetaForResource(r){
+  const src=(r&&(r.externalLink||r.fileUrl))||'';
+  return ((r&&r.typeLabel)||'Document')+(src?' · '+src:'');
+}
+function hydrateTopicsFromClassroom(d){
+  if(typeof topics==='undefined')return;
+  const existing={};
+  topics.forEach(function(t){if(t&&t.title)existing[t.title]=t;});
+  const byTopic={};
+  (d.resources||[]).forEach(function(r){const k=r.topic||'General Resources';(byTopic[k]=byTopic[k]||[]).push(r);});
+  const names=[];
+  (d.topics||[]).forEach(function(t){if(t&&t.name&&names.indexOf(t.name)<0)names.push(t.name);});
+  Object.keys(byTopic).forEach(function(n){if(names.indexOf(n)<0)names.push(n);});
+  topics=names.map(function(name){
+    const prev=existing[name]||{};
+    return {
+      title:name,desc:prev.desc||'',open:!!prev.open,showUploadSelector:!!prev.showUploadSelector,
+      selectedUploadType:prev.selectedUploadType||null,
+      materials:(byTopic[name]||[]).map(function(r){return {type:materialTypeForResource(r),name:r.title,meta:materialMetaForResource(r),url:((r.fileUrl||r.externalLink)||''),description:''};})
+    };
+  });
+  if(typeof renderTopics==='function')renderTopics();
+}
+function hydrateSubmissionsFromClassroom(d){
+  if(typeof submissionData==='undefined')return;
+  (d.assessments||[]).forEach(function(a){
+    if(!Array.isArray(a.submissions))return;
+    submissionData[String(a.id)]=a.submissions.map(function(s){
+      const nm=s.name||'Student';
+      const initials=nm.split(/\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
+      const st=(s.status==='submitted'||s.status==='late')?s.status:'not-submitted';
+      return {id:initials,name:nm,grad:'linear-gradient(135deg,#f59e0b,#fbbf24)',status:st,time:(s.time||'—'),score:(s.score==null||s.score==='')?'—':String(s.score),fileUrl:s.fileUrl||'',fileName:s.fileName||'',studentId:(s.studentId!=null?s.studentId:null),assessId:a.id};
+    });
+  });
+  window.__classroomAssessments=(d.assessments||[]).slice();
+  populateSubmissionSelect();
+  if(typeof renderSubmissionTracker==='function')renderSubmissionTracker();
+}
+function hydrateGeneralFilesFromClassroom(d){
+  const list=document.getElementById('uploadedFilesList');if(!list)return;
+  list.innerHTML='';
+  (d.resources||[]).filter(function(r){return String(r.topic||'')==='General Resources';}).forEach(function(r){
+    addMaterialToList({type:materialTypeForResource(r),name:r.title,meta:materialMetaForResource(r),url:r.fileUrl||r.externalLink||''});
+  });
+}
+function applyClassroomPayload(key, d) {
+  var sig = JSON.stringify({
+    r: d.resources || [],
+    t: (d.topics || []).map(function (x) { return { name: x.name, order: x.order }; }),
+    a: (d.assessments || []).map(function (x) { return { id: x.id, s: (x.submissions || []).length, att: x.attachmentUrl || '', f: (x.submissions || []).map(function (s) { return s.fileUrl || ''; }).join(',') }; })
+  });
+  var sigs = window.__classroomSigs || (window.__classroomSigs = {});
+  if (sigs[key] === sig) return false;
+  sigs[key] = sig;
+  hydrateTopicsFromClassroom(d);
+  hydrateGeneralFilesFromClassroom(d);
+  hydrateSubmissionsFromClassroom(d);
+  return true;
+}
+function loadClassroomContent(vcId){
+  if(vcId===undefined||vcId===null||vcId==='')return;
+  fetch('/api/classroom/'+encodeURIComponent(vcId)+'/',{credentials:'same-origin'})
+    .then(function(r){return r.json();})
+    .then(function(d){if(!d||!d.ok)return;applyClassroomPayload(String(vcId),d);})
+    .catch(function(){});
+}
+window.loadClassroomContent=loadClassroomContent;
 function renderAnnouncements(){
   const list=document.getElementById('announceList');if(!list)return;
   const stateAnn=(window.teacherFRState&&window.teacherFRState.announcements)||[];
@@ -3603,7 +3793,11 @@ function confirmCopyResource(id){
     fd.append('action','attach');
     fd.append('resource_id',id);
     fd.append('virtual_classroom_id',vcId);
-    return tassApiPost('/api/learning-resources/attach/',fd).then(function(){return true;}).catch(function(){return false;});
+    return tassApiPost('/api/learning-resources/attach/',fd).then(function(result){
+      if(!result||!result.placement_id)throw new Error('The server did not attach this resource.');
+      if(String(window.currentVCId||'')===String(vcId)&&typeof loadClassroomContent==='function')loadClassroomContent(vcId);
+      return true;
+    }).catch(function(){return false;});
   })).then(function(results){
     const ok=results.filter(Boolean).length;
     const failed=results.length-ok;
@@ -3622,12 +3816,12 @@ function downloadResourceLibraryReport(){
 const ASSESS_TYPE_ICONS={
   'Quiz':'fa-clipboard-question','Seatwork':'fa-pen-to-square','Assignment':'fa-file-signature','Project':'fa-folder-tree','Examination':'fa-file-circle-question'
 };
-function assessTypeColor(t){const m={'Quiz':'#1e5faf','Seatwork':'#16a34a','Assignment':'#f59e0b','Project':'#7c3aed','Examination':'#e11d48'};return m[t]||'var(--blue)';}
+function assessTypeColor(t){const m={'Quiz':'#f59e0b','Seatwork':'#16a34a','Assignment':'#f59e0b','Project':'#7c3aed','Examination':'#e11d48'};return m[t]||'var(--blue)';}
 function renderAssessmentLibrary(){
   const grid=document.getElementById('assessmentLibraryGrid');
   if(!grid) return;
   const q=(document.getElementById('assessRepoSearchPage')?.value||'').toLowerCase();
-  const subject=document.getElementById('assessRepoSubjectPage')?.value||'Biology';
+  const subject=document.getElementById('assessRepoSubjectPage')?.value||'';
   const type=document.getElementById('assessRepoTypePage')?.value||'';
   const grade=document.getElementById('assessRepoGradePage')?.value||'';
   const items=assessmentSource().filter(a=>(!subject||a.subject===subject)&&(!type||a.type===type)&&(!grade||resourceGradeOf(a.subject)===grade)&&(!q||(a.title+' '+a.type+' '+a.subject+' '+a.meta).toLowerCase().includes(q)));
@@ -3652,11 +3846,21 @@ function saveFrontendAssessmentUpload(){
   if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('assessmentLibraryUploadModal')))return;
   const title=document.getElementById('feAssessTitle')?.value.trim();
   if(!title){ showToast('Please enter an assessment title.','error'); return; }
-  feNotice('assessmentLibraryStatus','“'+title+'” successfully uploaded to the Subject-Level Assessment Repository.');
-  closeModal('assessmentLibraryUploadModal');
+  const subject=document.getElementById('feAssessSubject')?.value||'';
+  const type=document.getElementById('feAssessType')?.value||'Quiz';
+  const fileInput=document.querySelector('#assessmentLibraryUploadModal input[type=file]');
+  const fname=(fileInput&&fileInput.files&&fileInput.files[0])?fileInput.files[0].name:'';
+  REAL_ASSESSMENTS_EXTRA.unshift({
+    title:title,subject:subject,type:type,items:'',meta:'',shares:'',updated:'Just now',fileName:fname
+  });
   document.getElementById('feAssessTitle').value='';
+  if(fileInput)fileInput.value='';
+  feNotice('assessmentLibraryStatus','“'+title+'” successfully uploaded to the Subject-Level Assessment Repository.');
+  feNotice('assessmentUploadStatus','“'+title+'” uploaded and is now listed in the Assessment Repository.');
+  closeModal('assessmentLibraryUploadModal');
+  renderAssessmentLibrary();
   showToast('Assessment uploaded to repository!','success');
-  if(typeof logActivity==='function')logActivity('Uploaded assessment "'+title+'" to the Subject-Level Assessment Repository.','fa-cloud-arrow-up','#ede9fe','#7c3aed');}
+  if(typeof logActivity==='function')logActivity('Uploaded assessment "'+title+'" to the Subject-Level Assessment Repository.','fa-cloud-arrow-up','#fef3c7','#7c3aed');}
 function copyAssessmentToBuilder(name){
   const a=(assessmentSource()||[]).find(x=>x.title===name)||{title:name,subject:'',type:'',items:'',meta:'',shares:'',updated:''};
   const escName=String(a.title).replace(/'/g,"\\'");
@@ -3709,6 +3913,7 @@ function saveFrontendResource(){
   const typeMap={pdf:'pdf',ppt:'ppt',pptx:'ppt',png:'img',jpg:'img',jpeg:'img',gif:'img',webp:'img',mp4:'vid',mov:'vid',avi:'vid',mkv:'vid',mp3:'aud',wav:'aud',m4a:'aud',aac:'aud'};
   const topic=(document.getElementById('feResourceTopic')?.value||'').trim();
   const fd=new FormData();
+  if(window.currentVCId)fd.append('virtual_classroom_id',window.currentVCId);
   if(file){
     const ext=(file.name.split('.').pop()||'').toLowerCase();
     fd.append('action','file');
@@ -3738,6 +3943,7 @@ function saveFrontendResource(){
     const l=document.getElementById('feResourceLink');if(l)l.value='';
     closeModal('resourceUploadModal');
     if(typeof loadResourceLibrary==='function')loadResourceLibrary();
+    if(window.currentVCId&&typeof loadClassroomContent==='function')loadClassroomContent(window.currentVCId);
   }).catch(function(err){
     feNotice('resourceUploadStatus','Upload failed: '+((err&&err.message)||'please try again.'));
     showToast('Upload failed. Please try again.','error');
@@ -3794,7 +4000,7 @@ function showMessageAttachment(input){
 .fr-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fr-muted{font-size:11px;color:var(--text-muted);line-height:1.5}
 .fr-chip{display:inline-flex;align-items:center;padding:4px 9px;border-radius:20px;background:var(--light-blue);color:var(--navy);font-size:11px;font-weight:700;margin:3px}
-.sd-letter-paper{background:#fff;border:1px solid #d6dbe4;border-radius:6px;box-shadow:0 2px 14px rgba(10,36,99,.10);max-width:520px;width:100%;padding:26px 30px;color:#26324a;font-size:13.5px;line-height:1.7;}
+.sd-letter-paper{background:#fff;border:1px solid #d6dbe4;border-radius:6px;box-shadow:0 2px 14px rgba(17,17,17,.10);max-width:520px;width:100%;padding:26px 30px;color:#2a2a2a;font-size:13.5px;line-height:1.7;}
 .sd-letter-head{font-weight:800;text-align:center;font-size:15px;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:8px;}
 .sd-letter-head-sub{font-size:11.5px;text-align:center;color:var(--text-muted);margin-top:6px;}
 .sd-letter-body{margin-top:16px;font-family:'Georgia',serif;}
@@ -3809,7 +4015,7 @@ function showMessageAttachment(input){
     <div class="form-group"><label class="form-label">Virtual Classroom</label><input class="form-control" id="pcClassName" readonly></div>
     <div class="form-group"><label class="form-label">Theme Color</label><div class="class-color-selector" id="pcColors"></div></div>
     <div class="form-group"><label class="form-label">Background Image (optional)</label><input class="form-control" type="file" id="pcBgFile" accept="image/*" onchange="previewFRBg(this)"><div class="fr-muted" style="margin-top:6px">Upload a cover photo (JPG/PNG). It is saved to your classroom and shown on every device.</div></div>
-    <div class="form-group"><label class="form-label">Preview</label><div id="pcPreview" style="height:90px;border-radius:12px;background:#1e5faf;background-size:cover;background-position:center;border:1px solid var(--card-border);"></div></div>
+    <div class="form-group"><label class="form-label">Preview</label><div id="pcPreview" style="height:90px;border-radius:12px;background:#f59e0b;background-size:cover;background-position:center;border:1px solid var(--card-border);"></div></div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('personalizeClassModal')">Cancel</button><button class="btn btn-primary" onclick="savePersonalization()"><i class="fa-solid fa-save"></i> Save Personalization</button></div>
   </div>
 </div>
@@ -3919,7 +4125,7 @@ function showMessageAttachment(input){
       if(saved.backgroundUrl){el.style.backgroundImage='url(\''+saved.backgroundUrl+'\')';el.style.backgroundSize='cover';el.style.backgroundPosition='center';}
     }
   };
-  const FR_PALETTE=['#1e5faf','#2563eb','#3a86d4','#0891b2','#0d9488','#16a34a','#22a877','#65a30d','#ca8a04','#d97706','#ea580c','#dc2626','#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5','#4338ca','#475569','#0f172a','#78350f','#be123c','#047857'];
+  const FR_PALETTE=['#f59e0b','#d97706','#fbbf24','#0891b2','#0d9488','#16a34a','#22a877','#65a30d','#ca8a04','#d97706','#ea580c','#dc2626','#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5','#4338ca','#475569','#0f172a','#78350f','#be123c','#047857'];
   window.previewFRBg=function(inp){
     try{
       const f=inp&&inp.files&&inp.files[0]; if(!f)return;
@@ -3951,7 +4157,7 @@ function showMessageAttachment(input){
   window.savePersonalization=function(){
     const key=window._frPcKey||'assigned';
     const selected=document.querySelector('#pcColors .selected');
-    const color=(selected&&selected.dataset.color)||'#1e5faf';
+    const color=(selected&&selected.dataset.color)||'#f59e0b';
     const bgFile=document.getElementById('pcBgFile');
     const file=(bgFile&&bgFile.files&&bgFile.files[0])||null;
     const existing=state.personalizations[key]||{};
@@ -4009,9 +4215,20 @@ function showMessageAttachment(input){
   function assessTypeBadge(type){const t=String(type||'').toLowerCase();if(t.includes('quiz'))return'quiz';if(t.includes('seat'))return'seatwork';if(t.includes('assign'))return'assignment';if(t.includes('project'))return'project';return'exam';}
   function reportAssessType(type){const t=String(type||'').toLowerCase();if(t.includes('quiz'))return'Quiz';if(t.includes('seat'))return'Seatwork';if(t.includes('assign'))return'Assignment';if(t.includes('project'))return'Project';if(t.includes('exam'))return'Examination';return type||'Assessment';}
   window.reportAssessType=reportAssessType;
+  // The Assessment tab lives inside a Virtual Classroom, so it must only ever
+  // show the assessments assigned to that classroom's subject — never the
+  // teacher's other classes. Scoped by the open classroom id (same rule the
+  // announcements/topics tabs use); falls back to everything when no class is open.
+  function scopedAssessments(){
+    const all=(state.assessments||[]).filter(a=>!a.archived);
+    const vc=(window.currentVCId===undefined||window.currentVCId===null||window.currentVCId==='')?null:String(window.currentVCId);
+    if(!vc)return all;
+    return all.filter(a=>a.classroomId!==undefined&&a.classroomId!==null&&String(a.classroomId)===vc);
+  }
+  window.scopedAssessments=scopedAssessments;
   function updateAssessmentStats(){
     const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-    const list=(state.assessments||[]).filter(a=>!a.archived);
+    const list=scopedAssessments();
     set('statAssessTotal',list.length);
     set('statAssessOpen',list.filter(a=>{const l=assessLifecycleOf(a).label;return l==='Open'||l==='Open · Awaiting Grading';}).length);
     set('statAssessScheduled',list.filter(a=>assessLifecycleOf(a).label==='Scheduled').length);
@@ -4022,7 +4239,7 @@ function showMessageAttachment(input){
   function renderTeacherAssessments(){
     const wrap=document.querySelector('#tab-assessment .assessment-list');
     if(!wrap)return;
-    const list=(state.assessments||[]).filter(a=>!a.archived);
+    const list=scopedAssessments();
     const stb=document.getElementById('assessScoreTbody');
     if(stb){
       if(!list.length){stb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';}
@@ -4092,6 +4309,7 @@ function showMessageAttachment(input){
     const escTitle=String(a.title||title).replace(/'/g,"\\'");
     const partsHtml=(a.parts&&a.parts.length)?a.parts.map(p=>'<div style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);margin-bottom:8px;"><div style="font-weight:600;font-size:13px;color:var(--navy);">'+e(p.label)+'</div><span class="fr-mode-badge '+(p.mode==='objective'?'auto':'manual')+'" style="flex-shrink:0;">'+e(partTypeName(p))+' &middot; '+(p.mode==='objective'?'Auto-Graded':'Manual Grading')+'</span></div>').join(''):'<div style="color:var(--text-muted);font-size:12.5px;">No parts added yet. Click Edit to add parts and questions.</div>';
     const subStatus=lc.label==='Completed'?'<div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="fr-chip">Average Score: '+(a.avg||'—')+'</span><span class="fr-chip">Pass Rate: '+((a.passRate||a.passRate===0)?a.passRate+'%':'—')+'</span><span class="fr-chip">Highest: '+(a.high||'—')+'</span><span class="fr-chip">Lowest: '+(a.low||'—')+'</span></div>':(lc.label==='Scheduled'?'<div style="font-size:12.5px;color:var(--text-muted);">This assessment has not opened yet — students cannot submit until the opening date.</div>':'<div style="font-size:12.5px;color:var(--text-muted);">Submissions are open / in progress. Track them from the Submissions tab.</div>');
+    const attHtml=a.attachmentUrl?('<div style="margin:-6px 0 16px;display:flex;align-items:center;gap:8px;"><a class="btn btn-outline btn-sm" href="'+e(a.attachmentUrl)+'" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> '+(a.attachmentName?e(a.attachmentName):'Attached File')+'</a><span style="font-size:11.5px;color:var(--text-muted);">Uploaded assessment file</span></div>'):'';
     const html='<div class="modal-overlay open" id="tempViewAssessment" onclick="if(event.target===this)document.getElementById(\'tempViewAssessment\').remove()"><div class="modal-box wide">'+
       '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>View Assessment</div>'+
       '<div class="modal-sub" style="margin-bottom:16px;">Assessment details, instructions, parts, and schedule for the selected Virtual Classroom.</div>'+
@@ -4099,6 +4317,7 @@ function showMessageAttachment(input){
       '<div style="font-size:19px;font-weight:800;color:var(--navy);margin-bottom:14px;">'+e(a.title||title)+'</div>'+
       '<div style="font-size:11.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Instructions</div>'+
       '<div style="background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text-primary);margin-bottom:16px;">'+e(a.instructions?a.instructions:'No instructions provided.')+'</div>'+
+      attHtml+
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">'+
         '<div style="background:var(--gray-100);border-radius:10px;padding:10px 12px;"><div style="font-size:10.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.4px;">Opens</div><div style="font-size:12.5px;font-weight:700;color:var(--navy);margin-top:3px;">'+e(a.openDate?String(a.openDate).replace('T',' '):'—')+'</div></div>'+
         '<div style="background:var(--gray-100);border-radius:10px;padding:10px 12px;"><div style="font-size:10.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.4px;">Closes / Deadline</div><div style="font-size:12.5px;font-weight:700;color:var(--danger);margin-top:3px;">'+e(a.deadline?String(a.deadline).replace('T',' '):'—')+'</div></div>'+
@@ -4128,24 +4347,45 @@ function showMessageAttachment(input){
     const hasManual=questions.some(q=>q.mode==='manual');
     const editKey=(window.managedEditOriginal!==undefined&&window.managedEditOriginal!==null)?window.managedEditOriginal:null;
     const isEdit=!!editKey;
+    const vcId=(typeof window.currentVCId!=='undefined'&&window.currentVCId!==null&&window.currentVCId!=='')?window.currentVCId:null;
+    const vcLabel=(function(){try{return document.getElementById('classroomTitle')?document.getElementById('classroomTitle').textContent:'';}catch(e){return '';}})();
     if(questions.length===0){showToast('Add at least one question first','error');return;}
     if(isEdit&&!confirm('Are you sure you want to update this assessment?')){showToast('Assessment update cancelled.','error');return;}
+    // Persist new assessments before the legacy local UI reports success. The
+    // background bridge can retry later, but it must not be the only save path.
+    if(!isEdit&&!window.__assessmentSaveConfirmed){
+      if(window.__assessmentSavePending)return;
+      if(!vcId){showToast('Open a virtual classroom before publishing an assessment.','error');return;}
+      const savePayload={virtual_classroom_id:vcId,title,type:document.getElementById('bType')?.value||'Quiz',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',questions:questions.filter(q=>q&&q.text)};
+      window.__assessmentSavePending=true;
+      fetch('/api/assessments/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(savePayload)})
+        .then(r=>r.json().then(data=>({response:r,data:data})))
+        .then(result=>{
+          window.__assessmentSavePending=false;
+          if(!result.response.ok||!result.data.ok||!result.data.assessment_id)throw new Error(result.data.message||'The assessment could not be saved.');
+          window.__assessmentSaveConfirmed=true;
+          window.publishAssessment();
+        })
+        .catch(err=>{window.__assessmentSavePending=false;showToast((err&&err.message)||'The assessment could not be saved. Please retry.','error');});
+      return;
+    }
+    if(window.__assessmentSaveConfirmed)window.__assessmentSaveConfirmed=false;
     if(typeof oldPublish==='function')oldPublish();
     if(title){
       if(isEdit){
         const i=state.assessments.findIndex(x=>x.title===editKey);
         if(i>=0){
           const prev=state.assessments[i];
-          state.assessments[i]={...prev,title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||prev.instructions||'',parts,questions,hasManual,lifecycle:prev.lifecycle||'scheduled'};
+          state.assessments[i]={...prev,title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||prev.instructions||'',parts,questions,hasManual,lifecycle:prev.lifecycle||'scheduled',classroomId:prev.classroomId||vcId,classroomLabel:prev.classroomLabel||vcLabel};
         }else{
-          state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[]});
+          state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
         }
         window.managedEditOriginal=null;
         state.notifications=state.notifications||[];
         state.notifications.unshift({id:'upd_'+Date.now(),type:'assessment_updated',title:title,msg:'"'+title+'" was updated. Changes are reflected in the selected Virtual Classroom.',createdAt:new Date().toISOString()});
         showToast('Assessment Successfully Updated.','success');
       }else{
-        state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[]});
+        state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
       }
       persist();renderTeacherAssessments();updateAssessmentStats();
     }
@@ -4374,7 +4614,7 @@ function showMessageAttachment(input){
   function repTitleCols(){ return (typeof REPORT_ASSESSMENTS!=='undefined' && REPORT_ASSESSMENTS.length) ? REPORT_ASSESSMENTS.slice(0,6).map(function(a){return a.title;}) : []; }
 
   // (label, value, colour) — value is pre-formatted by the caller.
-  function repStat(label,value,color){return {label:label,value:value,color:color||'#0a2463'};}
+  function repStat(label,value,color){return {label:label,value:value,color:color||'#111111'};}
   // A student with neither attendance nor scores has not been assessed, which
   // is not the same as doing well — say "No data" rather than "On Track".
   function repStatus(s){
@@ -4647,7 +4887,7 @@ function showMessageAttachment(input){
     list.innerHTML=recs.map(r=>{
       const pct=assessPct((r.assess||[]).find(x=>x[0]===target.key));
       const shown=pct===null?(parseInt(String(r.score||'0').replace('%',''),10)||0):pct;
-      const barColor=shown>=90?'#22a877':shown>=75?'#1e5faf':shown>=60?'#e99b2a':'#d94f4f';
+      const barColor=shown>=90?'#22a877':shown>=75?'#f59e0b':shown>=60?'#e99b2a':'#d94f4f';
       return '<div style="margin-bottom:12px;">'+'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div class="student-avatar-sm" style="background:'+r.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+r.initials+'</div><div style="flex:1;font-weight:600;font-size:13px;color:var(--navy);min-width:0;">'+e(r.name)+'<div style="font-size:11px;color:var(--text-muted);font-weight:400;">'+e(target.label)+' \u00b7 Overall '+e(r.score)+'</div></div><div style="font-size:13px;font-weight:800;color:'+barColor+';">'+(pct===null?'\u2014':shown+'%')+'</div></div>'+'<div style="background:var(--gray-100);border-radius:8px;height:8px;overflow:hidden;"><div style="width:'+shown+'%;height:100%;background:'+barColor+';border-radius:8px;"></div></div></div>';
     }).join('');
   };
@@ -4694,31 +4934,23 @@ function showMessageAttachment(input){
     const list=document.getElementById('announceList');if(!list)return;
     const openId=window.currentVCId;
     const rows=(state.announcements||[]).filter(function(a){
-      if(a.archived)return false;
-      if(a.classroomId===undefined||a.classroomId===null)return !openId;
-      return !openId||String(a.classroomId)===String(openId);
+      return !!openId&&!a.archived&&a.classroomId!==undefined&&a.classroomId!==null&&String(a.classroomId)===String(openId);
     });
     if(!rows.length){
-      if(!schoolAnnRows().length){
-        TASS.empty.list(list,{message:'No announcements yet.',hint:openId?'Post an announcement to reach only the students in this virtual classroom.':'Open a virtual classroom to post an announcement.'});
-        return;
-      }
+      TASS.empty.list(list,{message:'No announcements yet.',hint:openId?'Post an announcement to reach only the students in this virtual classroom.':'Open a virtual classroom to view its announcements.'});
+      return;
     }
-    // School-wide posts from the Principal lead the list, and are read-only.
-    const school=schoolAnnRows().map(function(a,i){return schoolAnnItem(a,i,{readonly:true});}).join('');
-    const own=rows.length?rows.map(function(a,i){
+    const own=rows.map(function(a,i){
       return '<div class="announce-item" style="border-left-color:var(--blue);">'+
         '<div class="title"><span class="notif-sent-badge" style="font-size:10px;margin-right:6px;vertical-align:middle;"><i class="fa-solid fa-bell"></i> Notification sent</span>'+e(a.title||'')+'</div>'+
         '<div class="body">'+e(a.body||'')+'</div>'+
         '<div class="meta"><span><i class="fa-regular fa-calendar"></i> '+e(timeAgoText(a.createdAt))+'</span></div>'+
         '<div style="margin-top:10px;display:flex;gap:8px;"><button class="btn btn-outline btn-sm" onclick="openAnnouncementEditByIdx('+i+')"><i class="fa-solid fa-pen"></i> Edit</button><button class="btn btn-outline btn-sm" onclick="archiveAnnouncementByIdx('+i+')"><i class="fa-solid fa-box-archive"></i> Archive</button></div></div>';
-    }).join(''):'';
-    list.innerHTML=school+(own?'<div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px;">Your class announcements</div>':'')+own;
+    }).join('');
+    list.innerHTML=own;
   };
   window._announcementRows=function(){return (state.announcements||[]).filter(function(a){
-    if(a.archived)return false;
-    if(a.classroomId===undefined||a.classroomId===null)return !window.currentVCId;
-    return !window.currentVCId||String(a.classroomId)===String(window.currentVCId);
+    return !!window.currentVCId&&!a.archived&&a.classroomId!==undefined&&a.classroomId!==null&&String(a.classroomId)===String(window.currentVCId);
   });};
   window.openAnnouncementEditByIdx=function(i){
     const a=window._announcementRows()[i];if(!a)return;
@@ -4884,10 +5116,10 @@ function showMessageAttachment(input){
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
 .filter-bar .form-control{width:auto;flex:0 1 150px}
 @media(max-width:600px){.class-search-bar label{flex-basis:100%}.class-search-bar .form-control{flex-basis:160px}}
-.sidebar-overlay{position:fixed;inset:0;background:rgba(10,36,99,0.45);backdrop-filter:blur(2px);z-index:149;display:none}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(17,17,17,0.45);backdrop-filter:blur(2px);z-index:149;display:none}
 .sidebar-overlay.visible{display:block}
 @media(max-width:900px){
-  .sidebar,.sidebar:hover,body.sidebar-expanded .sidebar{width:var(--sidebar-w) !important;padding:16px 10px;transform:translateX(-110%);box-shadow:4px 0 32px rgba(7,24,50,0.4) !important;transition:transform var(--transition),width var(--transition)}
+  .sidebar,.sidebar:hover,body.sidebar-expanded .sidebar{width:var(--sidebar-w) !important;padding:16px 10px;transform:translateX(-110%);box-shadow:4px 0 32px rgba(17,17,17,0.4) !important;transition:transform var(--transition),width var(--transition)}
   .sidebar.mobile-open{transform:translateX(0)}
   .sidebar-section-label,.sidebar-label,.sidebar:hover .sidebar-section-label,body.sidebar-expanded .sidebar .sidebar-section-label,.sidebar:hover .sidebar-label,body.sidebar-expanded .sidebar .sidebar-label{opacity:1;max-height:24px}
   .nav-item{padding:10px 12px;gap:12px;justify-content:flex-start}
@@ -4920,8 +5152,9 @@ function showMessageAttachment(input){
   .grid-2,.grid-3,.grid-6535,.grid-3565,.grid-65-35,.dashboard-grid,.class-grid,.form-grid,.form-grid-3,.export-grid,.form-row,.form-row-2,.analytics-row{grid-template-columns:1fr !important}
 .analytics-row.three{grid-template-columns:1fr}
   .cal-grid{grid-template-columns:repeat(7,minmax(64px,1fr));overflow-x:auto}
-  .msg-layout{grid-template-columns:1fr;height:auto}
-  .msg-sidebar{max-height:200px;border-right:none;border-bottom:1px solid var(--card-border)}
+  .msg-layout{grid-template-columns:1fr;grid-template-rows:200px minmax(320px,1fr);height:520px;min-height:520px}
+  .msg-sidebar{height:200px;max-height:none;border-right:none;border-bottom:1px solid var(--card-border)}
+  .msg-main{height:320px;min-height:320px}
   .welcome-stats{display:grid;grid-template-columns:repeat(2,1fr);width:100%}
 }
 @media(max-width:480px){
@@ -4934,28 +5167,26 @@ function showMessageAttachment(input){
    ========================================================================= */
 
 /* ---------- Refined brand palette & design tokens ---------- */
-:root{
-  --navy:#0a1f4d; --blue:#1d5bd4; --sky:#3b82f6; --light-blue:#d8e7ff; --accent:#eaf1ff;
-  --white:#ffffff; --off-white:#f5f8fd; --gray-100:#eef3fb; --gray-200:#dde6f4; --gray-300:#b9c9e0; --gray-500:#6f86a8;
-  --gray-400:#8ea3c4; --gray-600:#4a6388; --gray-700:#3c5885; --gray-800:#15213a;
-  --success:#0da878; --warning:#ee9d1b; --danger:#e04646; --info:#2f7de1;
-  --header-bg:#0a1f4d; --sidebar-bg:#0a1f4d; --sidebar-hover-bg:#112f68; --sidebar-active-bg:#1d5bd4;
-  --sidebar-text:rgba(255,255,255,0.72); --sidebar-text-active:#ffffff;
-  --body-bg:#f5f8fd; --card-bg:#ffffff; --card-border:#e3ebf6;
-  --text-primary:#14203a; --text-muted:#7d94b9; --input-bg:#ffffff; --input-border:#d5e0ef;
-  --radius:16px; --radius-sm:11px;
-  --shadow:0 14px 36px -14px rgba(10,31,77,.24),0 4px 14px -9px rgba(10,31,77,.12);
-  --shadow-sm:0 4px 18px -12px rgba(10,31,77,.18);
-}
-[data-theme="dark"]{
-  --navy:#1b3d86; --blue:#3d7dea; --light-blue:#1c2c4a; --accent:#1e2c44;
-  --gray-100:#1c2838; --gray-200:#27364a; --gray-300:#3b5278; --gray-500:#7d9cc6; --gray-400:#6d8db3; --gray-600:#8fb0d8; --gray-700:#a3c2e6; --gray-800:#d5e0ee;
-  --success:#21d094; --warning:#f0b04a; --danger:#ef6a6a;
-  --header-bg:#081831; --sidebar-bg:#081831; --sidebar-hover-bg:#0e2447; --sidebar-active-bg:#1b4580;
-  --body-bg:#0d1420; --card-bg:#1a2337; --card-border:#27364a; --text-primary:#d5e0ee; --text-muted:#6d8db3;
-  --input-bg:#1c2638; --input-border:#31425a;
-  --shadow:0 14px 36px -14px rgba(0,0,0,.55),0 4px 14px -9px rgba(0,0,0,.4);
-  --shadow-sm:0 4px 18px -12px rgba(0,0,0,.45);
+:root {
+  --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
+  --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0;
+  --gray-400: #94a8c4; --gray-600: #4a637f; --gray-700: #5a78a0; --gray-800: #1e2e42;
+  --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #f59e0b;
+  --header-bg: #111111; --sidebar-bg: #111111; --sidebar-hover-bg: #1f2937;
+  --sidebar-active-bg: #f59e0b; --sidebar-text: rgba(255,255,255,0.85);
+  --sidebar-text-active: #111111; --body-bg: #f4f7fc; --card-bg: #ffffff;
+  --card-border: #dde5f0; --text-primary: #1e2e42; --text-muted: #94a8c4;
+  --input-bg: #ffffff; --input-border: #dde5f0;
+  --sidebar-w: 240px; --sidebar-collapsed: 64px; --header-h: 64px;
+  --radius: 14px; --shadow: 0 4px 24px rgba(17,17,17,0.12); --shadow-sm: 0 2px 10px rgba(17,17,17,0.07);
+  --transition: 0.28s cubic-bezier(.4,0,.2,1); --red: #e11d48; --gray-300: #b9c8dd; --gray-500: #6f86a8; --radius-sm: 10px; }
+[data-theme="dark"] {
+  --navy: #0b0b0b; --blue: #f59e0b; --light-blue: #2a2416; --accent: #1f1a12;
+  --gray-100: #1e1e1e; --gray-200: #2a2a2a; --gray-400: #9a9a9a; --gray-600: #bfbfbf; --gray-700: #d4d4d4; --gray-800: #f5f5f5;
+  --success: #2acc88; --warning: #f0ac3a; --danger: #e96060; --info: #fbbf24;
+  --header-bg: #000000; --sidebar-bg: #000000; --sidebar-hover-bg: #111111; --sidebar-active-bg: #f59e0b;
+  --body-bg: #0e0e0e; --card-bg: #161616; --card-border: #2a2a2a; --text-primary: #f5f5f5; --text-muted: #a3a3a3;
+  --input-bg: #1e1e1e; --input-border: #2a2a2a; --shadow: 0 4px 24px rgba(0,0,0,0.45); --shadow-sm: 0 2px 10px rgba(0,0,0,0.35);
 }
 
 /* ---------- Base typography ---------- */
@@ -4966,8 +5197,8 @@ select,.form-control,.btn,.nav-item,.msg-thread{ letter-spacing:.1px; }
 /* ---------- Buttons & controls ---------- */
 .btn{ min-height:38px; border-radius:var(--radius-sm); font-weight:600; }
 .btn:focus-visible,.dark-toggle:focus-visible,.icon-btn:focus-visible,.hamburger-btn:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
-.btn-primary{ background:linear-gradient(135deg,var(--navy),var(--blue)); box-shadow:0 8px 18px -10px rgba(10,31,77,.55); }
-.btn-primary:hover{ box-shadow:0 12px 24px -10px rgba(10,31,77,.6); }
+.btn-primary{ background:linear-gradient(135deg,var(--navy),var(--blue)); box-shadow:0 8px 18px -10px rgba(17,17,17,.55); }
+.btn-primary:hover{ box-shadow:0 12px 24px -10px rgba(17,17,17,.6); }
 .btn-outline{ border:1.5px solid var(--gray-200); }
 .btn-danger{ box-shadow:0 8px 18px -10px rgba(224,70,70,.55); }
 .btn-success{ box-shadow:0 8px 18px -10px rgba(13,168,120,.5); }
@@ -4980,19 +5211,19 @@ select,.form-control,.btn,.nav-item,.msg-thread{ letter-spacing:.1px; }
 
 /* ---------- Stat cards ---------- */
 .stat-card,.analytics-stat,.welcome-stat{ background:linear-gradient(165deg,var(--card-bg),var(--gray-100)); backdrop-filter:blur(6px); }
-.stat-card:hover,.analytics-stat:hover{ transform:translateY(-4px); box-shadow:0 20px 44px -16px rgba(10,31,77,.3); }
-.stat-icon{ box-shadow:inset 0 0 0 1px rgba(10,31,77,.06); }
+.stat-card:hover,.analytics-stat:hover{ transform:translateY(-4px); box-shadow:0 20px 44px -16px rgba(17,17,17,.3); }
+.stat-icon{ box-shadow:inset 0 0 0 1px rgba(17,17,17,.06); }
 .stat-icon i{ line-height:1; }
 .stat-val{ letter-spacing:-.5px; }
 .stat-trend{ letter-spacing:.2px; }
 
 /* ---------- Welcome banner ---------- */
-.welcome-banner{ background:linear-gradient(135deg,var(--navy) 0%,#1e5faf 50%,#3a86d4 100%); border:1px solid rgba(255,255,255,.22); border-radius:var(--radius); padding:24px 28px; color:#fff; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:20px; position:relative; overflow:hidden; } .welcome-banner .welcome-text h2{ font-family:'Fraunces',serif; font-size:22px; font-weight:600; margin:0 0 6px; color:#fff; } .welcome-banner .welcome-text p{ font-size:13px; margin:0; color:rgba(255,255,255,.88); }
-.welcome-banner{ box-shadow:0 18px 44px -20px rgba(10,31,77,.55); }
+.welcome-banner{ background:linear-gradient(135deg,var(--navy) 0%,#f59e0b 50%,#fbbf24 100%); border:1px solid rgba(255,255,255,.22); border-radius:var(--radius); padding:24px 28px; color:#fff; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:20px; position:relative; overflow:hidden; } .welcome-banner .welcome-text h2{ font-family:'Fraunces',serif; font-size:22px; font-weight:600; margin:0 0 6px; color:#fff; } .welcome-banner .welcome-text p{ font-size:13px; margin:0; color:rgba(255,255,255,.88); }
+.welcome-banner{ box-shadow:0 18px 44px -20px rgba(17,17,17,.55); }
 
 /* ---------- Forms ---------- */
 .form-control,.search-bar,.search-input,input[type="search"]{ border-radius:var(--radius-sm); min-height:40px; }
-.form-control:focus,.msg-input:focus,.search-bar:focus-within,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-control:focus,.msg-input:focus,.search-bar:focus-within,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(217,119,6,.14); }
 select.form-control{ cursor:pointer; }
 
 /* ---------- Tables ---------- */
@@ -5002,11 +5233,11 @@ select.form-control{ cursor:pointer; }
 .data-table tbody tr:hover{ background:var(--accent); }
 
 /* ---------- Modals (bottom-sheet on phones) ---------- */
-.modal-overlay{ background:rgba(8,24,49,.55); }
-.modal-box{ border:1px solid var(--card-border); box-shadow:0 24px 80px -20px rgba(10,31,77,.4); }
+.modal-overlay{ background:rgba(0,0,0,.55); }
+.modal-box{ border:1px solid var(--card-border); box-shadow:0 24px 80px -20px rgba(17,17,17,.4); }
 
 /* ---------- Panels / toast ---------- */
-.notif-panel,.profile-panel{ box-shadow:0 16px 48px -12px rgba(10,31,77,.35); border:1px solid var(--card-border); }
+.notif-panel,.profile-panel{ box-shadow:0 16px 48px -12px rgba(17,17,17,.35); border:1px solid var(--card-border); }
 .toast{ border-radius:var(--radius-sm); }
 
 /* ---------- Scrollbars ---------- */
@@ -5017,10 +5248,10 @@ select.form-control{ cursor:pointer; }
 .sidebar-inner,.msg-tab-list{ scrollbar-width:thin; }
 
 /* ---------- Header & sidebar depth ---------- */
-header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
-[data-theme="dark"] header{ background:linear-gradient(90deg,var(--header-bg),#0e2447); }
-.sidebar{ background:linear-gradient(180deg,var(--sidebar-bg),#071630); }
-[data-theme="dark"] .sidebar{ background:linear-gradient(180deg,var(--sidebar-bg),#050f20); }
+header{ background:linear-gradient(90deg,var(--header-bg),#b45309); }
+[data-theme="dark"] header{ background:linear-gradient(90deg,var(--header-bg),#000000); }
+.sidebar{ background:linear-gradient(180deg,var(--sidebar-bg),#000000); }
+[data-theme="dark"] .sidebar{ background:linear-gradient(180deg,var(--sidebar-bg),#000000); }
 .brand-icon-img{ box-shadow:0 0 0 2px rgba(255,255,255,.15); }
 
 /* ---------- Icon alignment fixes ---------- */
@@ -5099,7 +5330,7 @@ header{ background:linear-gradient(90deg,var(--header-bg),#10408f); }
 /* ---------- My Profile modal ---------- */
 .modal-box.profile-box{ width:min(94vw,480px); }
 .profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
-.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1e5faf,#3a86d4); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#f59e0b,#fbbf24); box-shadow:0 10px 26px -10px rgba(217,119,6,.55); position:relative; overflow:hidden; }
 .profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .profile-photo-btn{ display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border:1.5px solid var(--input-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; transition:border-color .18s,color .18s,background .18s; }
 .profile-photo-btn:hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
@@ -5130,12 +5361,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline-offset:
   outline:none; transition:border-color .18s,box-shadow .18s,background .18s; cursor:pointer;
 }
 .form-select:hover{ border-color:var(--gray-400); }
-.form-select:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-select:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(217,119,6,.14); }
 .form-control[disabled],.form-select[disabled],select[disabled],input[disabled],textarea[disabled]{
   opacity:.6; cursor:not-allowed; background:var(--gray-100);
 }
 input::placeholder,textarea::placeholder{ color:var(--gray-400); }
-.form-control:focus,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-control:focus,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(217,119,6,.14); }
 
 /* ---------- Search & filter bars: consistent sizing + focus ---------- */
 .search-input,.filter-bar .form-control,.filter-bar .form-select{
@@ -5161,7 +5392,7 @@ input::placeholder,textarea::placeholder{ color:var(--gray-400); }
 .btn-primary:not(:disabled):active,.btn-danger:not(:disabled):active,.btn-success:not(:disabled):active{ box-shadow:none; filter:brightness(.96); }
 
 /* ---------- Tabs: hover/active affordance ---------- */
-.tab-btn:not(.active):hover{ background:rgba(29,91,212,.08); color:var(--navy); }
+.tab-btn:not(.active):hover{ background:rgba(217,119,6,.08); color:var(--navy); }
 .tab-btn.active{ box-shadow:var(--shadow-sm); }
 .classroom-tabs::-webkit-scrollbar{ height:0; }
 
@@ -5326,7 +5557,7 @@ function getProfile(){
   const srv=window.__TASS_PROFILE__;
   if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
   try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
-    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar)d.avatar=p.avatar;}
+    if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar&&!((srv&&srv.avatar)||PROFILE_DEFAULTS.avatar))d.avatar=p.avatar;}
   }catch(e){}
   return d;
 }
@@ -5367,8 +5598,8 @@ function saveProfile(){
       if(st){st.style.display="block";st.textContent=msg;st.style.color="var(--danger)";}
       return;
     }
-    if(d&&d.avatar){profileAvatarData=d.avatar;}
-    profilePhotoFile=null;
+    if(profilePhotoFile&&!(d&&d.avatar)){const msg="The profile photo was not saved. Please try again.";if(typeof showToast==="function")showToast(msg,"error");const st=document.getElementById("profileStatus");if(st){st.style.display="block";st.textContent=msg;st.style.color="var(--danger)";}return;}if(d&&d.avatar){profileAvatarData=d.avatar;window.__TASS_PROFILE__=Object.assign({},window.__TASS_PROFILE__||{},{avatar:d.avatar});}
+    profilePhotoFile=null;const photoInput=document.getElementById("profilePhoto");if(photoInput)photoInput.value="";
     const rec={name:name,email:email,role:g("profileRole")||PROFILE_DEFAULTS.role,dept:g("profileDept")||PROFILE_DEFAULTS.dept,contact:String(g("profileContact")).replace(/[^0-9+]/g,""),avatar:profileAvatarData};
     try{localStorage.setItem(PROFILE_KEY,JSON.stringify(rec));}catch(e){}
     const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=name;
@@ -5386,6 +5617,7 @@ function saveProfile(){
 }
 if(window.openTeacherProfileModal)window.openTeacherProfileModal=window.openProfile;
 (function initHeaderProfile(){const p=getProfile();const pn=document.querySelector(".profile-panel-name");if(pn)pn.textContent=p.name;if(p.avatar)applyHeaderPhoto(p.avatar);})();
+window.saveProfile.__tassServerManaged=true;
 if(window.saveTeacherProfile)window.saveTeacherProfile=window.saveProfile;
 </script>
 <script>
@@ -5433,7 +5665,7 @@ function tassField(el){
    if(isInt&&!/^\d+$/.test(v)){ok=false;msg="Please enter a valid whole number.";}
    else if(isDec&&!/^\d+(\.\d+)?$/.test(v)){ok=false;msg="Please enter a valid number.";}
    else if(!isInt&&!isDec){
-    if(el.getAttribute("data-letters")!=null&&!/^[A-Za-z\u00C0-\u00FF]+(?:[\s'.][A-Za-z\u00C0-\u00FF]+)*$/.test(v)){ok=false;msg="Please use letters only (no numbers or symbols).";}
+    if(el.getAttribute("data-letters")!=null&&!/^[A-Za-z\u00C0-\u00FF]+(?:[\s'.\-]+[A-Za-z\u00C0-\u00FF]+)*\.?$/.test(v)){ok=false;msg="Please use letters only (no numbers or symbols).";}
     else if(el.getAttribute("data-alnum")!=null&&!/^[A-Za-z0-9-]+$/.test(v)){ok=false;msg="Please use letters or numbers only (no spaces or special characters).";}
     else if(el.getAttribute("data-phone")!=null&&!/^(09\d{9})$/.test(v)){ok=false;msg="Enter a valid PH mobile number: 09XXXXXXXXX (11 digits).";}
     else if(el.getAttribute("data-initial")!=null&&!/^[A-Za-z]$/.test(v)){ok=false;msg="Middle initial must be a single letter (A-Z) or left blank.";}
@@ -5572,12 +5804,17 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 </script>
 <script>
 // Backend bridge: replace demo/mock data in the new teacher dashboard with real data.
-function teacherBackendBridge() {
-  var el = document.getElementById('teacher-backend-data');
-  if (!el) return;
-  var D;
-  try { D = JSON.parse(el.textContent); } catch (e) { return; }
+var __tpayloadSigned = ['classes','assessments','roster','analytics','report_data','announcements','activity','stats','notifications','performance','school_announcements'];
+function __tpayloadSig(D){
+  var p = {};
+  if (D) for (var i = 0; i < __tpayloadSigned.length; i++){ var k = __tpayloadSigned[i]; if (D[k] !== undefined) p[k] = D[k]; }
+  try { return JSON.stringify(p); } catch (e) { return String(Math.random()); }
+}
+function applyTeacherPayload(D) {
   if (!D) return;
+  var sig = __tpayloadSig(D);
+  if (window.__teacherSig !== undefined && sig === window.__teacherSig) return;
+  window.__teacherSig = sig;
 
   // Age/Sex panel for this teacher's own learners.
   if (window.TASS && TASS.demo && D.demographics) { TASS.demo.setRows(D.demographics.rows); }
@@ -5606,14 +5843,16 @@ function teacherBackendBridge() {
   //   D.years    -> ["2025-2026", ...]             school years
   //   D.analytics-> { "<classKey>": bucket, ... }   see emptyAnalyticsBucket()
   var cls = document.getElementById('analyticsClassFilter');
-  if (cls && typeof window.analyticsBucketKey === 'function') {
+  if (cls) {
     var keep = cls.value;
     cls.innerHTML = '<option value="all">All My Classes</option>';
     (D.classes || []).forEach(function (c) {
-      var key = window.analyticsBucketKey(c);
-      if (!key) return;
+      // Buckets in D.analytics are keyed by Virtual Classroom id, so the option
+      // value must be that id (not a subject/grade slug) or selecting a class
+      // silently falls back to the school-wide aggregate.
+      if (c.id === undefined || c.id === null || c.id === '') return;
       var o = document.createElement('option');
-      o.value = key;
+      o.value = String(c.id);
       o.textContent = (c.grade ? c.grade + ' – ' : '') + (c.subject || '') + (c.section ? ' · ' + c.section : '');
       cls.appendChild(o);
     });
@@ -5654,7 +5893,7 @@ function teacherBackendBridge() {
     attendStudents.forEach(function (s) { haveIds[s.id] = true; });
     D.roster.forEach(function (s) {
       if (haveIds[s.id]) return;
-      attendStudents.push({ id: s.id, lrn: s.lrn, name: s.name, classroom_id: s.classroom_id, classroom: s.classroom, grad: 'linear-gradient(135deg,#1e5faf,#3a86d4)' });
+      attendStudents.push({ id: s.id, lrn: s.lrn, name: s.name, classroom_id: s.classroom_id, classroom: s.classroom, grad: 'linear-gradient(135deg,#f59e0b,#fbbf24)' });
     });
     if (typeof renderAttendList === 'function') { try { renderAttendList(); } catch (e) {} }
   }
@@ -5691,8 +5930,8 @@ function teacherBackendBridge() {
         return [t, sc.by_assessment[t] + '%', sc.by_assessment[t] >= 60 ? 'Passed' : 'Failed'];
       });
       realRecs.push({
-        name: nm, initials: initials,
-        grad: 'linear-gradient(135deg,#1e5faf,#3a86d4)',
+        id: s.id, name: nm, initials: initials,
+        grad: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
         score: sc.graded ? sc.avg + '%' : '—',
         status: (typeof repStatus === 'function' ? repStatus(rep || { att: att, score: sc, risk: risk }).text
                  : (risk.at_risk ? 'At Risk' : 'Active')),
@@ -5725,7 +5964,31 @@ function teacherBackendBridge() {
 
   var st = window.teacherFRState;
   if (st) {
-    if (D.assessments && D.assessments.length) st.assessments = D.assessments;
+    // The dashboard payload carries assessment metadata only (title, type,
+    // schedule, lifecycle) and no questions/parts. Replacing state.assessments
+    // wholesale therefore wiped the question bank a teacher had just built, so
+    // clicking Edit reopened an empty builder. Merge instead: keep the local
+    // questions/parts for any assessment the payload doesn't describe in full.
+    if (D.assessments && D.assessments.length) {
+      var assessKey = function (a) {
+        return String((a && a.title) || '') + '|' + String(a && a.classroomId != null ? a.classroomId : '');
+      };
+      var prevAssess = {};
+      (st.assessments || []).forEach(function (a) {
+        if (a && a.title) prevAssess[assessKey(a)] = a;
+      });
+      st.assessments = D.assessments.map(function (a) {
+        var prev = prevAssess[assessKey(a)];
+        if (prev && ((prev.questions && prev.questions.length) || (prev.parts && prev.parts.length))) {
+          return Object.assign({}, a, {
+            questions: prev.questions,
+            parts: prev.parts,
+            hasManual: prev.hasManual
+          });
+        }
+        return a;
+      });
+    }
     if (D.notifications) st.notifications = D.notifications;
     // Only rows the teacher owns, keyed by classroomId. Locally-created posts
     // for the classroom that is still open are kept so a refresh mid-session
@@ -5792,7 +6055,7 @@ function teacherBackendBridge() {
     }
     box.dataset.real = '1';
     box.innerHTML = items.map(function (a) {
-      return '<div class="log-item"><div class="notif-dot-icon" style="background:' + (a.bg || '#dbeafe') + ';color:' + (a.color || '#2563eb') + ';"><i class="fa-solid ' + (a.icon || 'fa-flag') + '"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">' + (a.text || '') + '</div><div class="notif-time">' + (a.time || '') + '</div></div></div>';
+      return '<div class="log-item"><div class="notif-dot-icon" style="background:' + (a.bg || '#fef3c7') + ';color:' + (a.color || '#d97706') + ';"><i class="fa-solid ' + (a.icon || 'fa-flag') + '"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">' + (a.text || '') + '</div><div class="notif-time">' + (a.time || '') + '</div></div></div>';
     }).join('');
   };
 
@@ -5803,6 +6066,31 @@ function teacherBackendBridge() {
   });
   void feedOK;
 }
+window.applyTeacherPayload = applyTeacherPayload;
+
+function teacherBackendBridge() {
+  var el = document.getElementById('teacher-backend-data');
+  if (!el) return;
+  var D;
+  try { D = JSON.parse(el.textContent); } catch (e) { return; }
+  if (!D) return;
+  applyTeacherPayload(D);
+}
+
+// Auto-refresh polling: the teacher's whole dashboard plus whatever classroom
+// is open stays current without a reload, no matter which account changed the
+// data. Change-detection inside applyTeacherPayload / applyClassroomPayload
+// skips repaints (and collapsed accordions) when nothing moved.
+window.onTassPollRefresh = function () {
+  var openVc = (typeof window.currentVCId !== 'undefined' && window.currentVCId != null && window.currentVCId !== '') ? window.currentVCId : null;
+  return fetch('/api/teacher-dashboard/', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (D) {
+      if (D) applyTeacherPayload(D);
+      if (openVc != null && typeof loadClassroomContent === 'function') loadClassroomContent(openVc);
+    })
+    .catch(function () {});
+};
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', teacherBackendBridge);
 } else {
@@ -5814,7 +6102,7 @@ if (document.readyState === 'loading') {
 <script src="/static/js/api_bridge.js"></script>
 <script>
 window.__TASS_BRIDGE__={interval:4000,watch:[
- {key:'tass_teacher_frontend_v3',endpoint:'assessments/',each:true,guard:function(v){return Array.isArray(v.assessments)&&v.assessments.length>0;},map:function(v){return (v.assessments||[]).map(function(a){return {title:a.title,type:a.type,instructions:a.instructions||'',questions:(a.questions||[]).filter(function(q){return q&&q.text;})};});}},
+  {key:'tass_teacher_frontend_v3',endpoint:'assessments/',each:true,guard:function(v){return Array.isArray(v.assessments)&&v.assessments.length>0;},map:function(v){return (v.assessments||[]).map(function(a){return {virtual_classroom_id:a.classroomId||window.currentVCId||null,title:a.title,type:a.type,openDate:a.openDate||'',deadline:a.deadline||'',instructions:a.instructions||'',questions:(a.questions||[]).filter(function(q){return q&&q.text;})};});}},
  {key:'tass_teacher_frontend_v3',endpoint:'teacher-content/',each:true,guard:function(v){return Array.isArray(v.topics)&&v.topics.length>0;},map:function(v){return (v.topics||[]).map(function(t){return {action:'topic',name:t.title};});}},
   {key:'tass_teacher_frontend_v3',endpoint:'class-announcements/',each:true,guard:function(v){return Array.isArray(v.announcements)&&v.announcements.length>0;},map:function(v){return (v.announcements||[]).filter(function(a){return a&&!a.archived&&a.classroomId!=null;}).map(function(a){return {virtual_classroom_id:a.classroomId,title:a.title,content:a.body,archived:false};});}}
 ]};
@@ -5846,8 +6134,9 @@ window.csrfToken = (function () {
 })();
 </script>
 
-<script src="/static/js/profile_bridge.js"></script>
+<script src="/static/js/profile_bridge.js?v=4"></script>
 <script src="{% static 'js/tass_live.js' %}"></script>
+<script src="{% static 'js/tass_poll.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
 </body>
 </html> 

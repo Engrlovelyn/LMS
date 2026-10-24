@@ -26,6 +26,27 @@
       </div>
       {% endif %}
 
+      <div class="card" style="background:var(--accent);border:1px solid var(--card-border);margin-bottom:18px;">
+        <div class="card-body" style="padding:14px 16px;">
+          <div style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">
+            <i class="fa-solid fa-user-check" style="color:var(--blue);"></i> Find a Teacher
+          </div>
+          <div class="form-row" style="margin-bottom:0;align-items:flex-end;">
+            <div class="form-group" style="flex:2;min-width:200px;margin-bottom:0;">
+              <label class="form-label" for="teacherSearch">Search teacher</label>
+              <input type="search" id="teacherSearch" class="form-control" placeholder="Type a name or subject...">
+            </div>
+            <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0;">
+              <label class="form-label" for="teacherGradeFilter">Grade level</label>
+              <select id="teacherGradeFilter" class="form-control">
+                <option value="">All grades</option>
+              </select>
+            </div>
+          </div>
+          <div class="help-text" id="teacherPickerCount" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
       <div class="form-row">
         {% for field in form %}
         <div class="form-group">
@@ -50,4 +71,53 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  const teacher = document.getElementById('id_teacher');
+  const search = document.getElementById('teacherSearch');
+  const grade = document.getElementById('teacherGradeFilter');
+  const count = document.getElementById('teacherPickerCount');
+  if(!teacher || !search || !grade || !count) return;
+
+  const options = Array.from(teacher.options);
+  const gradeSet = {};
+  options.forEach(function(o){
+    (o.dataset.grades || '').split(',').forEach(function(g){
+      if(g) gradeSet[g] = true;
+    });
+  });
+  Object.keys(gradeSet).map(Number).sort(function(a,b){return a-b;}).forEach(function(g){
+    const opt = document.createElement('option');
+    opt.value = String(g);
+    opt.textContent = 'Grade ' + g;
+    grade.appendChild(opt);
+  });
+
+  function applyFilter(){
+    const q = (search.value || '').toLowerCase().trim();
+    const g = grade.value;
+    let visible = 0;
+    options.forEach(function(o){
+      if(!o.value){ o.hidden = false; return; }
+      const haystack = (o.dataset.name + ' ' + o.dataset.subjects + ' ' + (o.textContent || '')).toLowerCase();
+      const grades = (o.dataset.grades || '').split(',');
+      const matches = (!q || haystack.indexOf(q) !== -1) && (!g || grades.indexOf(g) !== -1);
+      const show = matches || o.selected;
+      o.hidden = !show;
+      if(show && o.value) visible += 1;
+    });
+    count.textContent = visible + ' teacher' + (visible === 1 ? '' : 's') + ' shown' + (visible ? '.' : ' — no matches. Try clearing the filters.');
+    if(!visible){
+      const current = teacher.value;
+      if(!current) teacher.selectedIndex = 0;
+    }
+  }
+
+  search.addEventListener('input', applyFilter);
+  grade.addEventListener('change', applyFilter);
+  applyFilter();
+})();
+</script>
 {% endblock %}

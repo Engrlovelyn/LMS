@@ -295,7 +295,28 @@ def submission_reports(request):
     assessment_pk = request.GET.get("assessment")
     status_filter = request.GET.get("status")
 
-    scopes = campus_scopes_for(request.user)
+    assessments, _qs, rows = _submission_data(request.user, assessment_pk, status_filter)
+
+    generated_reports = (
+        GeneratedReport.objects.select_related("academic_year", "generated_by")
+        .filter(report_type=GeneratedReport.TYPE_SUBMISSION_REPORT)
+        .order_by("-generated_at")
+    )
+
+    context = {
+        "assessments": assessments,
+        "rows": rows,
+        "selected_assessment": int(assessment_pk) if assessment_pk else None,
+        "selected_status": status_filter,
+        "total": len(rows),
+        "generated_reports": generated_reports,
+    }
+    return render(request, "analytics/submission_reports.html", context)
+
+
+def _submission_data(user, assessment_pk=None, status_filter=None):
+    """Shared query/row builder for viewing and exporting submission reports."""
+    scopes = campus_scopes_for(user)
     assessments = Assessment.objects.all()
     qs = (
         Submission.objects.select_related(
@@ -307,7 +328,7 @@ def submission_reports(request):
         .order_by("-submitted_at")
     )
     if WHOLE_SCHOOL not in scopes:
-        campus_vcs = scoped_classrooms(VirtualClassroom.objects.all(), request.user)
+        campus_vcs = scoped_classrooms(VirtualClassroom.objects.all(), user)
         qs = qs.filter(assessment_assignment__virtual_classroom__in=campus_vcs)
         assessments = assessments_for_campus(assessments, scopes)
 
@@ -334,15 +355,75 @@ def submission_reports(request):
                 "status": "graded" if sub.total_score is not None else "pending",
             }
         )
+    return assessments, qs, rows
 
-    context = {
-        "assessments": assessments,
-        "rows": rows,
-        "selected_assessment": int(assessment_pk) if assessment_pk else None,
-        "selected_status": status_filter,
-        "total": len(rows),
-    }
-    return render(request, "analytics/submission_reports.html", context)
+
+@perm_required("analytics.generate_submission_assessment_reports")
+def submission_report_generate(request):
+    """Persist a Submission & Assessment Report as a downloadable CSV."""
+    if request.method != "POST":
+        return redirect("analytics:submission_reports")
+
+    academic_year = (
+        AcademicYear.objects.filter(status=AcademicYear.STATUS_ACTIVE).first()
+        or AcademicYear.objects.first()
+    )
+    if academic_year is None:
+        messages.error(
+            request, "Create an academic year before generating a report."
+        )
+        return redirect("analytics:submission_reports")
+
+    assessment_pk = request.POST.get("assessment") or None
+    status_filter = request.POST.get("status") or None
+    _assessments, _qs, rows = _submission_data(
+        request.user, assessment_pk, status_filter
+    )
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["Submission & Assessment Report"])
+    writer.writerow(["Academic Year:", academic_year.label])
+    writer.writerow([])
+    writer.writerow(
+        ["Assessment", "Subject", "Section", "Student", "Submitted", "Late", "Status", "Score"]
+    )
+    for r in rows:
+        writer.writerow(
+            [
+                r["assessment"].title,
+                r["subject"].name,
+                r["section"],
+                f"{r['student'].last_name}, {r['student'].first_name}",
+                r["submission"].submitted_at.strftime("%Y-%m-%d %H:%M"),
+                "Yes" if r["submission"].is_late else "No",
+                r["status"],
+                r["submission"].total_score if r["submission"].total_score is not None else "",
+            ]
+        )
+
+    content = buffer.getvalue()
+    filename = f"submission_report_{academic_year.label}.csv".replace("/", "-")
+    scope = f"Submission & Assessment Report - {academic_year.label}"
+    report = GeneratedReport(
+        report_type=GeneratedReport.TYPE_SUBMISSION_REPORT,
+        academic_year=academic_year,
+        scope_description=scope,
+        parameters={
+            "academic_year": academic_year.label,
+            "assessment": assessment_pk,
+            "status": status_filter,
+        },
+        generated_by=request.user,
+    )
+    report.file.save(filename, ContentFile(content.encode("utf-8")), save=True)
+    ActivityLog.objects.create(
+        user=request.user,
+        action=f"Generated {scope}",
+        related_entity_type="analytics.GeneratedReport",
+    )
+    messages.success(request, "Submission & Assessment Report generated successfully.")
+    return redirect("analytics:submission_reports")
 
 
 @login_required
@@ -530,6 +611,7 @@ def report_download(request, pk):
     if not (
         has_permission(request.user, "analytics.generate_sf_reports")
         or has_permission(request.user, "analytics.manage_sf_report_templates")
+        or has_permission(request.user, "analytics.generate_submission_assessment_reports")
     ):
         return HttpResponseForbidden("You do not have permission to download this report.")
     report = get_object_or_404(GeneratedReport, pk=pk)

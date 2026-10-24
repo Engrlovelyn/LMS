@@ -111,12 +111,17 @@ def messageable_contacts(user):
                 seen.add(vc.teacher_id)
                 contacts.append(entry)
         if wants_students:
+            # Every learner enrolled in the room, whatever their account status:
+            # a teacher (or staff member) picks recipients from the class roster,
+            # and learners are created "pending_verification" until they activate
+            # their account, so keying the picker on ACTIVE hid the very class
+            # the teacher runs. Only archived accounts are left out.
             enrolls = (
                 VirtualClassroomEnrollment.objects.filter(
                     virtual_classroom=vc,
                     status=VirtualClassroomEnrollment.STATUS_ACTIVE,
-                    student__user__status=User.Status.ACTIVE,
                 )
+                .exclude(student__user__status=User.Status.ARCHIVED)
                 .select_related("student__user")
                 .distinct()
             )

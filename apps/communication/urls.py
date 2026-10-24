@@ -36,4 +36,13 @@ urlpatterns = [
     path("messages/", views.message_threads, name="messages"),
     path("messages/class/<int:vc_pk>/", views.group_message_thread, name="group_message_thread"),
     path("messages/private/<int:user_pk>/", views.private_message_thread, name="private_message_thread"),
+    # Persistent header-bell notifications.
+    path("notifications/", views.notification_list, name="notifications"),
+    path("notifications/summary/", views.notification_summary, name="notification_summary"),
+    path("notifications/<int:pk>/open/", views.notification_open, name="notification_open"),
+    path(
+        "notifications/mark-all-read/",
+        views.notification_mark_all_read,
+        name="notification_mark_all_read",
+    ),
 ]

@@ -53,6 +53,16 @@
                 <i class="fa-solid fa-pen"></i> Grade
               </a>
               {% endif %}
+              {% if perms.assessments.auto_grade_objective_assessment %}
+              <form method="post" action="{% url 'assessments:auto_grade_submission' assessment.pk sub.pk %}"
+                class="inline-form"
+                onsubmit="return confirm('Re-run auto-grading for this submission? Objective answers are scored against the answer key.')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline btn-sm">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Grade
+                </button>
+              </form>
+              {% endif %}
             </div>
           </td>
         </tr>

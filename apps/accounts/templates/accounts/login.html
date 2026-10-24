@@ -9,18 +9,20 @@
 <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
 <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
 <style>
-  :root {
-    --navy: #0a2463; --blue: #1e5faf; --sky: #3a86d4; --light-blue: #d6e8f7; --accent: #e8f0fc;
-    --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0; --gray-300:#b9c9e0; --gray-500:#6f86a8;
-    --gray-400: #94a8c4; --gray-600: #4a637f; --gray-800: #1e2e42;
-    --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #3a86d4;
-    --header-bg: #0a2463; --body-bg: #f4f7fc; --card-bg: #ffffff; --card-border: #dde5f0;
-    --text-primary: #1e2e42; --text-muted: #94a8c4; --input-bg: #ffffff; --input-border: #dde5f0;
-    --radius: 14px; --shadow: 0 4px 24px rgba(10,36,99,0.12); --shadow-sm: 0 2px 10px rgba(10,36,99,0.07);
-    --transition: 0.28s cubic-bezier(.4,0,.2,1);
-    --light: var(--light-blue); --off: var(--off-white);
-    --g200: var(--gray-200); --g400: var(--gray-400); --g600: var(--gray-600); --g800: var(--gray-800);
-  }
+    :root {
+  --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
+  --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0;
+  --gray-400: #94a8c4; --gray-600: #4a637f; --gray-700: #5a78a0; --gray-800: #1e2e42;
+  --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #f59e0b;
+  --header-bg: #111111; --sidebar-bg: #111111; --sidebar-hover-bg: #1f2937;
+  --sidebar-active-bg: #f59e0b; --sidebar-text: rgba(255,255,255,0.85);
+  --sidebar-text-active: #111111; --body-bg: #f4f7fc; --card-bg: #ffffff;
+  --card-border: #dde5f0; --text-primary: #1e2e42; --text-muted: #94a8c4;
+  --input-bg: #ffffff; --input-border: #dde5f0;
+  --sidebar-w: 240px; --sidebar-collapsed: 64px; --header-h: 64px;
+  --radius: 14px; --shadow: 0 4px 24px rgba(17,17,17,0.12); --shadow-sm: 0 2px 10px rgba(17,17,17,0.07);
+  --transition: 0.28s cubic-bezier(.4,0,.2,1);
+}
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -72,7 +74,7 @@
     position: absolute;
     width: 260px; height: 260px;
     border-radius: 50%;
-    background: rgba(58,134,212,0.12);
+    background: rgba(251,191,36,0.12);
     filter: blur(60px);
     bottom: 80px; right: -60px;
     pointer-events: none;
@@ -116,7 +118,7 @@
     font-size: 42px; font-weight: 700;
     color: #fff; line-height: 1.2; margin-bottom: 16px;
   }
-  .left-hero h1 em { font-style: italic; color: #7eb8f7; }
+  .left-hero h1 em { font-style: italic; color: #fbbf24; }
   .left-hero p {
     font-size: 15px; color: rgba(255,255,255,0.65);
     line-height: 1.7; max-width: 380px; margin-bottom: 36px;
@@ -149,7 +151,7 @@
     width: 32px; height: 32px; border-radius: 8px;
     background: rgba(255,255,255,0.12);
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; color: #7eb8f7; flex-shrink: 0;
+    font-size: 14px; color: #fbbf24; flex-shrink: 0;
   }
 
   .left-footer { position: relative; z-index: 1; font-size: 12px; color: rgba(255,255,255,0.35); }
@@ -174,7 +176,7 @@
 
   /* Mobile-only brand row (left panel is hidden below 900px) */
   .mobile-brand { display: none; align-items: center; gap: 10px; justify-content: center; margin: -4px 0 28px; }
-  .mobile-brand img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(10,36,99,0.12); background: #fff; }
+  .mobile-brand img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(17,17,17,0.12); background: #fff; }
   .mobile-brand img + img { margin-left: -10px; }
   .mobile-brand .mb-big { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; color: var(--navy); line-height: 1.2; }
   .mobile-brand .mb-small { font-size: 9.5px; letter-spacing: .6px; color: var(--g400); font-weight: 700; margin-top: 2px; }
@@ -223,7 +225,7 @@
   .form-control:focus {
     border-color: var(--sky);
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(58,134,212,0.12);
+    box-shadow: 0 0 0 3px rgba(251,191,36,0.12);
   }
   .form-control.error {
     border-color: var(--danger);
@@ -297,13 +299,13 @@
     cursor: pointer;
     transition: background .2s, transform .15s, box-shadow .2s, opacity .2s;
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 4px 16px rgba(10,36,99,0.25);
+    box-shadow: 0 4px 16px rgba(17,17,17,0.25);
     margin-bottom: 22px;
     position: relative; overflow: hidden;
   }
   .btn-submit:hover:not(.loading):not(.btn-success-state) {
     background: var(--blue);
-    box-shadow: 0 6px 20px rgba(10,36,99,0.3);
+    box-shadow: 0 6px 20px rgba(17,17,17,0.3);
     transform: translateY(-1px);
   }
   .btn-submit:active:not(.loading) { transform: translateY(0); }
@@ -525,7 +527,7 @@
   @media (max-width: 600px) {
     body {
       background:
-        linear-gradient(160deg, rgba(10,36,99,0.62) 0%, rgba(30,95,175,0.62) 55%, rgba(14,58,128,0.68) 90%),
+        linear-gradient(160deg, rgba(17,17,17,0.62) 0%, rgba(245,158,11,0.62) 55%, rgba(180,83,9,0.68) 90%),
         url("{% static 'dashboards/img/sanvicente.jpg' %}");
       background-size: cover;
       background-position: center;
@@ -548,7 +550,7 @@
       border: 2px solid #ffffff;
       border-radius: 22px;
       padding: 18px 20px 20px;
-      box-shadow: 0 12px 36px rgba(4,14,40,0.45);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45);
     }
 
     .mobile-brand {
@@ -751,7 +753,7 @@
       padding: 36px 40px;
       max-width: 480px;
       width: 100%;
-      box-shadow: 0 16px 40px rgba(10,36,99,0.25);
+      box-shadow: 0 16px 40px rgba(17,17,17,0.25);
       text-align: center;
     }
 
@@ -1067,8 +1069,8 @@
     padding: 34px 38px 32px;
     border: 1px solid rgba(255,255,255,.18);
     border-radius: 26px;
-    background: linear-gradient(135deg, rgba(4,22,64,.55), rgba(12,66,140,.26));
-    box-shadow: 0 28px 70px rgba(1,13,38,.34);
+    background: linear-gradient(135deg, rgba(0,0,0,.55), rgba(180,83,9,.26));
+    box-shadow: 0 28px 70px rgba(0,0,0,.34);
     backdrop-filter: blur(14px);
   }
 
@@ -1079,9 +1081,9 @@
     height: 27px;
     padding: 0 11px;
     margin-bottom: 17px;
-    border: 1px solid rgba(169,212,255,.25);
+    border: 1px solid rgba(253,230,138,.25);
     border-radius: 999px;
-    background: rgba(169,212,255,.08);
+    background: rgba(253,230,138,.08);
     color: #b9dcff;
     font-size: 9px;
     font-weight: 800;
@@ -1097,7 +1099,7 @@
   }
 
   .left-hero h1 em {
-    color: #a9d7ff;
+    color: #fde68a;
   }
 
   .left-hero p {
@@ -1133,7 +1135,7 @@
     width: 29px;
     height: 29px;
     border-radius: 8px;
-    background: rgba(126,184,247,.12);
+    background: rgba(251,191,36,.12);
     color: #9fd0ff;
   }
 
@@ -1148,8 +1150,8 @@
     min-width: 0;
     padding: 42px clamp(38px, 5vw, 78px);
     background:
-      radial-gradient(circle at 90% 7%, rgba(58,134,212,.10), transparent 24%),
-      linear-gradient(180deg, #fbfdff 0%, #f5f9fe 100%);
+      radial-gradient(circle at 90% 7%, rgba(251,191,36,.10), transparent 24%),
+      linear-gradient(180deg, #fffdf5 0%, #fffbeb 100%);
   }
 
   .auth-container {
@@ -1168,7 +1170,7 @@
     width: 54px;
     height: 54px;
     border: 2px solid #fff;
-    box-shadow: 0 8px 22px rgba(10,36,99,.14);
+    box-shadow: 0 8px 22px rgba(17,17,17,.14);
   }
 
   .mobile-brand img + img {
@@ -1225,10 +1227,10 @@
 
   .form-control {
     min-height: 51px;
-    border: 1px solid #d5e1ee;
+    border: 1px solid #e7e5e4;
     border-radius: 13px;
     background: rgba(255,255,255,.92);
-    box-shadow: 0 2px 7px rgba(10,36,99,.025);
+    box-shadow: 0 2px 7px rgba(17,17,17,.025);
   }
 
   .form-control:hover {
@@ -1236,8 +1238,8 @@
   }
 
   .form-control:focus {
-    border-color: #3a86d4;
-    box-shadow: 0 0 0 4px rgba(58,134,212,.10), 0 8px 20px rgba(10,36,99,.06);
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 4px rgba(251,191,36,.10), 0 8px 20px rgba(17,17,17,.06);
   }
 
   .forgot-row {
@@ -1248,8 +1250,8 @@
     min-height: 52px;
     margin-bottom: 17px;
     border-radius: 13px;
-    background: linear-gradient(135deg, #0a2463 0%, #174e9b 100%);
-    box-shadow: 0 10px 24px rgba(10,36,99,.20);
+    background: linear-gradient(135deg, #111111 0%, #174e9b 100%);
+    box-shadow: 0 10px 24px rgba(17,17,17,.20);
   }
 
   .btn-submit::after {
@@ -1268,7 +1270,7 @@
   .page-footer {
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px solid #dce6f2;
+    border-top: 1px solid #ede9e0;
   }
 
   .footer-links a {
@@ -1407,7 +1409,7 @@
   }
 
   .left-panel .left-hero h1 em {
-    color: #a9d7ff;
+    color: #fde68a;
   }
 
   .left-panel .left-hero p {
@@ -1431,8 +1433,8 @@
   /* Right panel: open layout, no surrounding white card/border */
   .right-panel {
     background:
-      radial-gradient(circle at 90% 7%, rgba(58,134,212,.08), transparent 24%),
-      linear-gradient(180deg, #fbfdff 0%, #f5f9fe 100%);
+      radial-gradient(circle at 90% 7%, rgba(251,191,36,.08), transparent 24%),
+      linear-gradient(180deg, #fffdf5 0%, #fffbeb 100%);
     border: none !important;
     box-shadow: none !important;
   }
@@ -1447,12 +1449,12 @@
 
   /* Keep only the input fields visually defined */
   .form-control {
-    border: 1px solid #d5e1ee;
+    border: 1px solid #e7e5e4;
   }
 
   /* Keep the footer subtle rather than looking like another card */
   .page-footer {
-    border-top: 1px solid #dce6f2;
+    border-top: 1px solid #ede9e0;
     background: transparent;
   }
 }
@@ -1463,7 +1465,7 @@
     background: #ffffff;
     border: 2px solid #ffffff;
     border-radius: 22px;
-    box-shadow: 0 12px 36px rgba(4,14,40,0.45);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.45);
   }
 }
 
@@ -1530,23 +1532,27 @@
 }
 
 /* ---------- TASS login page polish ---------- */
-:root{
-  --navy:#0a1f4d; --blue:#1d5bd4; --sky:#3b82f6; --light-blue:#d8e7ff; --accent:#eaf1ff;
-  --white:#ffffff; --off-white:#f5f8fd; --gray-100:#eef3fb; --gray-200:#dde6f4;
-  --gray-400:#8ea3c4; --gray-600:#4a6388; --gray-800:#15213a;
-  --success:#0da878; --warning:#ee9d1b; --danger:#e04646; --info:#2f7de1;
-  --body-bg:#f5f8fd; --card-bg:#ffffff; --card-border:#e3ebf6;
-  --text-primary:#14203a; --text-muted:#7d94b9; --input-bg:#ffffff; --input-border:#d5e0ef;
-  --radius:16px; --shadow:0 14px 36px -14px rgba(10,31,77,.24),0 4px 14px -9px rgba(10,31,77,.12);
-  --shadow-sm:0 4px 18px -12px rgba(10,31,77,.18);
+:root {
+  --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
+  --white: #ffffff; --off-white: #f4f7fc; --gray-100: #eef2f8; --gray-200: #dde5f0;
+  --gray-400: #94a8c4; --gray-600: #4a637f; --gray-700: #5a78a0; --gray-800: #1e2e42;
+  --success: #22a877; --warning: #e99b2a; --danger: #d94f4f; --info: #f59e0b;
+  --header-bg: #111111; --sidebar-bg: #111111; --sidebar-hover-bg: #1f2937;
+  --sidebar-active-bg: #f59e0b; --sidebar-text: rgba(255,255,255,0.85);
+  --sidebar-text-active: #111111; --body-bg: #f4f7fc; --card-bg: #ffffff;
+  --card-border: #dde5f0; --text-primary: #1e2e42; --text-muted: #94a8c4;
+  --input-bg: #ffffff; --input-border: #dde5f0;
+  --sidebar-w: 240px; --sidebar-collapsed: 64px; --header-h: 64px;
+  --radius: 14px; --shadow: 0 4px 24px rgba(17,17,17,0.12); --shadow-sm: 0 2px 10px rgba(17,17,17,0.07);
+  --transition: 0.28s cubic-bezier(.4,0,.2,1);
 }
 body{ -webkit-font-smoothing:antialiased; letter-spacing:.1px; }
 .auth-container{ border:1px solid var(--card-border); box-shadow:var(--shadow); }
-.btn-submit,.btn-progress{ background:linear-gradient(135deg,var(--navy),var(--blue)); box-shadow:0 10px 24px -12px rgba(10,31,77,.6); border-radius:11px; min-height:44px; }
-.btn-submit:hover{ transform:translateY(-1px); box-shadow:0 14px 30px -12px rgba(10,31,77,.65); }
+.btn-submit,.btn-progress{ background:linear-gradient(135deg,var(--navy),var(--blue)); box-shadow:0 10px 24px -12px rgba(17,17,17,.6); border-radius:11px; min-height:44px; }
+.btn-submit:hover{ transform:translateY(-1px); box-shadow:0 14px 30px -12px rgba(17,17,17,.65); }
 .btn-submit:focus-visible,.btn-progress:focus-visible,.eye-toggle:focus-visible,.link-btn:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
 .form-control{ border-radius:10px; min-height:44px; }
-.form-control:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-control:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(217,119,6,.14); }
 .input-wrap .input-icon i{ line-height:1; }
 ::-webkit-scrollbar{ width:8px; height:8px; }
 ::-webkit-scrollbar-track{ background:transparent; }
@@ -1562,7 +1568,7 @@ body{ -webkit-font-smoothing:antialiased; letter-spacing:.1px; }
 /* ---------- My Profile modal ---------- */
 .modal-box.profile-box{ width:min(94vw,480px); }
 .profile-hero{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 18px; text-align:center; }
-.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1e5faf,#3a86d4); box-shadow:0 10px 26px -10px rgba(29,91,212,.55); position:relative; overflow:hidden; }
+.profile-avatar-lg{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; color:#fff; background:linear-gradient(135deg,#f59e0b,#fbbf24); box-shadow:0 10px 26px -10px rgba(217,119,6,.55); position:relative; overflow:hidden; }
 .profile-avatar-lg img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .profile-photo-btn{ display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border:1.5px solid var(--input-border); border-radius:10px; background:var(--card-bg); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; transition:border-color .18s,color .18s,background .18s; }
 .profile-photo-btn:hover{ border-color:var(--blue); color:var(--blue); background:var(--accent); }
@@ -1593,12 +1599,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline-offset:
   outline:none; transition:border-color .18s,box-shadow .18s,background .18s; cursor:pointer;
 }
 .form-select:hover{ border-color:var(--gray-400); }
-.form-select:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-select:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(217,119,6,.14); }
 .form-control[disabled],.form-select[disabled],select[disabled],input[disabled],textarea[disabled]{
   opacity:.6; cursor:not-allowed; background:var(--gray-100);
 }
 input::placeholder,textarea::placeholder{ color:var(--gray-400); }
-.form-control:focus,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,91,212,.14); }
+.form-control:focus,.search-input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(217,119,6,.14); }
 
 /* ---------- Search & filter bars: consistent sizing + focus ---------- */
 .search-input,.filter-bar .form-control,.filter-bar .form-select{
@@ -1624,7 +1630,7 @@ input::placeholder,textarea::placeholder{ color:var(--gray-400); }
 .btn-primary:not(:disabled):active,.btn-danger:not(:disabled):active,.btn-success:not(:disabled):active{ box-shadow:none; filter:brightness(.96); }
 
 /* ---------- Tabs: hover/active affordance ---------- */
-.tab-btn:not(.active):hover{ background:rgba(29,91,212,.08); color:var(--navy); }
+.tab-btn:not(.active):hover{ background:rgba(217,119,6,.08); color:var(--navy); }
 .tab-btn.active{ box-shadow:var(--shadow-sm); }
 .classroom-tabs::-webkit-scrollbar{ height:0; }
 
@@ -1856,6 +1862,7 @@ body {
 }
 </style>
 
+
 </head>
 <body>
 {% csrf_token %}
@@ -2019,9 +2026,9 @@ body {
 </div>
 
 <!-- ABOUT MODAL -->
-<div id="aboutModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(10,36,99,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeAboutModal()">
-  <div style="background:#fff;border-radius:20px;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(10,36,99,0.3);animation:slideUp .3s ease;">
-    <div style="background:linear-gradient(135deg,#0a2463 0%,#1e5faf 100%);border-radius:20px 20px 0 0;padding:32px 36px 28px;position:relative;overflow:hidden;">
+<div id="aboutModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(17,17,17,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeAboutModal()">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(17,17,17,0.3);animation:slideUp .3s ease;">
+    <div style="background:linear-gradient(135deg,#111111 0%,#f59e0b 100%);border-radius:20px 20px 0 0;padding:32px 36px 28px;position:relative;overflow:hidden;">
       <div style="position:absolute;width:200px;height:200px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.07);top:-60px;right:-60px;"></div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
         <img src="{% static 'dashboards/img/SVI_logo.png' %}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" alt="">
@@ -2038,70 +2045,70 @@ body {
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
-    <div style="background:linear-gradient(90deg,#e8f0fc,#f4f7fc);border-bottom:1px solid #dde5f0;padding:14px 36px;display:flex;align-items:center;gap:10px;">
-      <i class="fa-solid fa-quote-left" style="color:#1e5faf;font-size:16px;"></i>
-      <span style="font-family:'Fraunces',serif;font-size:15px;font-style:italic;color:#0a2463;font-weight:600;">Enter with Gladness… Learn and Share God's Goodness</span>
+    <div style="background:linear-gradient(90deg,#fff7ed,#f4f7fc);border-bottom:1px solid #dde5f0;padding:14px 36px;display:flex;align-items:center;gap:10px;">
+      <i class="fa-solid fa-quote-left" style="color:#f59e0b;font-size:16px;"></i>
+      <span style="font-family:'Fraunces',serif;font-size:15px;font-style:italic;color:#111111;font-weight:600;">Enter with Gladness… Learn and Share God's Goodness</span>
     </div>
     <div style="padding:32px 36px;display:flex;flex-direction:column;gap:28px;">
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:36px;height:36px;border-radius:9px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-eye" style="color:#1e5faf;font-size:15px;"></i></div>
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Vision</div>
+          <div style="width:36px;height:36px;border-radius:9px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-eye" style="color:#f59e0b;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#111111;">Vision</div>
         </div>
-        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">SVI envisions itself as a beacon of Christian formation, aiming for the <strong style="color:#0a2463;">total formation of individuals</strong> who are ready to lead and serve the community in the light of Christ.</p>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">SVI envisions itself as a beacon of Christian formation, aiming for the <strong style="color:#111111;">total formation of individuals</strong> who are ready to lead and serve the community in the light of Christ.</p>
       </div>
       <div style="border-top:1px solid #eef2f8;"></div>
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
           <div style="width:36px;height:36px;border-radius:9px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullseye" style="color:#16a34a;font-size:15px;"></i></div>
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Mission</div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#111111;">Mission</div>
         </div>
-        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">To <strong style="color:#0a2463;">educate with purpose, serve with humility, and love with sincerity.</strong></p>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">To <strong style="color:#111111;">educate with purpose, serve with humility, and love with sincerity.</strong></p>
       </div>
       <div style="border-top:1px solid #eef2f8;"></div>
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:36px;height:36px;border-radius:9px;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-brain" style="color:#7c3aed;font-size:15px;"></i></div>
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Philosophy</div>
+          <div style="width:36px;height:36px;border-radius:9px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-brain" style="color:#7c3aed;font-size:15px;"></i></div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#111111;">Philosophy</div>
         </div>
-        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">The school is committed to molding students through <strong style="color:#0a2463;">religious teachings and respect for human dignity</strong>, guided by the motto: <em>"Enter with Gladness… Learn and Share God's Goodness."</em></p>
+        <p style="font-size:14px;color:#4a637f;line-height:1.8;padding-left:46px;">The school is committed to molding students through <strong style="color:#111111;">religious teachings and respect for human dignity</strong>, guided by the motto: <em>"Enter with Gladness… Learn and Share God's Goodness."</em></p>
       </div>
       <div style="border-top:1px solid #eef2f8;"></div>
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:36px;height:36px;border-radius:9px;background:#fff7ed;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-heart" style="color:#ea580c;font-size:15px;"></i></div>
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Core Values</div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#111111;">Core Values</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-left:46px;">
           <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
-            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-cross" style="color:#1e5faf;margin-right:6px;font-size:11px;"></i>Maka-Diyos</div>
+            <div style="font-size:13px;font-weight:700;color:#111111;margin-bottom:3px;"><i class="fa-solid fa-cross" style="color:#f59e0b;margin-right:6px;font-size:11px;"></i>Maka-Diyos</div>
             <div style="font-size:11.5px;color:#4a637f;">God-fearing</div>
           </div>
           <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
-            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-hands-holding-heart" style="color:#16a34a;margin-right:6px;font-size:11px;"></i>Maka-Tao</div>
+            <div style="font-size:13px;font-weight:700;color:#111111;margin-bottom:3px;"><i class="fa-solid fa-hands-holding-heart" style="color:#16a34a;margin-right:6px;font-size:11px;"></i>Maka-Tao</div>
             <div style="font-size:11.5px;color:#4a637f;">Humane</div>
           </div>
           <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
-            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-flag" style="color:#ea580c;margin-right:6px;font-size:11px;"></i>Maka-Bayan</div>
+            <div style="font-size:13px;font-weight:700;color:#111111;margin-bottom:3px;"><i class="fa-solid fa-flag" style="color:#ea580c;margin-right:6px;font-size:11px;"></i>Maka-Bayan</div>
             <div style="font-size:11.5px;color:#4a637f;">Patriotic</div>
           </div>
           <div style="background:#f4f7fc;border-radius:12px;padding:14px 16px;border:1px solid #dde5f0;">
-            <div style="font-size:13px;font-weight:700;color:#0a2463;margin-bottom:3px;"><i class="fa-solid fa-leaf" style="color:#16a34a;margin-right:6px;font-size:11px;"></i>Maka-Kalikasan</div>
+            <div style="font-size:13px;font-weight:700;color:#111111;margin-bottom:3px;"><i class="fa-solid fa-leaf" style="color:#16a34a;margin-right:6px;font-size:11px;"></i>Maka-Kalikasan</div>
             <div style="font-size:11.5px;color:#4a637f;">Environmental Stewardship</div>
           </div>
         </div>
       </div>
     </div>
     <div style="padding:16px 36px 24px;border-top:1px solid #eef2f8;display:flex;justify-content:flex-end;">
-      <button onclick="closeAboutModal()" style="background:#0a2463;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Close</button>
+      <button onclick="closeAboutModal()" style="background:#111111;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Close</button>
     </div>
   </div>
 </div>
 
 <!-- CONTACT SUPPORT MODAL -->
-<div id="contactModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(10,36,99,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeContactModal()">
-  <div style="background:#fff;border-radius:20px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(10,36,99,0.3);animation:slideUp .3s ease;">
-    <div style="background:linear-gradient(135deg,#0a2463,#1e5faf);padding:24px 28px;border-radius:20px 20px 0 0;color:#fff;position:relative;overflow:hidden;">
+<div id="contactModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(17,17,17,0.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeContactModal()">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(17,17,17,0.3);animation:slideUp .3s ease;">
+    <div style="background:linear-gradient(135deg,#111111,#f59e0b);padding:24px 28px;border-radius:20px 20px 0 0;color:#fff;position:relative;overflow:hidden;">
       <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.07);top:-60px;right:-60px;"></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;">
@@ -2120,30 +2127,30 @@ body {
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:36px;height:36px;border-radius:9px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-circle-info" style="color:#d97706;font-size:15px;"></i></div>
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#0a2463;">Contact Information</div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#111111;">Contact Information</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;padding-left:46px;">
           <div style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:#4a637f;line-height:1.6;">
-            <i class="fa-solid fa-location-dot" style="color:#1e5faf;margin-top:2px;width:16px;"></i>
+            <i class="fa-solid fa-location-dot" style="color:#f59e0b;margin-top:2px;width:16px;"></i>
             <span>#204 Bonifacio Street, Centro Southwest, Solana, Cagayan, Philippines</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
-            <i class="fa-solid fa-graduation-cap" style="color:#1e5faf;width:16px;"></i>
+            <i class="fa-solid fa-graduation-cap" style="color:#f59e0b;width:16px;"></i>
             <span>Kindergarten through Senior High School</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
-            <i class="fa-solid fa-church" style="color:#1e5faf;width:16px;"></i>
+            <i class="fa-solid fa-church" style="color:#f59e0b;width:16px;"></i>
             <span>Affiliated with the Tuguegarao Archdiocesan School System</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a637f;">
-            <i class="fa-solid fa-phone" style="color:#1e5faf;width:16px;"></i>
+            <i class="fa-solid fa-phone" style="color:#f59e0b;width:16px;"></i>
             <span>+63 78 224 8366</span>
           </div>
         </div>
       </div>
     </div>
     <div style="padding:16px 32px 24px;border-top:1px solid #eef2f8;display:flex;justify-content:flex-end;">
-      <button onclick="closeContactModal()" style="background:#0a2463;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Close</button>
+      <button onclick="closeContactModal()" style="background:#111111;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Close</button>
     </div>
   </div>
 </div>

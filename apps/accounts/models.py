@@ -118,6 +118,9 @@ class User(AbstractBaseUser, PermissionsMixin):
             ("manage_active_sessions", "Manage Active Sessions"),
             ("view_role_based_dashboard", "View Role-Based Dashboard"),
             ("role_based_access_control", "Role-Based Access Control"),
+            ("view_user_account", "View User Account"),
+            ("update_user_account", "Update User Account"),
+            ("reactivate_account", "Reactivate Account"),
         ]
 
 

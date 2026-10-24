@@ -195,6 +195,6 @@ window.TASS = window.TASS || {};
     }
   };
 
-  T.page = T.page || document.body.getAttribute('data-tass-page') || '';
+  T.page = T.page || (document.body && document.body.getAttribute('data-tass-page')) || '';
   T.wire = T.wire || { page: T.page, slots: {} };
 })(window.TASS);

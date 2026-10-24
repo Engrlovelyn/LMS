@@ -2,10 +2,10 @@
    login.css — SVI "Welcome back." authentication (per reference)
    ============================================================ */
 :root {
-  --navy:      #0a2463;
-  --blue:      #1e5faf;
-  --sky:       #3a86d4;
-  --light-blue:#d6e8f7;
+  --navy:      #111111;
+  --blue:      #f59e0b;
+  --sky:       #fbbf24;
+  --light-blue:#fef3c7;
   --gray-200:  #dde5f0;
   --gray-400:  #94a8c4;
   --gray-600:  #4a637f;
@@ -31,7 +31,7 @@ a { color: inherit; }
 .left-panel {
   position: fixed; inset: 0 auto 0 0; width: 55%;
   background:
-    linear-gradient(160deg, rgba(7,24,50,.55) 0%, rgba(10,36,99,.60) 45%, rgba(30,95,175,.45) 100%),
+    linear-gradient(160deg, rgba(17,17,17,.55) 0%, rgba(17,17,17,.60) 45%, rgba(245,158,11,.45) 100%),
     url('../images/login-hero.png');
   background-size: cover;
   background-position: center;
@@ -72,7 +72,7 @@ a { color: inherit; }
 .auth-logo-mini {
   width: 52px; height: 52px; border-radius: 50%; object-fit: cover;
   background: #fff; border: 2px solid #fff;
-  box-shadow: 0 6px 18px rgba(7,24,50,.20);
+  box-shadow: 0 6px 18px rgba(17,17,17,.20);
 }
 .auth-logo-mini + .auth-logo-mini { margin-left: -12px; }
 .brand-block { margin-left: 4px; }
@@ -109,7 +109,7 @@ a { color: inherit; }
   background: var(--off); outline: none;
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
-.form-control:focus { border-color: var(--sky); background: #fff; box-shadow: 0 0 0 3px rgba(58,134,212,.12); }
+.form-control:focus { border-color: var(--sky); background: #fff; box-shadow: 0 0 0 3px rgba(251,191,36,.12); }
 .form-control.error   { border-color: var(--danger); background: #fff8f8; }
 .form-control.success { border-color: var(--success); background: #f6fdfb; }
 
@@ -143,10 +143,10 @@ a { color: inherit; }
   border: none; border-radius: 11px;
   font-size: 15px; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 8px 22px rgba(10,36,99,.28);
+  box-shadow: 0 8px 22px rgba(17,17,17,.28);
   transition: transform .15s, box-shadow .2s, background .2s;
 }
-.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(10,36,99,.34); }
+.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(17,17,17,.34); }
 .btn-submit:active { transform: translateY(0); }
 .btn-submit.loading { pointer-events: none; opacity: .72; }
 .btn-submit.btn-success-state { background: linear-gradient(135deg, #1d9c74, var(--success)); pointer-events: none; }
@@ -212,19 +212,19 @@ a { color: inherit; }
 /* ── MODALS (About / Contact Support) ────────────────────── */
 .app-modal { display: none; }
 .app-modal.show { display: block; }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(7,24,50,.62); backdrop-filter: blur(3px); z-index: 900; animation: fadeIn .25s ease; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(17,17,17,.62); backdrop-filter: blur(3px); z-index: 900; animation: fadeIn .25s ease; }
 .modal-content {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   z-index: 910; width: calc(100% - 48px); max-width: 560px; max-height: 86vh;
   background: #fff; border-radius: 20px; overflow-y: auto;
-  box-shadow: 0 30px 80px rgba(7,24,50,.45);
+  box-shadow: 0 30px 80px rgba(17,17,17,.45);
   animation: modalIn .28s ease;
 }
 @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -46%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 22px 26px;
-  background: linear-gradient(135deg, #0a2463, #1153b0);
+  background: linear-gradient(135deg, #111111, #1153b0);
   color: #fff; border-radius: 20px 20px 0 0;
 }
 .modal-header-left { display: flex; align-items: center; gap: 14px; }

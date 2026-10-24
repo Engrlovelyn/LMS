@@ -1,9 +1,10 @@
 """Populate the analytics charts and attendance views with representative sample data.
 
 The dashboard and analytics charts read from real rows (attendance records,
-assessment assignments, submissions, resource placements). A fresh install has
-classrooms and enrollments but none of those, so every chart renders an empty
-state. This command fills them in.
+assessment assignments, submissions, resource placements, announcements, shared
+resources, generated reports). A fresh install has classrooms and enrollments but
+none of those, so every chart and list renders an empty state. This command fills
+them in.
 
 What it seeds, per active VirtualClassroom:
   * AttendanceSession rows on the last N school days, plus one AttendanceRecord
@@ -15,11 +16,19 @@ What it seeds, per active VirtualClassroom:
   * Topics, LearningResources and LearningResourcePlacements so the
     download-activity chart has monthly counts.
 
-Every write is idempotent. Sessions, assessments, parts, assignments, resources
-and placements use get_or_create; records and submissions are bulk-inserted
-with ``ignore_conflicts=True`` against their unique constraints, so re-running
-never duplicates a row. Sample values come from a fixed-seed RNG, so a re-run
-also never contradicts what the first run wrote.
+And, school-wide, once:
+  * A shared LearningResource per subject (``share_to_repository=True``) so the
+    Subject-Level Resource Repository is not empty for every teacher.
+  * A handful of SchoolAnnouncement rows plus one ClassAnnouncement per
+    classroom so the Announcements panels have content.
+  * An SF2 SFReportTemplate and a few GeneratedReport rows so the Analytics &
+    Reports list (System Administrator, Assistant Principal) is not empty.
+
+Every write is idempotent. Sessions, assessments, parts, assignments, resources,
+placements, announcements, templates and reports use get_or_create; records and
+submissions are bulk-inserted with ``ignore_conflicts=True`` against their unique
+constraints, so re-running never duplicates a row. Sample values come from a
+fixed-seed RNG, so a re-run also never contradicts what the first run wrote.
 
 Call AFTER ``seed_official_accounts`` / ``assign_role_permissions``.
 Use ``--flush`` to rebuild from scratch, ``--dry-run`` to preview.
@@ -30,18 +39,25 @@ import random
 from datetime import timedelta
 from decimal import Decimal
 
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Case, DateTimeField, Q, Value, When
 from django.utils import timezone
 
+from apps.analytics.models import GeneratedReport, SFReportTemplate
 from apps.attendance.models import AttendanceRecord, AttendanceSession
 from apps.assessments.models import (
     Assessment,
     AssessmentAssignment,
     AssessmentPart,
+    GradingComponent,
+    GradingFormula,
     Submission,
 )
+from apps.assessments.services import compute_grades_for_classroom
+from apps.communication.models import ClassAnnouncement, SchoolAnnouncement
+from apps.teaching_learning.models import LearningResource
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
 SEED = 20260902
@@ -60,6 +76,26 @@ RESOURCE_TITLES = [
     "Sample Problem Set",
 ]
 RESOURCE_TYPES = ["document", "pdf", "presentation", "link"]
+
+# Shared subject-level resources (the Subject-Level Resource Repository).
+SHARED_RESOURCE_TITLE_PREFIX = "Shared Lesson Pack - "
+
+# Announcements. School-wide notices are visible to every campus; one class
+# announcement is posted per classroom by its teacher.
+SCHOOL_ANNOUNCEMENTS = [
+    ("Enrollment for the new school year is now open", "Please coordinate with the Registrar's Office for the schedule of enrollment per grade level."),
+    ("Quarterly examinations schedule released", "The examination period runs for one week. Advisers are asked to post the detailed schedule in their classrooms."),
+    ("Faculty meeting for all teachers", "A faculty meeting will be held to discuss the academic calendar and assessment deadlines."),
+]
+CLASS_ANNOUNCEMENT_MARKER = "Reminder: bring your learning materials to the next session."
+
+# Analytics report records so the Generated Reports list is not empty.
+SF_TEMPLATE_NAME = "SF2 - Daily Attendance (Official)"
+REPORT_SCOPES = [
+    (GeneratedReport.TYPE_SF2, "Active Academic Year - Whole School"),
+    (GeneratedReport.TYPE_SF1, "Active Academic Year - Learner Roster"),
+    (GeneratedReport.TYPE_SUBMISSION_REPORT, "Active Academic Year - Submission Summary"),
+]
 
 # Weight of each attendance status.
 ATTENDANCE_WEIGHTS = [
@@ -118,6 +154,24 @@ class Command(BaseCommand):
             help="Only seed the first N active classrooms (default: 0 = all)",
         )
         parser.add_argument(
+            "--shared-resources",
+            type=int,
+            default=1,
+            help="Shared repository resources to create per subject (default: 1)",
+        )
+        parser.add_argument(
+            "--announcements",
+            type=int,
+            default=2,
+            help="School-wide announcements to create (default: 2)",
+        )
+        parser.add_argument(
+            "--reports",
+            type=int,
+            default=3,
+            help="Generated analytics report rows to create (default: 3)",
+        )
+        parser.add_argument(
             "--flush",
             action="store_true",
             help="Delete existing sample rows in scope first",
@@ -129,10 +183,17 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        session_count = max(1, options["sessions"])
+        # Re-enabled: the Assistant Principal's Insights panels (Attendance,
+        # Student Performance, Analytics & Reports) render from real rows, so a
+        # fresh install with no attendance sessions, assessments or submissions
+        # shows only empty states. Run this explicitly to populate demo data.
+        session_count = max(0, options["sessions"])
         assessment_count = max(0, options["assessments"])
         resource_count = max(0, options["resources"])
         classroom_limit = max(0, options["classrooms"])
+        shared_resource_count = max(0, options["shared_resources"])
+        announcement_count = max(0, options["announcements"])
+        report_count = max(0, options["reports"])
 
         classrooms = list(
             VirtualClassroom.objects.filter(status=VirtualClassroom.STATUS_ACTIVE)
@@ -181,6 +242,13 @@ class Command(BaseCommand):
             "topics": 0,
             "resources": 0,
             "placements": 0,
+            "shared_resources": 0,
+            "school_announcements": 0,
+            "class_announcements": 0,
+            "reports": 0,
+            "templates": 0,
+            "formulas": 0,
+            "grades": 0,
         }
 
         with transaction.atomic():
@@ -191,8 +259,14 @@ class Command(BaseCommand):
                     classroom, assessment_count, rng, counts
                 )
                 self._seed_resources(classroom, resource_count, rng, counts)
+                counts["class_announcements"] += self._seed_class_announcement(classroom)
                 if index % 50 == 0 or index == len(classrooms):
                     self.stdout.write(f"  ...{index}/{len(classrooms)} classrooms processed")
+
+            self._seed_shared_resources(classrooms, shared_resource_count, counts)
+            self._seed_school_announcements(announcement_count, counts)
+            self._seed_reports(classrooms, report_count, counts)
+            self._seed_grades(classrooms, counts)
 
         labels = {
             "sessions": "Attendance sessions",
@@ -202,6 +276,13 @@ class Command(BaseCommand):
             "topics": "Topics",
             "resources": "Learning resources",
             "placements": "Resource placements",
+            "shared_resources": "Shared repository resources",
+            "school_announcements": "School announcements",
+            "class_announcements": "Class announcements",
+            "reports": "Generated reports",
+            "templates": "SF report templates",
+            "formulas": "Grading formulas",
+            "grades": "Computed student grades",
         }
         for key, label in labels.items():
             self.stdout.write(self.style.SUCCESS(f"{label}: {counts[key]}"))
@@ -430,6 +511,68 @@ class Command(BaseCommand):
         digest = hashlib.md5(f"{assignment_pk}:{student_id}".encode()).hexdigest()
         return int(digest[:8], 16) % 100 < rate
 
+    # -- computed grades ----------------------------------------------------
+
+    def _seed_grades(self, classrooms, counts):
+        """Give each classroom a grading formula and roll up student grades.
+
+        The "School Avg. Score" stat and any official grade read from
+        ``StudentGrade``, which is only produced by ``compute_student_grades``
+        against a per-classroom ``GradingFormula``. A fresh install has neither,
+        so the card read 0.0% even after submissions existed. Here we build a
+        formula whose components (one per assessment type the class actually
+        uses, weights summing to 100) reflect the seeded work, then compute.
+        """
+        from apps.academic_structure.models import AcademicStructureVersion
+
+        formula_count = 0
+        grade_count = 0
+        for classroom in classrooms:
+            assignment_ids = AssessmentAssignment.objects.filter(
+                virtual_classroom=classroom
+            ).values_list("id", flat=True)
+            used_types = list(
+                Assessment.objects.filter(
+                    assignments__id__in=list(assignment_ids)
+                )
+                .values_list("assessment_type", flat=True)
+                .distinct()
+            )
+            if not used_types:
+                continue
+
+            structure_version = getattr(classroom.academic_year, "structure_version", None) or (
+                AcademicStructureVersion.objects.filter(
+                    academic_year=classroom.academic_year
+                ).first()
+            )
+            if structure_version is None:
+                structure_version = AcademicStructureVersion.objects.create(
+                    academic_year=classroom.academic_year,
+                    grading_period_type="QUARTER",
+                )
+
+            formula, _ = GradingFormula.objects.get_or_create(
+                virtual_classroom=classroom,
+                defaults={"structure_version": structure_version},
+            )
+            if not formula.components.exists():
+                base = 100 // len(used_types)
+                remainder = 100 - base * len(used_types)
+                for index, comp_type in enumerate(used_types):
+                    GradingComponent.objects.create(
+                        formula=formula,
+                        component_type=comp_type,
+                        weight_percentage=base + (remainder if index == 0 else 0),
+                    )
+                formula_count += 1
+
+            result = compute_grades_for_classroom(classroom, formula)
+            grade_count += result["grades"]
+
+        counts["formulas"] += formula_count
+        counts["grades"] += grade_count
+
     # -- learning resources -------------------------------------------------
 
     def _seed_resources(self, classroom, count, rng, counts):
@@ -488,6 +631,153 @@ class Command(BaseCommand):
             if was_placed:
                 counts["placements"] += 1
 
+    # -- shared repository resources ---------------------------------------
+
+    def _seed_shared_resources(self, classrooms, count, counts):
+        """One (or more) shared resource per distinct subject.
+
+        The Subject-Level Resource Repository only lists resources with
+        ``share_to_repository=True``; the classroom-level resources seeded above
+        are intentionally private, so without these the repository stays empty.
+        """
+        if count == 0:
+            return
+
+        by_subject = {}
+        for classroom in classrooms:
+            by_subject.setdefault(classroom.subject_id, classroom)
+        for index, classroom in enumerate(by_subject.values()):
+            for offset in range(count):
+                title = f"{SHARED_RESOURCE_TITLE_PREFIX}{classroom.subject.name}"
+                if count > 1:
+                    title = f"{title} ({offset + 1})"
+                _resource, was_created = LearningResource.objects.get_or_create(
+                    subject=classroom.subject,
+                    academic_year=classroom.academic_year,
+                    title=title,
+                    defaults={
+                        "uploaded_by": classroom.teacher,
+                        "description": (
+                            f"A shared lesson pack for {classroom.subject.name}, "
+                            "contributed to the subject-level repository."
+                        ),
+                        "resource_type": RESOURCE_TYPES[index % len(RESOURCE_TYPES)],
+                        "external_link": "https://example.com/shared-materials",
+                        "status": LearningResource.STATUS_ACTIVE,
+                        "share_to_repository": True,
+                    },
+                )
+                counts["shared_resources"] += 1 if was_created else 0
+
+    # -- announcements ------------------------------------------------------
+
+    def _announcement_author(self):
+        """A staff user who may author school-wide notices, else any teacher."""
+        from apps.accounts.models import RoleAssignment
+
+        order = [
+            "principal",
+            "assistant_principal",
+            "system_admin",
+            "elementary_principal",
+            "registrar",
+            "teacher",
+        ]
+        for code in order:
+            assignment = (
+                RoleAssignment.objects.filter(role__code=code)
+                .select_related("user")
+                .order_by("id")
+                .first()
+            )
+            if assignment and assignment.user:
+                return assignment.user
+        return None
+
+    def _seed_school_announcements(self, count, counts):
+        if count == 0:
+            return
+        author = self._announcement_author()
+        if author is None:
+            return
+        for title, content in SCHOOL_ANNOUNCEMENTS[:count]:
+            _ann, was_created = SchoolAnnouncement.objects.get_or_create(
+                title=title,
+                posted_by=author,
+                defaults={
+                    "content": content,
+                    "audience": "whole_school",
+                    "audience_at_posted_at": "whole_school",
+                    "status": SchoolAnnouncement.STATUS_ACTIVE,
+                },
+            )
+            counts["school_announcements"] += 1 if was_created else 0
+
+    def _seed_class_announcement(self, classroom):
+        # DISABLED: one sample class announcement per classroom was seeding on
+        # every run (it is not gated by --announcements). Remove the next line
+        # to re-enable.
+        return 0
+        if classroom.teacher is None:
+            return 0
+        _ann, was_created = ClassAnnouncement.objects.get_or_create(
+            virtual_classroom=classroom,
+            posted_by=classroom.teacher,
+            content=CLASS_ANNOUNCEMENT_MARKER,
+            defaults={"status": ClassAnnouncement.STATUS_ACTIVE},
+        )
+        return 1 if was_created else 0
+
+    # -- report records -----------------------------------------------------
+
+    def _seed_reports(self, classrooms, count, counts):
+        """An SF2 template plus a few generated report records.
+
+        The Analytics & Reports views on the System Administrator and Assistant
+        Principal dashboards list GeneratedReport rows; nothing creates them in a
+        fresh install, so the list renders its empty state until someone
+        generates one. This seeds representative rows.
+        """
+        active_year = classrooms[0].academic_year if classrooms else None
+        if active_year is None:
+            return
+
+        author = self._announcement_author()
+        if author is None:
+            return
+
+        _tpl, was_created = SFReportTemplate.objects.get_or_create(
+            name=SF_TEMPLATE_NAME,
+            form_type=SFReportTemplate.FORM_SF2,
+            defaults={
+                "description": "Official SF2 daily attendance form (sample).",
+                "template_file": ContentFile(
+                    b"School Form 2 (SF2) - Daily Attendance\nSample template seeded for the pilot.\n",
+                    name="sf2_daily_attendance.txt",
+                ),
+                "field_mappings": {"LRN": "lrn", "Name": "full_name"},
+                "is_active": True,
+                "uploaded_by": author,
+            },
+        )
+        counts["templates"] += 1 if was_created else 0
+
+        for report_type, scope in REPORT_SCOPES[:count]:
+            _report, was_created = GeneratedReport.objects.get_or_create(
+                report_type=report_type,
+                academic_year=active_year,
+                scope_description=scope,
+                defaults={
+                    "parameters": {"sample": True},
+                    "file": ContentFile(
+                        f"{scope}\nGenerated sample report for the pilot.\n".encode(),
+                        name=f"{report_type}_{active_year.label}.txt",
+                    ),
+                    "generated_by": author,
+                },
+            )
+            counts["reports"] += 1 if was_created else 0
+
     # -- teardown -----------------------------------------------------------
 
     def _flush(self, classrooms):
@@ -542,9 +832,31 @@ class Command(BaseCommand):
                 | Q(title__startswith=RESOURCE_TITLES[3])
             )
         ).delete()
+        shared_resources, _ = LearningResource.objects.filter(
+            title__startswith=SHARED_RESOURCE_TITLE_PREFIX
+        ).delete()
+
+        class_announcements, _ = ClassAnnouncement.objects.filter(
+            virtual_classroom_id__in=vc_ids, content=CLASS_ANNOUNCEMENT_MARKER
+        ).delete()
+        school_announcements, _ = SchoolAnnouncement.objects.filter(
+            title__in=[title for title, _ in SCHOOL_ANNOUNCEMENTS]
+        ).delete()
+
+        templates, _ = SFReportTemplate.objects.filter(name=SF_TEMPLATE_NAME).delete()
+        reports, _ = GeneratedReport.objects.filter(
+            report_type__in=[report_type for report_type, _ in REPORT_SCOPES],
+            scope_description__in=[scope for _, scope in REPORT_SCOPES],
+        ).delete()
 
         self.stdout.write(self.style.WARNING("Flushed:"))
         self.stdout.write(f"  attendance records {records}, sessions {sessions}")
         self.stdout.write(f"  submissions {submissions}, assignments {assignments}")
         self.stdout.write(f"  assessments {assessment_count}, parts {parts}")
         self.stdout.write(f"  placements {placements}, topics {topics}, resources {resources}")
+        self.stdout.write(
+            f"  shared resources {shared_resources}, "
+            f"class announcements {class_announcements}, "
+            f"school announcements {school_announcements}"
+        )
+        self.stdout.write(f"  report templates {templates}, reports {reports}")

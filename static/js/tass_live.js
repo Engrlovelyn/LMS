@@ -212,7 +212,11 @@
         pending = null;
         var fn =
           global.onTassLiveRefresh ||
+          global.onTassPollRefresh ||
           (typeof refreshActiveView === "function" ? refreshActiveView : null);
+        var active = document.activeElement;
+        if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+        if (document.querySelector(".modal-overlay.open, [data-tass-edit='1']")) return;
         if (typeof fn === "function") {
           try {
             fn(d);

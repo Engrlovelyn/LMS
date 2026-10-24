@@ -24,10 +24,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Max, Q
-from django.http import JsonResponse
+from django.http import FileResponse, HttpResponseRedirect, JsonResponse
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 
 from apps.accounts.models import (
     ActivityLog,
@@ -36,7 +37,9 @@ from apps.accounts.models import (
     PasswordHistory,
     Role,
     RoleAssignment,
+    SexChoices,
     StudentProfile,
+    SuffixChoices,
     User,
     _sync_user_groups,
 )
@@ -46,10 +49,15 @@ from apps.attendance.models import AttendanceRecord, AttendanceSession
 from apps.communication.models import (
     ClassAnnouncement,
     GroupMessage,
+    Notification,
     PrivateMessage,
     SchoolAnnouncement,
     SchoolEvent,
+    TARGET_ALL,
+    TARGET_ROLE_CHOICES,
+    user_matches_target_role,
 )
+from apps.communication import notifications as notif_service
 from apps.governance.models import RoleAccessReview
 from apps.system_settings.models import BackupRecord, PasswordPolicy, SystemConfiguration
 from apps.teaching_learning.models import LearningResource, LearningResourcePlacement, Topic, TopicTemplate
@@ -193,6 +201,21 @@ ADMIN_ROLES = (
 # `SchoolAnnouncement.audience`; kept here so the API can reject a bad value
 # with a 400 instead of failing a database write.
 VALID_AUDIENCES = (WHOLE_SCHOOL, ELEMENTARY, HIGH_SCHOOL)
+VALID_TARGET_ROLES = {value for value, _label in TARGET_ROLE_CHOICES}
+
+
+def _visible_target_roles(user):
+    """Role audiences the caller may read (mirrors communication.views)."""
+    roles = [TARGET_ALL]
+    if user.is_superuser or user.is_staff:
+        return [value for value, _label in TARGET_ROLE_CHOICES]
+    if user.groups.filter(name="teacher").exists():
+        roles.append("teachers")
+    elif getattr(user, "student_profile", None) is not None:
+        roles.append("students")
+    else:
+        roles.extend(["students", "teachers"])
+    return roles
 
 
 def _is_staff_admin(user):
@@ -677,7 +700,7 @@ def _field_errors(email, first, last, mi, emp_no, contact, suffix):
             errors["contact"] = (
                 "Contact number must be an 11-digit PH mobile, e.g. 09171234567."
             )
-    if suffix and suffix not in dict(EmployeeProfile.SuffixChoices.choices):
+    if suffix and suffix not in dict(SuffixChoices.choices):
         errors["suffix"] = "Suffix is not a valid option."
     return errors
 
@@ -833,6 +856,208 @@ def account_create(request):
             else (
                 f"Account saved to the database, but the verification email could "
                 f"NOT be sent. Share the temporary password manually: {temp_password}"
+            )
+        ),
+    }
+    if not mail_ok:
+        payload["email_error"] = mail.get("message") or "Unknown mail error."
+        payload["errors"] = {"email": "Verification email failed to send."}
+    return _ok(**payload)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/students/create/  — create ONE student account
+# ---------------------------------------------------------------------------
+# Companion to account_create above. The System Administrator's "Add User"
+# modal only ever produced employees, so a learner account could only be made
+# by the registrar's bulk roster import. This endpoint creates a single User +
+# StudentProfile + Student RoleAssignment so the same modal can add a student.
+# Enrollment is intentionally NOT performed here: grade/section is the
+# registrar's job from the Students page.
+def _student_field_errors(email, first, last, mi, lrn, birth_raw, contact, suffix):
+    """Validate one student payload the way the database would.
+
+    Mirrors ``_field_errors`` but uses the StudentProfile column rules: LRN is
+    exactly 12 digits, birthdate is NOT NULL, and contact_number is a looser
+    20-char free field rather than the employee PH-mobile constraint.
+    """
+    errors = {}
+    if not email:
+        errors["email"] = "Email address is required."
+    elif not _EMAIL_RE.match(email):
+        errors["email"] = "Enter a valid email address, e.g. name@school.edu."
+    elif len(email) > 254:
+        errors["email"] = "Email address is too long."
+
+    if not first:
+        errors["first_name"] = "First name is required."
+    elif len(first) > 50:
+        errors["first_name"] = "First name must be 50 characters or fewer."
+
+    if not last:
+        errors["last_name"] = "Last name is required."
+    elif len(last) > 50:
+        errors["last_name"] = "Last name must be 50 characters or fewer."
+
+    if mi:
+        if len(mi) > 2:
+            errors["middle_initial"] = "Middle initial must be a single letter."
+        elif not re.match(r"^[A-Za-z]\.?$", mi):
+            errors["middle_initial"] = "Middle initial must be a single letter, e.g. M."
+
+    if not lrn:
+        errors["lrn"] = "LRN is required."
+    elif not re.match(r"^\d{12}$", lrn):
+        errors["lrn"] = "LRN must be exactly 12 digits."
+
+    if not birth_raw:
+        errors["birthdate"] = "Birthdate is required for a student account."
+
+    if contact and len(contact) > 20:
+        errors["contact"] = "Contact number must be 20 characters or fewer."
+
+    if suffix and suffix not in dict(SuffixChoices.choices):
+        errors["suffix"] = "Suffix is not a valid option."
+    return errors
+
+
+@login_required
+@require_POST
+@api_role_required(*REGISTRAR_ROLES)
+def student_create(request):
+    """Create a single student account and email its activation link.
+
+    The User, StudentProfile and Student RoleAssignment are written in one
+    transaction so a rejected field cannot leave a user with no profile. The
+    account starts PENDING_VERIFICATION and the generated temporary password
+    is echoed back to the creating administrator, exactly like an employee.
+    """
+    year = _active_year()
+    if not year:
+        return _err("No active academic year configured yet.", 409)
+
+    data = _payload(request)
+    email = (data.get("email") or data.get("acctUsername") or "").strip().lower()
+    first, mi, last = _parse_name(
+        data.get("name") or "",
+        first=data.get("first") or data.get("first_name") or "",
+        surname=data.get("surname") or data.get("last") or data.get("last_name") or "",
+    )
+    mi = (mi or data.get("middle_initial") or "").strip()
+    if mi and "." not in mi and len(mi) == 1:
+        mi = mi + "."
+    lrn = re.sub(
+        r"\s+",
+        "",
+        str(data.get("lrn") or data.get("emp") or data.get("employee_number") or ""),
+    )
+    contact = re.sub(r"[\s()-]", "", str(data.get("contact") or ""))[:20]
+    suffix = (data.get("suffix") or "").strip()
+    address = (data.get("address") or "").strip()[:255]
+    guardian_name = (data.get("guardian_name") or data.get("guardian") or "").strip()[:100]
+    guardian_email = (data.get("guardian_email") or "").strip().lower()[:254]
+    guardian_contact = (
+        data.get("guardian_contact")
+        or data.get("guardian_contact_number")
+        or ""
+    ).strip()[:20]
+
+    sex_raw = str(data.get("sex") or data.get("gender") or "").strip()
+    sex = {"male": "M", "female": "F"}.get(sex_raw.lower(), sex_raw.upper())
+    birth_raw = str(data.get("birthdate") or data.get("birth") or "").strip()
+    birthdate = None
+
+    errors = _student_field_errors(email, first, last, mi, lrn, birth_raw, contact, suffix)
+    if sex not in ("", "M", "F"):
+        errors["sex"] = "Sex must be Male or Female."
+    if birth_raw and "birthdate" not in errors:
+        try:
+            birthdate = date.fromisoformat(birth_raw)
+        except ValueError:
+            errors["birthdate"] = "Birthdate must be a date, e.g. 2012-05-04."
+        else:
+            if birthdate > date.today():
+                errors["birthdate"] = "Birthdate cannot be in the future."
+    if guardian_email and not _EMAIL_RE.match(guardian_email):
+        errors["guardian_email"] = "Enter a valid guardian email address."
+
+    if not errors:
+        if User.objects.filter(email=email).exists():
+            errors["email"] = "An account with this email already exists."
+        elif lrn and StudentProfile.objects.filter(lrn=lrn).exists():
+            errors["lrn"] = "This LRN is already in use."
+
+    if errors:
+        return JsonResponse(
+            {
+                "ok": False,
+                "message": "Please correct the highlighted fields.",
+                "errors": errors,
+            },
+            status=400,
+        )
+
+    from django.db import transaction
+
+    try:
+        with transaction.atomic():
+            user, temp_password = _generate_credentials(email)
+            StudentProfile.objects.create(
+                user=user,
+                lrn=lrn,
+                first_name=first,
+                last_name=last,
+                middle_initial=mi,
+                suffix=suffix,
+                birthdate=birthdate,
+                sex=sex,
+                contact_number=contact,
+                address=address,
+                guardian_name=guardian_name,
+                guardian_email=guardian_email,
+                guardian_contact_number=guardian_contact,
+            )
+            role = Role.objects.filter(code=Role.Code.STUDENT).first()
+            if role:
+                RoleAssignment.objects.get_or_create(
+                    user=user, role=role, academic_year=year
+                )
+            _log(
+                request.user,
+                f"student_account_created:{email}",
+                entity_type="User",
+                entity_id=user.pk,
+            )
+    except Exception as exc:
+        _log(request.user, f"student_account_create_failed:{email}")
+        return _err(f"The student account could not be created: {exc}", 500)
+
+    mail = _send_welcome_mail(user, request, temp_password)
+    mail_ok = bool(mail.get("ok"))
+    _log(
+        request.user,
+        f"student_account_activation_email:{'sent' if mail_ok else 'failed'}:{email}",
+        entity_type="User",
+        entity_id=user.pk,
+    )
+
+    payload = {
+        "user_id": user.pk,
+        "email": email,
+        "lrn": lrn,
+        "roles": ["student"],
+        # Echoed only to the administrator who created the account, so a broken
+        # mail transport does not strand the learner without a password.
+        "temp_password": temp_password,
+        "email_sent": mail_ok,
+        "message": (
+            f"Student account created. An activation email with the temporary "
+            f"password and verification link was sent to {email}."
+            if mail_ok
+            else (
+                f"Student account saved to the database, but the verification email "
+                f"could NOT be sent. Share the temporary password manually: "
+                f"{temp_password}"
             )
         ),
     }
@@ -1379,6 +1604,7 @@ def academic_structure(request):
             vc = VirtualClassroom.objects.create(
                 subject=subj, section=sec, academic_year=year, grading_period=period, teacher=teacher,
                 theme_color=(row.get("color") or row.get("themeColor") or "#4F46E5"),
+                schedule=(row.get("schedule") or row.get("teacherSchedule") or row.get("classSchedule") or "").strip(),
             )
         else:
             if teacher and vc.teacher_id != teacher.pk:
@@ -1386,6 +1612,9 @@ def academic_structure(request):
             color = row.get("color") or row.get("themeColor")
             if color:
                 vc.theme_color = color
+            sched = row.get("schedule") or row.get("teacherSchedule") or row.get("classSchedule")
+            if sched is not None:
+                vc.schedule = str(sched).strip()
             active = (row.get("status") or "active") in ("active", "Active")
             vc.status = STATUS_ACTIVE if active else STATUS_ARCHIVED
             vc.save()
@@ -1678,6 +1907,13 @@ def school_announcements(request):
                 403,
             )
         archived = bool(row.get("archived"))
+        target_role = (row.get("target_role") or row.get("targetRole") or TARGET_ALL).strip()
+        if target_role not in VALID_TARGET_ROLES:
+            return _err(
+                "Unknown target role '{}'. Expected one of: {}.".format(
+                    target_role, ", ".join(sorted(VALID_TARGET_ROLES))
+                )
+            )
         # Look the row up within the audience it is being saved as, so a
         # same-titled notice on the other campus is never edited by accident.
         ann = (
@@ -1691,15 +1927,22 @@ def school_announcements(request):
                 status="archived" if archived else "active",
                 audience=audience or "whole_school",
                 audience_at_posted_at=author_campus,
+                target_role=target_role,
             )
         else:
             ann.content = content
             ann.status = "archived" if archived else "active"
             ann.audience = audience or "whole_school"
             ann.audience_at_posted_at = author_campus
+            ann.target_role = target_role
             ann.save()
         count += 1
         _log(request.user, f"school_announcement_saved:{title}:{ann.audience}", entity_type="SchoolAnnouncement", entity_id=ann.pk)
+        try:
+            from apps.communication import notifications as _notif
+            _notif.notify_school_announcement(ann)
+        except Exception:  # a notification must never break the post
+            pass
     try:
         from apps.communication.realtime import notify_school
         notify_school(kind=["school_announcements"])
@@ -1749,7 +1992,6 @@ def my_classroom(request, vc_id):
 
 
 @login_required
-@api_role_required("system_admin", "registrar", "principal", "elementary_principal", "assistant_principal")
 def classroom_detail(request, vc_id):
     vc = (
         VirtualClassroom.objects.filter(pk=vc_id)
@@ -1761,11 +2003,17 @@ def classroom_detail(request, vc_id):
     )
     if vc is None:
         return _err("Virtual classroom not found.", 404)
-    # The Elementary Principal passes the role gate above but must still be
-    # refused a Grade 11 classroom; the drill-down cannot out-scope the list it
-    # came from.
-    if not user_can_read_grade(request.user, vc.section.grade_level):
-        return _err("You do not have access to this classroom.", 403)
+    # The assigned teacher may read their own classroom; this is what powers the
+    # My Class tabs (Teaching & Learning Activities and Submissions). School
+    # leaders keep the campus scope check, because a drill-down cannot
+    # out-scope the list it came from.
+    if vc.teacher_id != request.user.pk:
+        may_read_grade = (
+            request.user.groups.filter(name="principal").exists()
+            or user_can_read_grade(request.user, vc.section.grade_level)
+        )
+        if not _is_staff_admin(request.user) or not may_read_grade:
+            return _err("You do not have access to this classroom.", 403)
 
     def _full_name(user):
         if not user or user.pk is None:
@@ -1788,6 +2036,7 @@ def classroom_detail(request, vc_id):
         "teacher": _full_name(vc.teacher),
         "year": vc.academic_year.label,
         "period": vc.grading_period,
+        "schedule": vc.schedule or "",
         "status": vc.status.title(),
         "themeColor": vc.theme_color or "#4F46E5",
         "createdAt": vc.created_at.strftime("%b %d, %Y") if vc.created_at else "",
@@ -1887,7 +2136,11 @@ def classroom_detail(request, vc_id):
             "title": placement.resource.title,
             "typeLabel": placement.resource.get_resource_type_display(),
             "externalLink": placement.resource.external_link or "",
-            "fileUrl": (placement.resource.file.url if placement.resource.file else ""),
+            "fileUrl": (
+                reverse("teaching:resource_download", args=[placement.resource.pk])
+                if placement.resource.file
+                else ""
+            ),
             "topic": placement.topic.name,
             "uploadedBy": _full_name(placement.resource.uploaded_by),
             "sharedToRepository": placement.resource.share_to_repository,
@@ -1911,27 +2164,117 @@ def classroom_detail(request, vc_id):
         )
         .order_by("-assigned_at")
     )
-    assessments = [
-        {
-            "id": assignment.pk,
-            "title": assignment.assessment.title,
-            "method": assignment.assessment.get_assessment_method_display(),
-            "category": assignment.assessment.get_assessment_type_display(),
-            "stage": assignment.assessment.lifecycle_stage.replace("_", " ").title(),
-            "status": assignment.assessment.status.title(),
-            "deadline": assignment.assessment.submission_deadline.strftime("%b %d, %Y")
-            if assignment.assessment.submission_deadline else "",
-            "parts": assignment.parts_count,
-            "submitted": assignment.submitted_count,
-            "graded": assignment.graded_count,
-            "students": len(students),
-            "createdBy": _full_name(assignment.assessment.created_by),
-            "assignedAt": assignment.assigned_at.strftime("%b %d, %Y") if assignment.assigned_at else "",
-        }
-        for assignment in assignments
-    ]
+    # Per-student submission rows for the monitor-submissions view, plus the
+    # first attached file on each assessment (if any), so the teacher's
+    # "uploaded assessment file" is visible in the classroom payload.
+    sub_by_assignment = defaultdict(dict)
+    for sub in Submission.objects.filter(
+        assessment_assignment__virtual_classroom=vc
+    ).prefetch_related("responses"):
+        sub_by_assignment[sub.assessment_assignment_id][sub.student_id] = sub
+
+    def _assessment_attachment(assessment):
+        part = (
+            assessment.parts.exclude(attached_file="")
+            .exclude(attached_file__isnull=True)
+            .first()
+        )
+        if part is None:
+            return "", ""
+        try:
+            return part.attached_file.url, os.path.basename(part.attached_file.name)
+        except Exception:
+            return "", ""
+
+    def _submission_file(sub):
+        """Return (download_url, filename) for a student's uploaded work.
+
+        The file lives on `attached_file` for part-less assessments and on the
+        first `SubmissionResponse.response_file` when the assessment has parts.
+        """
+        field = sub.attached_file
+        if not field:
+            response = next(
+                (r for r in sub.responses.all() if r.response_file), None
+            )
+            field = response.response_file if response is not None else None
+        if not field:
+            return "", ""
+        try:
+            return (
+                "/api/submission-file/{}/".format(sub.pk),
+                os.path.basename(field.name),
+            )
+        except Exception:
+            return "", ""
+
+    assessments = []
+    for assignment in assignments:
+        assessment = assignment.assessment
+        att_url, att_name = _assessment_attachment(assessment)
+        sub_map = sub_by_assignment.get(assignment.pk, {})
+        submission_rows = []
+        for enrollment in enrollments:
+            sp = enrollment.student
+            sub = sub_map.get(sp.pk)
+            if sub is None:
+                submission_rows.append(
+                    {
+                        "studentId": sp.pk,
+                        "name": _student_name(sp),
+                        "status": "not-submitted",
+                        "score": "—",
+                        "time": "—",
+                        "fileUrl": "",
+                        "fileName": "",
+                    }
+                )
+            else:
+                file_url, file_name = _submission_file(sub)
+                submission_rows.append(
+                    {
+                        "studentId": sp.pk,
+                        "name": _student_name(sp),
+                        "status": "late" if sub.is_late else "submitted",
+                        "score": (
+                            "%g" % float(sub.total_score)
+                            if sub.total_score is not None
+                            else "—"
+                        ),
+                        "time": timezone.localtime(sub.submitted_at).strftime(
+                            "%b %d, %Y %I:%M %p"
+                        )
+                        if sub.submitted_at
+                        else "—",
+                        "fileUrl": file_url,
+                        "fileName": file_name,
+                    }
+                )
+        assessments.append(
+            {
+                "id": assignment.pk,
+                "title": assessment.title,
+                "method": assessment.get_assessment_method_display(),
+                "category": assessment.get_assessment_type_display(),
+                "stage": assessment.lifecycle_stage.replace("_", " ").title(),
+                "status": assessment.status.title(),
+                "deadline": assessment.submission_deadline.strftime("%b %d, %Y")
+                if assessment.submission_deadline else "",
+                "parts": assignment.parts_count,
+                "submitted": assignment.submitted_count,
+                "graded": assignment.graded_count,
+                "students": len(students),
+                "createdBy": _full_name(assessment.created_by),
+                "assignedAt": assignment.assigned_at.strftime("%b %d, %Y")
+                if assignment.assigned_at else "",
+                "attachmentUrl": att_url,
+                "attachmentName": att_name,
+                "submissions": submission_rows,
+            }
+        )
 
     # --- announcements --------------------------------------------------------
+    _role_filter = _visible_target_roles(request.user)
     announcements = [
         {
             "id": announcement.pk,
@@ -1940,9 +2283,12 @@ def classroom_detail(request, vc_id):
             "postedAt": announcement.posted_at.strftime("%b %d, %Y · %I:%M %p")
             if announcement.posted_at else "",
             "status": announcement.status.title(),
+            "targetRole": announcement.target_role or TARGET_ALL,
             "attachmentUrl": (announcement.attachment.url if announcement.attachment else ""),
         }
-        for announcement in vc.announcements.select_related("posted_by").order_by("-posted_at")
+        for announcement in vc.announcements.select_related("posted_by")
+        .filter(Q(target_role__in=_role_filter) | Q(target_role=""))
+        .order_by("-posted_at")
     ]
 
     _log(request.user, f"viewed_classroom:{vc.pk}", entity_type="VirtualClassroom", entity_id=vc.pk)
@@ -1977,16 +2323,29 @@ def class_announcements(request):
     if not (vc.teacher_id == request.user.pk or _is_staff_admin(request.user)):
         return _err("You may only post announcements in your own virtual classroom.")
     archived = bool(data.get("archived"))
+    target_role = (data.get("target_role") or data.get("targetRole") or TARGET_ALL).strip()
+    if target_role not in VALID_TARGET_ROLES:
+        return _err(
+            "Unknown target role '{}'. Expected one of: {}.".format(
+                target_role, ", ".join(sorted(VALID_TARGET_ROLES))
+            )
+        )
     ann = ClassAnnouncement.objects.filter(virtual_classroom=vc, content=content).first()
     if ann is None:
         ann = ClassAnnouncement.objects.create(
             virtual_classroom=vc, posted_by=request.user, content=content,
             status="archived" if archived else "active",
+            target_role=target_role,
         )
     else:
         ann.status = "archived" if archived else "active"
+        ann.target_role = target_role
         ann.save()
     _log(request.user, f"class_announcement_saved:{ann.pk}", entity_type="ClassAnnouncement", entity_id=ann.pk)
+    try:
+        notif_service.notify_class_announcement(ann)
+    except Exception:
+        pass
     try:
         _notify_classroom_change(vc, request.user, ["announcements"])
     except Exception:
@@ -2006,6 +2365,9 @@ def profile(request):
     email = (data.get("email") or "").strip().lower()
     changed = False
 
+    if email and email != request.user.email and User.objects.filter(email=email).exclude(pk=request.user.pk).exists():
+        return _err("That email address is already in use by another account.", status=409)
+
     employee = _employee(request.user)
     if employee is not None:
         if name:
@@ -2013,7 +2375,7 @@ def profile(request):
             if first and (employee.first_name != first or employee.last_name != last):
                 employee.first_name, employee.middle_initial, employee.last_name = first, mi, last
                 changed = True
-        if contact:
+        if "contact" in data:
             cleaned = contact.replace(" ", "")
             if employee.contact_number != cleaned:
                 employee.contact_number = cleaned
@@ -2028,20 +2390,22 @@ def profile(request):
                 if first:
                     student.first_name, student.middle_initial, student.last_name = first, mi, last
                     changed = True
-            if contact and student.contact_number != contact:
+            if "contact" in data and student.contact_number != contact:
                 student.contact_number = contact
                 changed = True
             if changed:
                 student.save()
 
-    if email and email != request.user.email and not User.objects.filter(email=email).exclude(pk=request.user.pk).exists():
+    if email and email != request.user.email:
         request.user.email = email
         request.user.save(update_fields=["email"])
         changed = True
 
     target = employee if employee is not None else _student(request.user)
     avatar = request.FILES.get("avatar")
-    if avatar is not None and target is not None:
+    if avatar is not None:
+        if target is None:
+            return _err("This account has no profile record available for a profile photo.", status=409)
         target.avatar = avatar
         target.save(update_fields=["avatar"])
         changed = True
@@ -2064,7 +2428,6 @@ def profile(request):
 # ---------------------------------------------------------------------------
 @login_required
 @require_POST
-@api_role_required(*STAFF_ROLES)
 def submissions(request):
     from apps.assessments.models import (
         AssessmentAssignment,
@@ -2080,6 +2443,10 @@ def submissions(request):
     title = (data.get("title") or "").strip()
     note = (data.get("note") or "").strip()
     score = data.get("score")
+    try:
+        violations = int(data.get("violations") or 0)
+    except (TypeError, ValueError):
+        violations = 0
 
     enrolled = VirtualClassroomEnrollment.objects.filter(
         student=student, status=STATUS_ACTIVE
@@ -2103,9 +2470,23 @@ def submissions(request):
     if assignment is None:
         return _err("No matching assessment was found for this submission.", 404)
 
+    assessment = assignment.assessment
+    if assessment.status == Assessment.STATUS_ARCHIVED:
+        return _err("This assessment is no longer accepting submissions.", 403)
+    now = timezone.now()
+    if assessment.available_at and assessment.available_at > now:
+        return _err("This assessment is not yet available for submission.", 403)
+    if assessment.submission_deadline and assessment.submission_deadline < now:
+        return _err("The submission deadline for this assessment has passed.", 403)
+
     submission, created = Submission.objects.get_or_create(
         assessment_assignment=assignment, student=student
     )
+    if not created:
+        # If the student already submitted (responses/files attached) block
+        # re-submission from the SPA.
+        if submission.responses.exists() or submission.attached_file:
+            return _err("You have already submitted this assessment.", 409)
 
     if score is not None and str(score) != "":
         try:
@@ -2120,14 +2501,18 @@ def submissions(request):
 
     upload = request.FILES.get("file")
     parts = list(assignment.assessment.parts.order_by("order"))
-    if upload is not None and parts:
-        response, _ = SubmissionResponse.objects.get_or_create(
-            submission=submission, part=parts[0]
-        )
-        response.response_file = upload
-        if note:
-            response.response_data = {"note": note}
-        response.save()
+    if upload is not None:
+        if parts:
+            response, _ = SubmissionResponse.objects.get_or_create(
+                submission=submission, part=parts[0]
+            )
+            response.response_file = upload
+            if note:
+                response.response_data = {"note": note}
+            response.save()
+        else:
+            submission.attached_file = upload
+            submission.save(update_fields=["attached_file"])
 
     _log(
         request.user,
@@ -2135,7 +2520,191 @@ def submissions(request):
         entity_type="Submission",
         entity_id=submission.pk,
     )
-    return _ok(submission_id=submission.pk, created=created)
+    if violations > 0:
+        _log(
+            request.user,
+            f"assessment_proctor_violation:{violations}",
+            entity_type="Submission",
+            entity_id=submission.pk,
+        )
+    return _ok(submission_id=submission.pk, created=created, violations=violations)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/remind/ — a teacher nudges students who have not submitted.
+#
+# Body: {assignment_id} (or {title}) plus optional {student_ids: [...]}.
+# Without student_ids every enrolled student with no Submission is reminded;
+# with student_ids only those students are. One bell Notification per student,
+# keyed on ("assessment_reminder", <assignment pk>): each nudge replaces that
+# student's previous reminder for the same assessment with a fresh unread row,
+# so the red dot lights again while the assessment's own ("assessment", <pk>)
+# row is never touched.
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def remind(request):
+    from apps.assessments.models import AssessmentAssignment, Submission
+
+    data = _payload(request)
+    aid = data.get("assignment_id") or data.get("assessment_id")
+    title = (data.get("title") or "").strip()
+
+    qs = AssessmentAssignment.objects.select_related(
+        "assessment", "virtual_classroom", "virtual_classroom__section"
+    )
+
+    assignment = None
+    if aid is not None and str(aid).isdigit():
+        assignment = qs.filter(pk=int(aid)).first()
+    if assignment is None and title:
+        assignment = qs.filter(assessment__title__iexact=title).first()
+    if assignment is None:
+        return _err("No assessment you teach matches that reminder.", 404)
+
+    vc = assignment.virtual_classroom
+    # Same access rule the classroom page itself uses: the assigned teacher may
+    # nudge their own class; a school leader may nudge a class they can read.
+    # Checking is_staff here instead 404'd every leader whose account carries a
+    # role group but not Django's staff flag, so the button always failed.
+    if vc.teacher_id != request.user.pk:
+        if not _is_staff_admin(request.user) or not user_can_read_grade(
+            request.user, vc.section.grade_level
+        ):
+            return _err("No assessment you teach matches that reminder.", 404)
+    enrollments = list(
+        VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom=vc,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).select_related("student__user")
+    )
+
+    raw_ids = data.get("student_ids")
+    if isinstance(raw_ids, str):
+        raw_ids = [raw_ids]
+    if raw_ids:
+        wanted = {str(x) for x in raw_ids}
+        targets = [
+            e
+            for e in enrollments
+            if str(e.student_id) in wanted
+            or str(getattr(e.student, "user_id", "")) in wanted
+        ]
+    else:
+        submitted = set(
+            Submission.objects.filter(
+                assessment_assignment=assignment,
+                student_id__in=[e.student_id for e in enrollments],
+            ).values_list("student_id", flat=True)
+        )
+        targets = [e for e in enrollments if e.student_id not in submitted]
+
+    recipient_ids = [
+        e.student.user_id for e in targets if e.student and e.student.user_id
+    ]
+    if not recipient_ids:
+        return _ok(sent=0, created=0)
+
+    assess_title = assignment.assessment.title or "your assessment"
+    message = 'Your teacher is reminding you to submit "{}".'.format(assess_title)
+    deadline = assignment.assessment.submission_deadline
+    if deadline:
+        message += " Due {}.".format(
+            timezone.localtime(deadline).strftime("%b %d, %Y %I:%M %p")
+        )
+    url = reverse("classrooms:classroom_detail", args=[vc.pk])
+
+    created = 0
+    for uid in recipient_ids:
+        # A nudge is a fresh event each time: drop the previous reminder for
+        # this student+assessment and create a new unread row. Otherwise the
+        # second reminder reuses the already-read row (source_id was NULL for
+        # every assessment, so they all collided) and the student's bell never
+        # lit again.
+        Notification.objects.filter(
+            recipient_id=uid,
+            notification_type=Notification.TYPE_ASSESSMENT,
+            source_type="assessment_reminder",
+            source_id=assignment.pk,
+        ).delete()
+        Notification.objects.create(
+            recipient_id=uid,
+            notification_type=Notification.TYPE_ASSESSMENT,
+            source_type="assessment_reminder",
+            source_id=assignment.pk,
+            virtual_classroom=vc,
+            title="Reminder: {}".format(assess_title)[:200],
+            message=message[:200],
+            url=url,
+        )
+        created += 1
+    _log(
+        request.user,
+        "assessment_reminder_sent:{}".format(assess_title),
+        entity_type="AssessmentAssignment",
+        entity_id=assignment.pk,
+    )
+    return _ok(sent=len(recipient_ids), created=created)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/submission-file/<pk>/ — download a student's uploaded work.
+# Accessible to the student who owns it, the assigned teacher, or an
+# authorised school leader for the classroom's grade level.
+# ---------------------------------------------------------------------------
+@login_required
+@require_GET
+def submission_file(request, pk):
+    submission = (
+        Submission.objects.filter(pk=pk)
+        .select_related(
+            "student",
+            "student__user",
+            "assessment_assignment",
+            "assessment_assignment__virtual_classroom",
+            "assessment_assignment__virtual_classroom__section",
+        )
+        .first()
+    )
+    if submission is None:
+        return _err("Submission not found.", 404)
+
+    user = request.user
+    vc = submission.assessment_assignment.virtual_classroom
+    is_owner = submission.student.user_id == user.pk
+    is_teacher = vc.teacher_id == user.pk
+    is_leader = _is_staff_admin(user) and user_can_read_grade(
+        user, vc.section.grade_level
+    )
+    if not (is_owner or is_teacher or is_leader):
+        return _err("You do not have access to this submission.", 403)
+
+    field = submission.attached_file
+    if not field:
+        response = next(
+            (
+                r
+                for r in submission.responses.all()
+                if r.response_file
+            ),
+            None,
+        )
+        field = response.response_file if response is not None else None
+    if not field:
+        return _err("This submission has no uploaded file.", 404)
+
+    try:
+        handle = field.open("rb")
+        return FileResponse(
+            handle,
+            as_attachment=True,
+            filename=os.path.basename(field.name),
+        )
+    except Exception:
+        try:
+            return HttpResponseRedirect(field.url)
+        except Exception:
+            return _err("The submitted file could not be found.", 404)
 
 
 # ---------------------------------------------------------------------------
@@ -2262,6 +2831,12 @@ def vc_theme(request):
 
     vc.save()
     _log(request.user, "vc_theme_updated", entity_type="VirtualClassroom", entity_id=vc.id)
+    # Everyone enrolled in this classroom repaints its cover/theme without a
+    # reload, exactly like a material or announcement change.
+    try:
+        _notify_classroom_change(vc, request.user, ["theme", "classroom"])
+    except Exception:
+        pass
     return _ok(
         virtual_classroom_id=vc.id,
         color=vc.theme_color,
@@ -2353,6 +2928,58 @@ def notifications_read(request):
 
 
 # ---------------------------------------------------------------------------
+# GET /api/notifications/ — the persistent header-bell feed for the SPA
+# ---------------------------------------------------------------------------
+@login_required
+@require_GET
+def notifications(request):
+    """Unread count plus the newest notifications, scoped to the caller.
+
+    The SPA dashboards render their bell from this; the server-rendered pages
+    use the matching ``communication`` view. Both read the same model, so the
+    two UIs cannot disagree.
+    """
+    try:
+        limit = int(request.GET.get("limit", 20))
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(limit, 100))
+    qs = Notification.objects.filter(recipient=request.user).select_related("virtual_classroom")
+    unread_count = qs.filter(is_read=False).count()
+    from apps.communication import notifications as notif_service
+
+    items = [
+        {
+            "id": n.pk,
+            "type": n.notification_type,
+            "title": n.title,
+            "message": n.message,
+            "url": notif_service.notification_target(n),
+            "is_read": n.is_read,
+            "classroom_id": n.virtual_classroom_id,
+            "source_type": n.source_type,
+            "source_id": n.source_id,
+            "created_at": n.created_at.isoformat(),
+            "open_url": reverse("communication:notification_open", args=[n.pk]),
+        }
+        for n in qs[:limit]
+    ]
+    return JsonResponse({"ok": True, "unread_count": unread_count, "total": qs.count(), "items": items})
+
+
+# ---------------------------------------------------------------------------
+# POST /api/notifications/mark-all-read/ — clear the bell for the caller
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def notifications_mark_all_read(request):
+    count = Notification.objects.filter(recipient=request.user, is_read=False).update(
+        is_read=True, read_at=timezone.now()
+    )
+    return _ok(count=count, unread_count=0)
+
+
+# ---------------------------------------------------------------------------
 # POST /api/teacher-content/ — topics + learning resources for a classroom
 # ---------------------------------------------------------------------------
 @login_required
@@ -2368,7 +2995,7 @@ def teacher_content(request):
             return _err("Invalid virtual_classroom_id.")
         vc = VirtualClassroom.objects.filter(pk=cid, teacher=request.user, status=STATUS_ACTIVE).first()
     if vc is None:
-        return _ok(count=0, skipped="no_virtual_classroom")
+        return _err("Open a Virtual Classroom before adding or copying learning resources.", status=409)
 
     saved = {}
     topic = None
@@ -2408,12 +3035,21 @@ def teacher_content(request):
         saved["resource_id"] = resource.pk
         if data.get("topic_id"):
             topic = Topic.objects.filter(pk=data["topic_id"], virtual_classroom=vc).first()
+        topic_name = (data.get("topic") or data.get("topic_name") or "").strip()
+        if topic is None and topic_name:
+            topic = Topic.objects.filter(virtual_classroom=vc, name=topic_name).first()
         if topic is None:
-            topic = Topic.objects.filter(virtual_classroom=vc).first()
-        if topic is not None:
-            LearningResourcePlacement.objects.get_or_create(
-                resource=resource, virtual_classroom=vc, topic=topic, placed_by=request.user
+            topic, _ = Topic.objects.get_or_create(
+                virtual_classroom=vc, name="General Resources", defaults={"order": 0}
             )
+        placement, _ = LearningResourcePlacement.objects.get_or_create(
+            resource=resource, virtual_classroom=vc, topic=topic,
+            defaults={"placed_by": request.user},
+        )
+        try:
+            notif_service.notify_resource_placement(placement)
+        except Exception:
+            pass
 
     elif data.get("action") in ("file", "upload"):
         uploads = request.FILES.getlist("file")
@@ -2461,13 +3097,17 @@ def teacher_content(request):
         if topic is None and topic_name:
             topic = Topic.objects.filter(virtual_classroom=vc, name=topic_name).first()
         if topic is None:
-            topic = Topic.objects.filter(virtual_classroom=vc).first()
-        if topic is None:
-            topic = Topic.objects.create(virtual_classroom=vc, name="General Resources", order=0)
+            topic, _ = Topic.objects.get_or_create(
+                virtual_classroom=vc, name="General Resources", defaults={"order": 0}
+            )
         for _resource in resources:
-            LearningResourcePlacement.objects.get_or_create(
+            placement, _ = LearningResourcePlacement.objects.get_or_create(
                 resource=_resource, virtual_classroom=vc, topic=topic, placed_by=request.user
             )
+            try:
+                notif_service.notify_resource_placement(placement)
+            except Exception:
+                pass
             _log(request.user, "resource_uploaded", entity_type="LearningResource", entity_id=_resource.pk)
 
     # Tell the students in this classroom their Materials tab changed, so it
@@ -2519,7 +3159,8 @@ def _human_size(num):
 @login_required
 def learning_resources(request):
     qs = (
-        LearningResource.objects.select_related("subject", "uploaded_by")
+        LearningResource.objects.filter(status=LearningResource.STATUS_ACTIVE)
+        .select_related("subject", "uploaded_by")
         .prefetch_related("placements__topic")
         .order_by("-created_at")
     )
@@ -2537,7 +3178,14 @@ def learning_resources(request):
     # Roles that see every classroom (as opposed to only their own). The System
     # Administrator holds every permission, so the shared repository must offer
     # the full classroom list and let the admin copy resources into any class.
-    is_platform_admin = request.user.is_superuser or request.user.groups.filter(name="system_admin").exists()
+    is_platform_admin = request.user.is_superuser or request.user.groups.filter(name__in=["system_admin"]).exists()
+    # Leadership (campus-wide) roles browse a true school-wide Material
+    # Repository: every learning resource, including ones teachers only placed
+    # in a specific Virtual Classroom. They are not students, so per-class
+    # materials are not a leak for them.
+    is_school_wide_viewer = is_platform_admin or request.user.groups.filter(
+        name__in=["principal", "elementary_principal", "assistant_principal", "quality_audit"]
+    ).exists()
     if requested_vc:
         if is_teacher:
             cid = VirtualClassroom.objects.filter(
@@ -2549,7 +3197,20 @@ def learning_resources(request):
             cid = requested_vc
         qs = qs.filter(placements__virtual_classroom_id=cid).distinct()
     else:
-        qs = qs.filter(share_to_repository=True).distinct()
+        # With no classroom filter this is the browse-all list.
+        #   - Leadership/admin: every resource in the school.
+        #   - Teachers: the shared subject-level store plus their own uploads
+        #     (a fresh upload that is only visible in its class should still not
+        #     disappear from a teacher's view of the repository).
+        #   - Everyone else (students etc.): shared resources only.
+        if is_school_wide_viewer:
+            pass
+        elif is_teacher:
+            qs = qs.filter(
+                Q(share_to_repository=True) | Q(uploaded_by_id=request.user.id)
+            ).distinct()
+        else:
+            qs = qs.filter(share_to_repository=True).distinct()
 
     alias_map = {
         "document": "doc", "presentation": "ppt", "image": "img",
@@ -2582,10 +3243,11 @@ def learning_resources(request):
             meta += " · " + size
         url = ""
         if r.file:
-            try:
-                url = r.file.url
-            except Exception:
-                url = ""
+            # Route through the authenticated download view rather than the raw
+            # storage URL: it re-checks classroom/subject access and returns the
+            # original bytes with the right Content-Type and attachment header,
+            # so a Word/PDF file is not rendered as text in the browser.
+            url = reverse("teaching:resource_download", args=[r.pk])
         elif r.external_link:
             url = r.external_link
         items.append({
@@ -2617,7 +3279,9 @@ def learning_resources(request):
 @api_perm_required("manage_learning_resources", "upload_learning_resource")
 def attach_learning_resource(request):
     data = _payload(request)
-    resource = LearningResource.objects.filter(pk=data.get("resource_id")).first()
+    resource = LearningResource.objects.filter(
+        pk=data.get("resource_id"), status=LearningResource.STATUS_ACTIVE
+    ).first()
     if resource is None:
         return _err("Learning resource not found.")
     vcs = VirtualClassroom.objects.filter(
@@ -2639,6 +3303,11 @@ def attach_learning_resource(request):
         topic=topic,
         defaults={"placed_by": request.user},
     )
+    if created:
+        try:
+            notif_service.notify_resource_placement(placement)
+        except Exception:
+            pass
     _log(
         request.user,
         "resource_linked",
@@ -2711,7 +3380,11 @@ def attendance(request):
         lrn = str(rec.get("lrn") or "").strip()
         name = str(rec.get("name") or "").strip()
         status_raw = str(rec.get("status") or "P")
-        status = status_map.get(status_raw.lower(), AttendanceRecord.PRESENT_ON_TIME)
+        status = (
+            status_map.get(status_raw.lower())
+            or status_map.get(status_raw)
+            or AttendanceRecord.PRESENT_ON_TIME
+        )
         profile = None
         if lrn.isdigit() and len(lrn) == 12:
             profile = StudentProfile.objects.filter(lrn=lrn).first()
@@ -2730,6 +3403,22 @@ def attendance(request):
         except ValidationError:
             # e.g. an excused absence without the mandatory note/attachment.
             skipped += 1
+            continue
+        # Bell notice: tell the student they were absent, and clear any stale
+        # notice when the teacher corrects the record to present/late. A
+        # notification failure must never break the attendance save itself.
+        is_absent = status in (AttendanceRecord.ABSENT_UNEXCUSED, AttendanceRecord.ABSENT_EXCUSED)
+        label = "absent (excused)" if status == AttendanceRecord.ABSENT_EXCUSED else "absent"
+        try:
+            notif_service.sync_attendance_notification(
+                user_id=profile.user_id,
+                virtual_classroom=vc,
+                session=session,
+                is_absent=is_absent,
+                absent_label=label,
+            )
+        except Exception:  # pragma: no cover - notification is an enhancement
+            pass
     _log(request.user, f"attendance_saved:{session_date}", entity_type="AttendanceSession", entity_id=session.pk)
     return _ok(count=count, skipped=skipped, virtual_classroom_id=vc.pk, session_date=str(session_date))
 
@@ -2753,25 +3442,50 @@ def assessments(request):
             return _err("Invalid virtual_classroom_id.")
         vc = VirtualClassroom.objects.filter(pk=cid, teacher=request.user, status=STATUS_ACTIVE).first()
     if vc is None:
-        return _ok(count=0, skipped="no_virtual_classroom")
+        return _err("Open an active virtual classroom that you teach before publishing an assessment.")
 
     method_map = {
         "Quiz": Assessment.METHOD_QUIZ,
+        "Quizzes": Assessment.METHOD_QUIZ,
         "Seatwork": Assessment.METHOD_SEATWORK,
+        "Seatworks": Assessment.METHOD_SEATWORK,
         "Assignment": Assessment.METHOD_ASSIGNMENT,
+        "Assignments": Assessment.METHOD_ASSIGNMENT,
         "Examination": Assessment.METHOD_EXAMINATION,
+        "Examinations": Assessment.METHOD_EXAMINATION,
         "Project": Assessment.METHOD_PROJECT,
+        "Projects": Assessment.METHOD_PROJECT,
     }
     type_map = {
         "Quiz": Assessment.TYPE_WRITTEN_ORAL,
+        "Quizzes": Assessment.TYPE_WRITTEN_ORAL,
         "Seatwork": Assessment.TYPE_WRITTEN_ORAL,
+        "Seatworks": Assessment.TYPE_WRITTEN_ORAL,
         "Assignment": Assessment.TYPE_PRODUCT_PERFORMANCE,
+        "Assignments": Assessment.TYPE_PRODUCT_PERFORMANCE,
         "Examination": Assessment.TYPE_SUMMATIVE_TEST,
+        "Examinations": Assessment.TYPE_SUMMATIVE_TEST,
         "Project": Assessment.TYPE_PRODUCT_PERFORMANCE,
+        "Projects": Assessment.TYPE_PRODUCT_PERFORMANCE,
     }
     a_label = str(data.get("type") or "Quiz")
     method = method_map.get(a_label, method_map["Quiz"])
     a_type = type_map.get(a_label, Assessment.TYPE_WRITTEN_ORAL)
+
+    def _parse_dt(value):
+        value = (value or "").strip() if isinstance(value, str) else ""
+        if not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(value)
+        except (TypeError, ValueError):
+            return None
+        if timezone.is_naive(parsed):
+            parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+        return parsed
+
+    available_at = _parse_dt(data.get("openDate"))
+    submission_deadline = _parse_dt(data.get("deadline"))
 
     assessment = Assessment.objects.filter(subject=vc.subject, created_by=request.user, title=title).order_by("-created_at").first()
     if assessment is None:
@@ -2779,11 +3493,31 @@ def assessments(request):
             subject=vc.subject, academic_year=vc.academic_year, created_by=request.user, title=title,
             assessment_method=method, assessment_type=a_type,
             instructions=(data.get("instructions") or ""),
-            submission_deadline=timezone.now() + timedelta(days=1),
+            available_at=available_at,
+            submission_deadline=submission_deadline or (timezone.now() + timedelta(days=1)),
             lifecycle_stage=Assessment.STAGE_CREATED,
         )
+    else:
+        update_fields = []
+        if instructions := data.get("instructions"):
+            assessment.instructions = instructions
+            update_fields.append("instructions")
+        if available_at is not None:
+            assessment.available_at = available_at
+            update_fields.append("available_at")
+        if submission_deadline is not None:
+            assessment.submission_deadline = submission_deadline
+            update_fields.append("submission_deadline")
+        if update_fields:
+            assessment.save(update_fields=update_fields)
 
-    AssessmentAssignment.objects.get_or_create(assessment=assessment, virtual_classroom=vc, assigned_by=request.user)
+    assignment, _ = AssessmentAssignment.objects.get_or_create(
+        assessment=assessment, virtual_classroom=vc, assigned_by=request.user
+    )
+    try:
+        notif_service.notify_assessment_assignment(assignment)
+    except Exception:
+        pass
 
     questions = data.get("questions") or []
     if questions and not assessment.parts.exists():
@@ -3409,7 +4143,14 @@ def messages(request):
         group_id = request.GET.get("thread")
 
         if peer_id:
-            peer = User.objects.filter(pk=_coerce_int(peer_id), status=User.Status.ACTIVE).first()
+            # Match the picker in messageable_contacts: a peer is any learner
+            # enrolled in a class the caller may reach, regardless of account
+            # status (only archived accounts are rejected).
+            peer = (
+                User.objects.filter(pk=_coerce_int(peer_id))
+                .exclude(status=User.Status.ARCHIVED)
+                .first()
+            )
             if peer is None or peer.pk == user.pk:
                 return _err("Recipient not found.", 404)
             if not _shares_classroom(user, peer):
@@ -3531,9 +4272,11 @@ def messages(request):
         return _err("Message text is required.")
 
     if data.get("recipient_id"):
-        peer = User.objects.filter(
-            pk=_coerce_int(data["recipient_id"]), status=User.Status.ACTIVE
-        ).first()
+        peer = (
+            User.objects.filter(pk=_coerce_int(data["recipient_id"]))
+            .exclude(status=User.Status.ARCHIVED)
+            .first()
+        )
         if peer is None or peer.pk == user.pk:
             return _err("Recipient not found.", 404)
         if not _shares_classroom(user, peer):
@@ -3768,3 +4511,38 @@ def calendar(request, event_id=None):
         return _ok(deleted=pk)
 
     return _err("Method not allowed.", 405)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/teacher-dashboard/ and /api/student-dashboard/ — polling snapshots
+# ---------------------------------------------------------------------------
+# Auto-refresh polling foundation: the same dashboard_json that is embedded in
+# each template is exposed as a light JSON endpoint so an open dashboard can
+# re-fetch it in the background and repaint whatever changed, without a page
+# reload. Guarding matches the dashboard view: superuser or the named group.
+@login_required
+@require_GET
+def teacher_dashboard_snapshot(request):
+    if not (request.user.is_superuser or request.user.groups.filter(name="teacher").exists()):
+        return _err("You do not have access to this dashboard.", 403)
+    from apps.dashboards.context import teacher_context
+
+    try:
+        data = teacher_context(request.user)["dashboard_json"]
+    except Exception:
+        return _err("Could not build the dashboard.", 500)
+    return _ok(**data)
+
+
+@login_required
+@require_GET
+def student_dashboard_snapshot(request):
+    if not (request.user.is_superuser or request.user.groups.filter(name="student").exists()):
+        return _err("You do not have access to this dashboard.", 403)
+    from apps.dashboards.context import student_context
+
+    try:
+        data = student_context(request.user)["dashboard_json"]
+    except Exception:
+        return _err("Could not build the dashboard.", 500)
+    return _ok(**data)

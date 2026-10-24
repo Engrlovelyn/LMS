@@ -267,3 +267,62 @@ class AvatarDeliveryTests(TestCase):
                 self.assertIn(f"/accounts/avatar/avatars/{view_name}.jpg/", html)
                 self.assertNotIn("X-Amz-Signature", html)
                 self.assertNotIn("X-Amz-Expires", html)
+
+
+class UserAccountManagementTests(TestCase):
+    """View/Update User Account and Reactivate Account screens."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import EmployeeProfile
+
+        cls.admin = User.objects.create_superuser(
+            email="acct_admin@test.local", password="pass12345x"
+        )
+        cls.admin.status = User.Status.ACTIVE
+        cls.admin.save()
+
+        cls.target = User.objects.create_user(
+            email="acct_target@test.local", password="pass12345x"
+        )
+        cls.target.status = User.Status.ACTIVE
+        cls.target.save()
+        EmployeeProfile.objects.create(
+            user=cls.target, employee_number="EMP-2001",
+            first_name="Rosa", last_name="Lim",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_view_user_account_renders(self):
+        res = self.client.get(
+            reverse("accounts:account_detail", args=[self.target.pk])
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "acct_target@test.local")
+
+    def test_update_user_account_changes_email_and_status(self):
+        res = self.client.post(
+            reverse("accounts:account_detail", args=[self.target.pk]),
+            {"email": "renamed@test.local", "status": User.Status.LOCKED},
+        )
+        self.assertEqual(res.status_code, 302)
+        self.target.refresh_from_db()
+        self.assertEqual(self.target.email, "renamed@test.local")
+        self.assertEqual(self.target.status, User.Status.LOCKED)
+
+    def test_reactivate_restores_active_status_and_groups(self):
+        from django.contrib.auth.models import Group
+
+        group, _ = Group.objects.get_or_create(name="teacher")
+        self.target.status = User.Status.ARCHIVED
+        self.target.save()
+        self.target.groups.clear()
+
+        res = self.client.post(
+            reverse("accounts:account_reactivate", args=[self.target.pk])
+        )
+        self.assertEqual(res.status_code, 302)
+        self.target.refresh_from_db()
+        self.assertEqual(self.target.status, User.Status.ACTIVE)

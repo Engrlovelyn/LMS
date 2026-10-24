@@ -1,11 +1,16 @@
 from decimal import Decimal
 
+from datetime import timedelta
+import json
+
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from apps.accounts.campus import (
     WHOLE_SCHOOL,
@@ -16,6 +21,7 @@ from apps.accounts.campus import (
 )
 from apps.accounts.decorators import has_permission, perm_required
 from apps.attendance.models import AttendanceRecord
+from apps.communication import notifications as notif_service
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 
 def _notify(vc_ids, actor, kinds):
@@ -41,6 +47,7 @@ from .models import (
     Assessment,
     AssessmentAssignment,
     AssessmentPart,
+    AssessmentProctoringEvent,
     GradingComponent,
     GradingFormula,
     StudentGrade,
@@ -81,6 +88,47 @@ def _assessments_for_user(user):
         ).values_list("assessment_id", flat=True)
         return qs.filter(id__in=assignment_ids).distinct()
     return qs.none()
+
+
+def _teacher_subject_ids(user):
+    from apps.academic_structure.models import Subject
+
+    return (
+        Subject.objects.filter(virtual_classrooms__teacher_id=user.id)
+        .values_list("id", flat=True)
+        .distinct()
+    )
+
+
+def _can_view_assessment(user, assessment):
+    """Object-level read check, mirroring what the list already scopes.
+
+    Teachers may read their own assessments and assessments in any subject they
+    actually teach (so a teacher who shares a subject can open a colleague's
+    repository item), but never another subject's work by editing the URL.
+    Students may only read assessments assigned to a classroom they are actively
+    enrolled in. Administrators keep the existing campus rule.
+    """
+    if user.is_superuser:
+        return True
+    if user.groups.filter(name__in=ADMIN_ROLES).exists():
+        scopes = campus_scopes_for(user)
+        if WHOLE_SCHOOL in scopes:
+            return True
+        return assessment.subject_id is not None and user_can_read_grade(
+            user, assessment.subject.grade_level
+        )
+    if user.groups.filter(name="teacher").exists():
+        if assessment.created_by_id == user.id:
+            return True
+        return assessment.subject_id in set(_teacher_subject_ids(user))
+    if user.groups.filter(name="student").exists() and hasattr(user, "student_profile"):
+        return AssessmentAssignment.objects.filter(
+            assessment=assessment,
+            virtual_classroom__enrollments__student=user.student_profile,
+            virtual_classroom__enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).exists()
+    return False
 
 
 def _can_edit_assessment(user, assessment):
@@ -153,6 +201,8 @@ def assessment_detail(request, pk):
         Assessment.objects.select_related("subject", "created_by", "academic_year"),
         pk=pk,
     )
+    if not _can_view_assessment(request.user, assessment):
+        return HttpResponseForbidden("You do not have access to this assessment.")
     parts = assessment.parts.order_by("order")
     assignments = assessment.assignments.select_related(
         "virtual_classroom", "virtual_classroom__section"
@@ -189,6 +239,115 @@ def assessment_detail(request, pk):
         "total_possible": assessment.total_possible_score,
     }
     return render(request, "assessments/assessment_detail.html", context)
+
+
+def _item_correct_answer(item):
+    """Human-readable correct answer for one compiled item, for display."""
+    if not isinstance(item, dict):
+        return ""
+    if "correct_matches" in item:  # matching_type
+        matches = item.get("correct_matches") or {}
+        if isinstance(matches, dict):
+            return "; ".join("{} \u2192 {}".format(k, v) for k, v in matches.items())
+        return str(matches)
+    if "accepted_answers" in item:  # identification / short_answer
+        answers = item.get("accepted_answers") or []
+        if isinstance(answers, (list, tuple)):
+            return ", ".join(str(a) for a in answers)
+        return str(answers)
+    if "correct_answer" in item:  # multiple choice, true_false, numeric
+        correct = item.get("correct_answer")
+        if isinstance(correct, (list, tuple)):
+            return ", ".join(str(c) for c in correct)
+        return str(correct)
+    return ""
+
+
+def _format_student_answer(answer):
+    if answer is None or answer == "":
+        return ""
+    if isinstance(answer, dict):
+        return "; ".join("{} \u2192 {}".format(k, v) for k, v in answer.items())
+    if isinstance(answer, (list, tuple)):
+        return ", ".join(str(a) for a in answer)
+    return str(answer)
+
+
+@perm_required("view_assessment_custom")
+def assessment_result(request, pk):
+    """Student-facing result sheet for one assessment.
+
+    Shows the student's own answers alongside the correct answers, the
+    per-item and per-part scores, and the overall total. This is the target
+    of the "View" action on an assessment notification.
+    """
+    assessment = get_object_or_404(
+        Assessment.objects.select_related("subject", "created_by"),
+        pk=pk,
+    )
+    if not _can_view_assessment(request.user, assessment):
+        return HttpResponseForbidden("You do not have access to this assessment.")
+    profile = getattr(request.user, "student_profile", None)
+    if profile is None:
+        return HttpResponseForbidden("Only students can view their own results.")
+    submission = (
+        Submission.objects.filter(
+            assessment_assignment__assessment=assessment,
+            student=profile,
+        )
+        .select_related("assessment_assignment__virtual_classroom")
+        .order_by("-submitted_at")
+        .first()
+    )
+    if submission is None:
+        messages.info(request, "You have not submitted this assessment yet.")
+        return redirect(reverse("assessments:assessment_detail", args=[assessment.pk]))
+    responses = {r.part_id: r for r in submission.responses.select_related("part").all()}
+    part_rows = []
+    for part in assessment.parts.order_by("order"):
+        resp = responses.get(part.pk)
+        item_meta = (resp.item_scores if resp else {}) or {}
+        response_data = (resp.response_data if resp else {}) or {}
+        rows = []
+        for item_key, item in (part.items or {}).items():
+            meta = item_meta.get(item_key) or {}
+            score = meta.get("score")
+            rows.append(
+                {
+                    "question": item.get("question", ""),
+                    "answer": _format_student_answer(response_data.get(item_key)),
+                    "correct": _item_correct_answer(item),
+                    "point": item.get("point", 0),
+                    "score": score,
+                    "is_correct": meta.get("is_correct"),
+                    "feedback": meta.get("feedback", ""),
+                    "pending": score is None,
+                }
+            )
+        part_rows.append(
+            {
+                "part": part,
+                "rows": rows,
+                "score": resp.score if resp else None,
+            }
+        )
+    assignment = submission.assessment_assignment
+    vc = assignment.virtual_classroom
+    pts = int(assessment.total_possible_score or 0)
+    score = float(submission.total_score or 0)
+    pct = round(100.0 * score / pts) if pts else 0
+    context = {
+        "assessment": assessment,
+        "submission": submission,
+        "part_rows": part_rows,
+        "classroom": vc,
+        "pts": pts,
+        "score": score,
+        "pct": pct,
+        "grading_status": submission.get_grading_status_display(),
+        "teacher_remarks": submission.teacher_remarks or "",
+    }
+    return render(request, "assessments/assessment_result.html", context)
 
 
 @perm_required("update_assessment_custom")
@@ -300,6 +459,8 @@ def assessment_part_delete(request, pk, part_pk):
 @perm_required("access_assessment_repository")
 def assessment_assign(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
+    if not _can_edit_assessment(request.user, assessment):
+        return HttpResponseForbidden("You cannot assign this assessment.")
     if assessment.status == Assessment.STATUS_ARCHIVED:
         messages.error(request, "Cannot assign an archived assessment.")
         return redirect(
@@ -330,12 +491,18 @@ def assessment_assign(request, pk):
                 assessment=assessment,
                 virtual_classroom__subject=assessment.subject,
             ).exists()
-            AssessmentAssignment.objects.create(
+            assignment = AssessmentAssignment.objects.create(
                 assessment=assessment,
                 virtual_classroom=vc,
                 assigned_by=request.user,
                 is_original=is_original,
             )
+            # Bell notification for the students in this classroom. Skipped
+            # automatically when the assessment is still scheduled.
+            try:
+                notif_service.notify_assessment_assignment(assignment)
+            except Exception:
+                pass
             created_count += 1
         if created_count:
             messages.success(
@@ -349,6 +516,68 @@ def assessment_assign(request, pk):
         )
     context = {"form": form, "assessment": assessment}
     return render(request, "assessments/assessment_assign.html", context)
+
+
+PROCTORING_COOLDOWN_SECONDS = 5
+
+
+@login_required
+@require_POST
+def record_proctoring_event(request, pk):
+    """Record a client-detected focus/visibility/screenshot signal.
+
+    The browser can only *observe* these signals; this stores them so a teacher
+    can review what happened. Only an actively enrolled student assigned this
+    assessment may write a row, and rapid duplicates from the burst of events a
+    single tab switch fires collapse into one.
+    """
+    assessment = get_object_or_404(Assessment, pk=pk)
+    student = getattr(request.user, "student_profile", None)
+    if student is None:
+        return JsonResponse({"ok": False, "error": "students_only"}, status=403)
+
+    assigned = AssessmentAssignment.objects.filter(
+        assessment=assessment,
+        virtual_classroom__enrollments__student=student,
+        virtual_classroom__enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+    ).exists()
+    if not assigned:
+        return JsonResponse({"ok": False, "error": "not_enrolled"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (ValueError, UnicodeDecodeError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    event_type = payload.get("event_type") or request.POST.get("event_type") or ""
+    valid_types = {choice for choice, _ in AssessmentProctoringEvent.EVENT_TYPE_CHOICES}
+    if event_type not in valid_types:
+        return JsonResponse({"ok": False, "error": "unknown_event"}, status=400)
+
+    metadata = {}
+    for key in ("source", "hidden_seconds", "detail"):
+        if key in payload:
+            metadata[key] = payload[key]
+    if isinstance(payload.get("metadata"), dict):
+        metadata.update(payload["metadata"])
+
+    since = timezone.now() - timedelta(seconds=PROCTORING_COOLDOWN_SECONDS)
+    if AssessmentProctoringEvent.objects.filter(
+        assessment=assessment,
+        student=student,
+        event_type=event_type,
+        created_at__gte=since,
+    ).exists():
+        return JsonResponse({"ok": True, "recorded": False, "reason": "duplicate"})
+
+    AssessmentProctoringEvent.objects.create(
+        assessment=assessment,
+        student=student,
+        event_type=event_type,
+        metadata=metadata,
+    )
+    return JsonResponse({"ok": True, "recorded": True})
 
 
 @perm_required("complete_assessment_custom")
@@ -400,6 +629,13 @@ def assessment_submit(request, pk):
         return redirect(
             reverse("assessments:assessment_detail", args=[assessment.pk])
         )
+    now = timezone.now()
+    if assessment.available_at and assessment.available_at > now:
+        messages.error(request, "This assessment is not yet available for submission.")
+        return redirect(reverse("assessments:assessment_detail", args=[assessment.pk]))
+    if assessment.submission_deadline and assessment.submission_deadline < now:
+        messages.error(request, "The submission deadline for this assessment has passed.")
+        return redirect(reverse("assessments:assessment_detail", args=[assessment.pk]))
     parts = list(assessment.parts.order_by("order"))
     if request.method == "POST":
         form = SubmitForm(request.POST, parts=parts)
@@ -450,6 +686,8 @@ def assessment_submit(request, pk):
 @perm_required("monitor_student_submissions")
 def submissions_monitor(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
+    if not _can_view_assessment(request.user, assessment):
+        return HttpResponseForbidden("You do not have access to this assessment.")
     submissions = Submission.objects.filter(
         assessment_assignment__assessment=assessment,
     ).select_related(
@@ -464,9 +702,44 @@ def submissions_monitor(request, pk):
     return render(request, "assessments/submissions_monitor.html", context)
 
 
+@perm_required("auto_grade_objective_assessment")
+def auto_grade_submission(request, pk, submission_pk):
+    """Re-run auto-grading over every objective response of one submission.
+
+    Submissions are auto-graded inline at submit time; this is the explicit
+    entry point for a teacher to re-apply the answer key (for example after an
+    item key was corrected), and it enforces the auto-grade permission that
+    the submit path itself cannot.
+    """
+    assessment = get_object_or_404(Assessment, pk=pk)
+    if not _can_view_assessment(request.user, assessment):
+        return HttpResponseForbidden("You do not have access to this assessment.")
+    submission = get_object_or_404(
+        Submission,
+        pk=submission_pk,
+        assessment_assignment__assessment=assessment,
+    )
+    if request.method == "POST":
+        graded = 0
+        for response in submission.responses.select_related("part"):
+            if response.part.is_objective:
+                response.compute_auto_score()
+                graded += 1
+        submission.recompute_total_score()
+        messages.success(
+            request,
+            f"Auto-graded {graded} objective response(s) for {submission.student}.",
+        )
+    return redirect(
+        reverse("assessments:submissions_monitor", args=[assessment.pk])
+    )
+
+
 @perm_required("manually_grade_subjective_assessment")
 def grade_submission(request, pk, submission_pk):
     assessment = get_object_or_404(Assessment, pk=pk)
+    if not _can_view_assessment(request.user, assessment):
+        return HttpResponseForbidden("You do not have access to this assessment.")
     submission = get_object_or_404(
         Submission,
         pk=submission_pk,
@@ -560,12 +833,42 @@ def grade_submission(request, pk, submission_pk):
 def assessment_repository(request):
     if not request.user.groups.filter(name="teacher").exists():
         return HttpResponseForbidden("Only teachers can access the repository.")
-    created = Assessment.objects.filter(
-        created_by=request.user,
-    ).select_related("subject", "academic_year").annotate(
-        placement_count=Count("assignments", distinct=True)
-    ).order_by("-created_at")
-    context = {"assessments": created}
+    from apps.academic_structure.models import Subject
+
+    # A teacher's repository is scoped by subject, not by authorship: two
+    # teachers who both handle Grade 10 Mathematics share that subject's
+    # assessment bank, while a Grade 10 English teacher cannot reach it.
+    subject_ids = list(_teacher_subject_ids(request.user))
+    qs = (
+        Assessment.objects.filter(
+            Q(created_by=request.user) | Q(subject_id__in=subject_ids)
+        )
+        .select_related("subject", "academic_year", "created_by")
+        .annotate(placement_count=Count("assignments", distinct=True))
+    )
+    subject_filter = request.GET.get("subject", "").strip()
+    q = request.GET.get("q", "").strip()
+    if subject_filter.isdigit():
+        qs = qs.filter(subject_id=int(subject_filter))
+    if q:
+        qs = qs.filter(
+            Q(title__icontains=q)
+            | Q(subject__name__icontains=q)
+            | Q(assessment_method__icontains=q)
+        )
+    assessments = list(qs.order_by("-created_at"))
+    for assessment in assessments:
+        assessment.can_edit = _can_edit_assessment(request.user, assessment)
+    subjects = Subject.objects.filter(id__in=subject_ids).order_by(
+        "grade_level", "name"
+    )
+    context = {
+        "assessments": assessments,
+        "subjects": subjects,
+        "q": q,
+        "subject_filter": subject_filter,
+        "is_empty": not assessments,
+    }
     return render(request, "assessments/assessment_repository.html", context)
 
 
@@ -673,6 +976,37 @@ def grade_book(request, vc_pk):
         "rows": [(e, grades.get(e.student_id)) for e in enrollments],
     }
     return render(request, "assessments/grade_book.html", context)
+
+
+@perm_required("assessments.compute_student_grade")
+def compute_grades(request, vc_pk):
+    """Dedicated endpoint to (re)compute StudentGrade rows for a classroom.
+
+    The grade book also computes on POST, but this endpoint exposes the
+    capability on its own so it is reachable and permission-enforced
+    independently of the grade book screen.
+    """
+    vc = get_object_or_404(
+        VirtualClassroom.objects.select_related("academic_year", "subject", "section"),
+        pk=vc_pk,
+    )
+    if not user_can_read_grade(request.user, vc.section.grade_level):
+        return HttpResponseForbidden("You cannot compute grades for this classroom.")
+    if request.method == "POST":
+        formula = getattr(vc, "grading_formula", None)
+        if not formula:
+            messages.error(
+                request, "No grading formula is configured for this class."
+            )
+        else:
+            from .services import compute_grades_for_classroom
+
+            result = compute_grades_for_classroom(vc, formula)
+            messages.success(
+                request,
+                f"Computed {result['grades']} grade record(s) for {result['students']} student(s).",
+            )
+    return redirect(reverse("assessments:grade_book", args=[vc.pk]))
 
 
 def _classrooms_for_performance(user):

@@ -28,8 +28,22 @@
   </div>
 </div>
 
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body">
+    <form method="get" action="" class="form-row" style="align-items:flex-end;margin:0;">
+      <div class="form-group" style="flex:2;min-width:220px;margin-bottom:0;">
+        <label class="form-label" for="empSearch">Search</label>
+        <input type="search" id="empSearch" name="q" value="{{ q }}" class="form-control" placeholder="Search name, email, or employee number...">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <button class="btn btn-outline"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+        {% if q %}<a class="btn btn-outline" href="{% url 'accounts:employee_account_list' %}">Clear</a>{% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="card">
-  <div class="card-header">
     <div class="card-title"><i class="fa-solid fa-users"></i> Employee Accounts</div>
   </div>
   <div class="table-wrap">
@@ -65,6 +79,16 @@
             {% if perms.accounts.update_employee_account %}
             <a class="btn btn-outline btn-sm" href="{% url 'accounts:employee_account_update' employee.pk %}">
               <i class="fa-solid fa-pen"></i> Update
+            </a>
+            {% endif %}
+            {% if perms.accounts.view_user_account %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:account_detail' employee.user.pk %}">
+              <i class="fa-solid fa-id-card"></i> View Account
+            </a>
+            {% endif %}
+            {% if perms.accounts.reactivate_account and employee.user.status == 'archived' %}
+            <a class="btn btn-outline btn-sm" href="{% url 'accounts:account_reactivate' employee.user.pk %}">
+              <i class="fa-solid fa-rotate-right"></i> Reactivate
             </a>
             {% endif %}
             {% if perms.accounts.reset_account_password %}

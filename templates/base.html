@@ -6,7 +6,7 @@
 <title>{% block title %}SVI LMS{% endblock %}</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/app.css' %}?v={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/empty_state.css' %}?v={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/calendar.css' %}?v={% now 'U' %}">
@@ -14,6 +14,7 @@
 <script src="{% static 'js/empty_state.js' %}?v={% now 'U' %}"></script>
 <script src="{% static 'js/calendar.js' %}?v={% now 'U' %}"></script>
 {% block extra_head %}{% endblock %}
+
 </head>
 <body>
 
@@ -30,7 +31,7 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
     <div class="header-right">
       <button class="dark-toggle" onclick="toggleDarkMode()" id="darkToggleBtn" aria-label="Toggle theme"><i class="fa-solid fa-moon"></i></button>
-      <button class="icon-btn" onclick="toggleNotif()" aria-label="Notifications"><i class="fa-solid fa-bell"></i><span class="badge"></span></button>
+      <button class="icon-btn" onclick="toggleNotif()" aria-label="Notifications"><i class="fa-solid fa-bell"></i><span class="badge" id="headerNotifBadge"{% if not unread_notification_count %} style="display:none"{% endif %}></span></button>
       <button class="profile-btn" onclick="toggleProfile()" aria-label="Profile">
         <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%233a86d4%22/><text x=%2220%22 y=%2227%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22700%22 font-size=%2216%22>{{ user_initials }}</text></svg>" class="profile-img" alt="Profile" id="headerProfileImg">
         <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label|default:user_role|default:"User" }}</div></div>
@@ -205,5 +206,49 @@ window.csrfToken = (function () {
 </script>
 
 {% block extra_js %}{% endblock %}
-</body>
+<script>
+/* Persistent header-bell notifications. The panel markup, the unread badge and
+   the toggle functions already existed but were mock; notifications.js replaces
+   them with real rows fetched from the server. */
+window.tassNotifyConfig = {
+  listId: 'notifList',
+  badgeId: 'headerNotifBadge',
+  summaryUrl: '{% url "communication:notification_summary" %}',
+  markAllUrl: '{% url "communication:notification_mark_all_read" %}',
+  allUrl: '{% url "communication:notifications" %}'
+};
+</script>
+<script src="{% static 'js/notifications.js' %}?v=2"></script>
+<style id="svi-black-yellow-theme">
+html[data-theme="light"] {
+  --navy:#090909; --blue:#ffdf00; --sky:#ffeb3b; --light-blue:#fff8c7; --accent:#fffbea;
+  --header-bg:#080808; --sidebar-bg:#080808; --sidebar-hover-bg:#242424; --sidebar-active-bg:#ffdf00;
+  --sidebar-text:rgba(255,255,255,.88); --sidebar-text-active:#080808;
+  --body-bg:#f3f3f3; --card-bg:#fff; --card-border:#d4d4d4; --text-primary:#171717; --text-muted:#777;
+  --gray-100:#f1f1f1; --gray-200:#d8d8d8; --gray-400:#8a8a8a; --gray-600:#555; --gray-700:#3e3e3e; --gray-800:#171717;
+  --input-border:#d0d0d0; --shadow:0 4px 24px rgba(0,0,0,.10); --shadow-sm:0 2px 10px rgba(0,0,0,.06);
+}
+html[data-theme="dark"] {
+  --navy:#050505; --blue:#ffdf00; --sky:#ffeb3b; --light-blue:#302b08; --accent:#211e0b;
+  --header-bg:#000; --sidebar-bg:#000; --sidebar-hover-bg:#1b1b1b; --sidebar-active-bg:#ffdf00;
+  --sidebar-text:rgba(255,255,255,.88); --sidebar-text-active:#080808;
+  --body-bg:#111; --card-bg:#1a1a1a; --card-border:#363636; --text-primary:#f5f5f5; --text-muted:#aaa;
+  --gray-100:#222; --gray-200:#383838; --gray-400:#a5a5a5; --gray-600:#ccc; --gray-700:#e0e0e0; --gray-800:#f5f5f5;
+  --input-bg:#202020; --input-border:#404040; --shadow:0 4px 24px rgba(0,0,0,.45); --shadow-sm:0 2px 10px rgba(0,0,0,.3);
+}
+html body .btn-primary, html body .btn-reg, html body .btn-ict {
+  background:#ffdf00 !important; border-color:#ffdf00 !important; color:#080808 !important;
+  box-shadow:0 5px 14px rgba(0,0,0,.14);
+}
+html body .btn-primary:hover, html body .btn-reg:hover, html body .btn-ict:hover {
+  background:#080808 !important; border-color:#080808 !important; color:#ffdf00 !important;
+}
+html body .btn-outline:hover, html body .icon-action:hover {
+  background:#ffdf00 !important; border-color:#ffdf00 !important; color:#080808 !important;
+}
+html body .nav-item.active { background:#ffdf00; color:#080808; }
+html body .nav-item.active .nav-item-icon, html body .nav-item.active .nav-item-label { color:#080808; }
+html body button:focus-visible, html body a:focus-visible, html body input:focus-visible,
+html body select:focus-visible, html body textarea:focus-visible { outline-color:#c3a900; }
+</style></body>
 </html>
