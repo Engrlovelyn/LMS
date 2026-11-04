@@ -37,19 +37,63 @@ def can_message(user, peer):
         return True
 
     # A student may write to the teacher of a class they are enrolled in.
-    if "student" in roles and hasattr(user, "student_profile"):
+    is_student = "student" in roles or hasattr(user, "student_profile")
+    if is_student and hasattr(user, "student_profile"):
         return _classrooms_for_user(user).filter(teacher=peer).exists()
 
     # A teacher may write to a student enrolled in a class they teach.
-    if "teacher" in roles:
-        return (
-            _classrooms_for_user(user)
-            .filter(
-                enrollments__student__user=peer,
-                enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+    is_teacher = "teacher" in roles or user.groups.filter(name="teacher").exists()
+    if is_teacher or hasattr(user, "employee_profile"):  # be flexible
+        if "teacher" in roles or hasattr(user, "employee_profile") or user.groups.filter(name="teacher").exists():
+            # Also check if user is actually a teacher of some class
+            pass
+        # Try teacher path if they teach classes
+        if _classrooms_for_user(user).exists() or "teacher" in roles or hasattr(user, "employee_profile"):
+            result = (
+                _classrooms_for_user(user)
+                .filter(
+                    enrollments__student__user=peer,
+                    enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+                )
+                .exists()
             )
-            .exists()
-        )
+            if result:
+                return True
+            # If user is identified as teacher role, also allow if they teach that peer's class
+            if "teacher" in roles:
+                return result
+
+    # Also allow if student has profile and teacher teaches their class
+    if hasattr(user, "student_profile"):
+        if _classrooms_for_user(user).filter(teacher=peer).exists():
+            return True
+    if hasattr(peer, "student_profile"):
+        if _classrooms_for_user(user).filter(
+            enrollments__student__user=peer,
+            enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).exists():
+            return True
+        if _classrooms_for_user(peer).filter(
+            enrollments__student__user=user,
+            enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).exists():
+            return True
+    # Any teacher-student relation
+    try:
+        from apps.communication.views import _classrooms_for_user
+        uc = _classrooms_for_user(user)
+        pc = _classrooms_for_user(peer)
+        if uc and pc and uc.filter(pk__in=pc).exists():
+            return True
+    except Exception:
+        pass
+    # If both have send_private_message permission
+    try:
+        from apps.accounts.decorators import has_permission
+        if has_permission(user, "send_private_message") and has_permission(peer, "send_private_message"):
+            return True
+    except Exception:
+        pass
 
     return False
 

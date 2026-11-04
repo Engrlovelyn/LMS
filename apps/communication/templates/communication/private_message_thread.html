@@ -20,7 +20,7 @@
   <div class="card-body">
     <div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;margin-bottom:18px;">
       {% for m in messages %}
-      <div style="display:flex;justify-content:{% if m.sender_id == user.id %}flex-end{% else %}flex-start{% endif %};">
+      <div id="message-{{ m.pk }}" style="display:flex;justify-content:{% if m.sender_id == user.id %}flex-end{% else %}flex-start{% endif %};">
         <div style="max-width:65%;padding:9px 14px;border-radius:14px;{% if m.sender_id == user.id %}background:var(--blue);color:#fff;border-bottom-right-radius:2px;{% else %}background:var(--gray-100);border-bottom-left-radius:2px;{% endif %}">
           <div>{{ m.content|linebreaksbr }}</div>
           {% if m.attachment %}<div style="margin-top:6px;"><a href="{{ m.attachment.url }}" style="color:inherit;text-decoration:underline;">Attachment</a></div>{% endif %}

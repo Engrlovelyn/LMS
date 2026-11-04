@@ -381,6 +381,13 @@
     var opts = this.categories.map(function (c) {
       return '<option value="' + esc(c.key) + '"' + (d.category === c.key ? ' selected' : '') + '>' + esc(c.label) + '</option>';
     }).join('');
+    var auds = [
+      {key:'all', label:'Public (Everyone)'},
+      {key:'teachers', label:'Teachers Only'}
+    ];
+    var aopts = auds.map(function (a) {
+      return '<option value="' + esc(a.key) + '"' + ((d.audience || 'all') === a.key ? ' selected' : '') + '>' + esc(a.label) + '</option>';
+    }).join('');
     var timed = d.allDay === false;
     var self = this;
     var when = iso(this.selected.getFullYear(), this.selected.getMonth(), this.selected.getDate());
@@ -394,6 +401,7 @@
           return '<option value="' + s + '"' + ((d.status || 'published') === s ? ' selected' : '') + '>' +
                  s.charAt(0).toUpperCase() + s.slice(1) + '</option>';
         }).join('') + '</select></label>' +
+      '<label class="tcal-fld"><span>Audience</span><select id="fAudience">' + aopts + '</select></label>' +
       '<label class="tcal-fld"><span>Start date <b>*</b></span>' +
         '<input id="fStart" type="date" value="' + esc(d.startDate || when) + '"></label>' +
       '<label class="tcal-fld"><span>End date <i>blank = one day</i></span>' +
@@ -459,6 +467,7 @@
       title: q('#fTitle').trim(),
       category: q('#fCat'),
       status: q('#fStatus') || 'published',
+      audience: q('#fAudience') || 'all',
       startDate: q('#fStart'),
       endDate: end || null,          // null means a single day
       allDay: allDay,

@@ -10,14 +10,27 @@ from .services import assignable_teachers, teacher_conflict_in_section
 
 def _teacher_meta(teacher):
     """Grade levels and subjects a teacher already handles, for the picker."""
-    rooms = list(teacher.teaching_classrooms.all())
+    rooms = []
+    try:
+        rooms = list(teacher.teaching_classrooms.all())
+    except Exception:
+        rooms = []
     grades = sorted(
-        {room.section.grade_level for room in rooms if room.section_id}
+        {getattr(getattr(room.section, "grade_level", None), "__int__", lambda: room.section.grade_level)() if hasattr(room, "section") and room.section_id and hasattr(room.section, "grade_level") and isinstance(room.section.grade_level, int) is False else (room.section.grade_level if hasattr(room, "section") and room.section_id else None) for room in rooms}
     )
-    subjects = sorted({room.subject.name for room in rooms if room.subject_id})
-    advised = sorted(
-        {section.grade_level for section in teacher.advised_sections.all()}
-    )
+    grades = sorted({g for g in grades if g is not None})
+    subjects = []
+    try:
+        subjects = sorted({room.subject.name for room in rooms if room.subject_id and room.subject})
+    except Exception:
+        subjects = []
+    advised = []
+    try:
+        advised = sorted(
+            {section.grade_level for section in teacher.advised_sections.all() if section and section.grade_level is not None}
+        )
+    except Exception:
+        advised = []
     return grades, subjects, advised
 
 
@@ -89,8 +102,10 @@ class VirtualClassroomForm(forms.ModelForm):
         # subjects are shown as context only; they never remove a teacher from
         # the list, so a teacher who has not yet taught a grade can still be
         # assigned to it.
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
         teacher_qs = (
-            assignable_teachers()
+            User.objects.filter(groups__name="teacher", is_active=True)
             .select_related("employee_profile")
             .prefetch_related(
                 "teaching_classrooms__section",
@@ -107,11 +122,7 @@ class VirtualClassroomForm(forms.ModelForm):
             widget=TeacherSelect(attrs={"class": "form-control"}),
             help_text="Every active teacher in the school is listed. Search or filter by grade to narrow the list.",
         )
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        teachers_all = User.objects.filter(groups__name="teacher")
-        self.fields["teacher"].queryset = teachers_all | teacher_qs
-        self.fields["teacher"].queryset = self.fields["teacher"].queryset.distinct()
+        self.fields["teacher"].queryset = teacher_qs.distinct()
 
     def clean(self):
         cleaned = super().clean()

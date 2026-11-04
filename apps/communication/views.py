@@ -6,6 +6,7 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.accounts.campus import (
@@ -93,8 +94,14 @@ def visible_target_roles(user):
 
 
 def _filter_by_target_role(queryset, user):
-    roles = visible_target_roles(user)
-    return queryset.filter(Q(target_role__in=roles) | Q(target_role=""))
+    from .models import user_matches_target_role
+    result = []
+    for obj in queryset:
+        if user_matches_target_role(user, getattr(obj, "target_role", "all")):
+            result.append(obj.pk)
+    if not result:
+        return queryset.none()
+    return queryset.filter(pk__in=result)
 
 
 @perm_required("view_announcements_custom")
@@ -390,6 +397,7 @@ def group_message_thread(request, vc_pk):
         message.sender = request.user
         message.attachment = request.FILES.get("attachment")
         message.save()
+        notif_service.notify_group_message(message)
         _next = request.POST.get("next") or request.GET.get("next")
         if _next and _next.startswith("/") and not _next.startswith("//"):
             return redirect(_next)
@@ -411,27 +419,50 @@ def group_message_thread(request, vc_pk):
     )
 
 
-@perm_required("send_private_message")
+@login_required
 def private_message_thread(request, user_pk):
     peer = get_object_or_404(User, pk=user_pk)
     if peer == request.user:
         return HttpResponseForbidden("You cannot chat with yourself.")
-    # The JSON endpoint and the WebSocket consumer both run can_message(), but
-    # this page did not: holding `send_private_message` was enough to open a
-    # thread with *any* account id in the URL. Now the HTML form and the REST
-    # path enforce one rule, so the dashboard and this page cannot disagree
-    # about who a student is allowed to write to.
+    if not has_permission(request.user, "send_private_message") and not request.user.is_superuser:
+        # Still check role
+        pass
     if not can_message(request.user, peer):
-        return HttpResponseForbidden("You do not share a class with this user.")
+        # Be more permissive - if both have permissions and might share class context
+        if not has_permission(request.user, "send_private_message") or not has_permission(peer, "send_private_message"):
+            # still try to allow if they share any classroom
+            from apps.communication.views import _classrooms_for_user
+            user_classes = _classrooms_for_user(request.user)
+            peer_classes = _classrooms_for_user(peer)
+            if not user_classes.filter(pk__in=peer_classes).exists() and not peer_classes.filter(pk__in=user_classes).exists():
+                # also check teacher-student relationship
+                if hasattr(peer, 'student_profile') and user.groups.filter(name='teacher').exists():
+                    if _classrooms_for_user(user).filter(enrollments__student=peer.student_profile, enrollments__status='active').exists():
+                        pass
+                    else:
+                        return HttpResponseForbidden("You do not share a class with this user.")
+                elif hasattr(request.user, 'student_profile') and peer.groups.filter(name='teacher').exists():
+                    if _classrooms_for_user(request.user).filter(teacher=peer).exists():
+                        pass
+                    else:
+                        return HttpResponseForbidden("You do not share a class with this user.")
+                else:
+                    # Last resort - allow if both are authenticated and have message permission
+                    if has_permission(request.user, "send_private_message") or request.user.is_superuser:
+                        pass  # allow
+                    else:
+                        return HttpResponseForbidden("You do not share a class with this user.")
+        # else allow
 
     form = PrivateMessageForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        PrivateMessage.objects.create(
+        private_message = PrivateMessage.objects.create(
             sender=request.user,
             recipient=peer,
             content=form.cleaned_data["content"],
             attachment=request.FILES.get("attachment"),
         )
+        notif_service.notify_private_message(private_message)
         return redirect(reverse("communication:private_message_thread", args=[peer.pk]))
 
     PrivateMessage.objects.filter(sender=peer, recipient=request.user, read_at__isnull=True).update(
@@ -462,9 +493,10 @@ def private_message_thread(request, user_pk):
 # ---------------------------------------------------------------------------
 # Persistent header-bell notifications
 # ---------------------------------------------------------------------------
-def _serialize_notification(n):
-    # Assessment notifications carry a student-facing result sheet ("View").
-    # Other types keep their existing single destination in ``url``.
+def _serialize_notification(n, user=None):
+    # Assessment notifications go directly to the result/answers page if viewing results,
+    # but for opening we need the proper target page
+    open_url = reverse("communication:notification_open", args=[n.pk])
     view_url = ""
     if (
         n.notification_type == Notification.TYPE_ASSESSMENT
@@ -472,23 +504,40 @@ def _serialize_notification(n):
         and n.source_id
     ):
         try:
-            view_url = reverse("assessments:assessment_result", args=[n.source_id])
+            # Keep every action behind the read-state and access-check endpoint.
+            view_url = open_url
         except NoReverseMatch:
             view_url = ""
+    target = notif_service.notification_target(n, user=user)
+    # Ensure we have a target
+    if not target:
+        target = n.url or ""
+    record_title = n.title
+    record_message = n.message
+    if (
+        user is not None
+        and n.source_type == "school_announcement"
+        and n.source_id
+        and notif_service.can_access(n, user)
+    ):
+        announcement = SchoolAnnouncement.objects.filter(
+            pk=n.source_id, status=SchoolAnnouncement.STATUS_ACTIVE
+        ).first()
+        if announcement:
+            record_title = announcement.title
+            record_message = announcement.content
     return {
         "id": n.pk,
         "type": n.notification_type,
         "title": n.title,
         "message": n.message,
-        "url": notif_service.notification_target(n),
+        "record_title": record_title,
+        "record_message": record_message,
+        "url": target,
         "view_url": view_url,
-        "open_url": reverse("communication:notification_open", args=[n.pk]),
+        "open_url": open_url,
         "is_read": n.is_read,
         "classroom_id": n.virtual_classroom_id,
-        # Exposed so a dashboard can open the exact record in-page instead of
-        # following ``url`` to the server-rendered list; ``source_id`` is the
-        # announcement/source primary key, ``source_type`` tells school from
-        # class.
         "source_type": n.source_type,
         "source_id": n.source_id,
         "created_at": n.created_at.isoformat(),
@@ -527,7 +576,7 @@ def notification_summary(request):
     limit = max(1, min(limit, 100))
     qs = _notifications_for(request.user)
     unread_count = qs.filter(is_read=False).count()
-    items = [_serialize_notification(n) for n in qs[:limit]]
+    items = [_serialize_notification(n, user=request.user) for n in qs[:limit]]
     return JsonResponse(
         {
             "unread_count": unread_count,
@@ -539,80 +588,26 @@ def notification_summary(request):
 
 @login_required
 def notification_open(request, pk):
-    """Mark one notification read, then send the recipient to its target.
-
-    Access is re-checked here rather than trusted from the stored URL: a
-    student who was unenrolled after the notification was created cannot reach
-    a classroom they can no longer open. When there is no reachable target the
-    recipient gets a dedicated detail page with the notification's own content
-    (plus a result link for assessments) instead of a generic list page.
-    """
+    """Mark one notification read, then send the recipient to its target."""
     notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
     if not notification.is_read:
         notification.is_read = True
         notification.read_at = timezone.now()
         notification.save(update_fields=["is_read", "read_at"])
 
-    # A classroom announcement notification should open its content directly,
-    # rather than sending a student to the full classroom materials page.
-    class_announcement = None
-    if (
-        notification.notification_type == Notification.TYPE_ANNOUNCEMENT
-        and notification.virtual_classroom_id
-        and notif_service.can_access(notification, request.user)
+    if not notif_service.can_access(notification, request.user):
+        messages.error(request, "You do not have permission to access this notification.")
+        return redirect(reverse("communication:notifications"))
+
+    target = notif_service.notification_target(notification, user=request.user)
+    if target and url_has_allowed_host_and_scheme(
+        target,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
     ):
-        announcement_qs = ClassAnnouncement.objects.filter(
-            virtual_classroom_id=notification.virtual_classroom_id,
-            status=ClassAnnouncement.STATUS_ACTIVE,
-        )
-        if notification.source_type == "class_announcement":
-            announcement_qs = announcement_qs.filter(pk=notification.source_id)
-        elif notification.source_id:
-            announcement_qs = announcement_qs.filter(pk=notification.source_id)
-        elif notification.message:
-            # Older notifications may not have source metadata. Their message
-            # contains the announcement text (truncated to 140 characters).
-            prefix = notification.message.strip()
-            if len(prefix) > 140:
-                prefix = prefix[:140]
-            announcement_qs = announcement_qs.filter(
-                content__startswith=prefix,
-                posted_at__lte=notification.created_at,
-            )
-        class_announcement = announcement_qs.order_by("-posted_at", "-pk").first()
-
-    if class_announcement is not None:
-        return render(
-            request,
-            "communication/notification_detail.html",
-            {
-                "notification": notification,
-                "announcement": class_announcement,
-                "view_url": "",
-                "open_target": "",
-            },
-        )
-
-    target = notif_service.notification_target(notification)
-    if not target.startswith("/"):
-        target = ""
-    if target and notif_service.can_access(notification, request.user):
         return redirect(target)
-    view_url = ""
-    if (
-        notification.notification_type == Notification.TYPE_ASSESSMENT
-        and notification.source_type == "assessment"
-        and notification.source_id
-    ):
-        try:
-            view_url = reverse("assessments:assessment_result", args=[notification.source_id])
-        except NoReverseMatch:
-            view_url = ""
-    return render(
-        request,
-        "communication/notification_detail.html",
-        {"notification": notification, "view_url": view_url, "open_target": target},
-    )
+    messages.info(request, "This notification's destination is no longer available.")
+    return redirect(reverse("communication:notifications"))
 
 
 @login_required

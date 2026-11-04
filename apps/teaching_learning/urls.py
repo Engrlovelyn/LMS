@@ -9,6 +9,7 @@ urlpatterns = [
     path("resources/add/", views.resource_add, name="resource_add"),
     path("resources/<int:pk>/update/", views.resource_update, name="resource_update"),
     path("resources/<int:pk>/download/", views.resource_download, name="resource_download"),
+    path("resources/<int:pk>/preview/", views.resource_preview, name="resource_preview"),
     path("resources/<int:pk>/archive/", views.resource_archive, name="resource_archive"),
     path("classes/<int:vc_pk>/", views.class_materials, name="class_materials"),
     path("classes/<int:vc_pk>/topics/", views.topic_list, name="topic_list"),

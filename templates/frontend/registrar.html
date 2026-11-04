@@ -1691,8 +1691,8 @@ html,body{ width:100%; overflow-x:hidden; }
       <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
     </div>
     <div class="profile-fields">
-      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50"></div>
-      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100"></div>
+      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50" readonly disabled></div>
+      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
@@ -2021,7 +2021,8 @@ function downloadExcelTemplate(){
   const h=['LRN','Last Name','First Name','Grade Level','Section','Subject Applied']; 
   const d=['136100100021','Santos','Maria','Grade 7','Section A','Science']; 
   let html='<table><tr>'+h.map(c=>'<th>'+c+'</th>').join('')+'</tr><tr>'+d.map(c=>'<td>'+c+'</td>').join('')+'</tr></table>'; 
-  const xls='\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'+html+'</body></html>'; 
+  const xls='\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'+html+'<script src="{% static 'js/notifications.js' %}?v=3"></script>
+</body></html>'; 
   const a=document.createElement('a'); 
   a.href=URL.createObjectURL(new Blob([xls],{type:'application/vnd.ms-excel'})); 
   a.download='Subject_Applied_Import_Template.xls';document.body.appendChild(a);a.click();a.remove(); 
@@ -2627,13 +2628,13 @@ initCharts();
     const q=(((document.getElementById('sectionStudentSearch')||{}).value)||'').trim().toLowerCase();
     const g=(document.getElementById('sectionGrade')||{}).value;
     const pending=window.__sectionStudents;
-    let matches=state.students.filter(function(s){
+    let matches=sortedStudentRoster(state.students.filter(function(s){
       if(s.status==='Alumni'||s.status==='Archived')return false;
       if(g&&s.grade&&s.grade!==g)return false;
       if(pending.includes(s.lrn))return false;
       if(q){const hay=(s.last+' '+(s.first||'')+' '+(s.middle||'')+' '+(s.lrn||'')).toLowerCase();if(hay.indexOf(q)===-1)return false;}
       return true;
-    }).slice(0,30);
+    })).slice(0,30);
     if(!matches.length){
       box.innerHTML='<div style="padding:10px 12px;font-size:12.5px;color:var(--gray-400);">'+(q?'No matching student records found.'+(g?' Try a different search or grade level.':' Try a LRN or name search.') : 'No unassigned students match this grade yet. Enroll students first in the Student List tab.')+'</div>';
     } else {
@@ -2814,20 +2815,30 @@ initCharts();
   // ── STUDENT LIST + STATS ──
   var studentPageSize=10;
   window.studentPage=1;
+  function compareStudentRoster(a,b){
+    var gradeA=parseInt(String(a.grade||'').replace(/\D+/g,''),10);var gradeB=parseInt(String(b.grade||'').replace(/\D+/g,''),10);
+    gradeA=isNaN(gradeA)?Number.MAX_SAFE_INTEGER:gradeA;gradeB=isNaN(gradeB)?Number.MAX_SAFE_INTEGER:gradeB;
+    if(gradeA!==gradeB)return gradeA-gradeB;
+    var sexRank=function(s){var g=String(s.gender||'').toLowerCase();return g==='male'||g==='m'?0:(g==='female'||g==='f'?1:2);};
+    var sexDiff=sexRank(a)-sexRank(b);if(sexDiff)return sexDiff;
+    var surname=String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'});if(surname)return surname;
+    return String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});
+  }
+  function sortedStudentRoster(rows){return (rows||[]).slice().sort(compareStudentRoster);}
   function filteredStudents(){
     var q=(((document.getElementById('stuSearch')||{}).value)||'').trim().toLowerCase();
     var grade=((document.getElementById('stuGradeFilter')||{}).value)||'';
     var section=((document.getElementById('stuSectionFilter')||{}).value)||'';
     var status=((document.getElementById('stuStatusFilter')||{}).value)||'';
     var account=((document.getElementById('stuAccountFilter')||{}).value)||'';
-    return state.students.filter(function(s){
+    return sortedStudentRoster(state.students.filter(function(s){
       if(grade&&s.grade!==grade)return false;
       if(section&&s.section!==section)return false;
       if(status&&String(s.status||'Enrolled').toLowerCase()!==String(status).toLowerCase())return false;
       if(account&&String(s.account||'Pending').toLowerCase()!==String(account).toLowerCase())return false;
       if(q){var hay=(s.last+' '+s.first+' '+(s.middle||'')+' '+s.lrn+' '+(s.grade||'')+' '+(s.section||'')).toLowerCase();if(hay.indexOf(q)===-1)return false;}
       return true;
-    });
+    }));
   }
   function renderStudentList(){
     const tb=document.querySelector('#view-students tbody');if(!tb)return;
@@ -3108,7 +3119,8 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
   function openReportWindow(title,html){
     const w=window.open('','_blank');
     if(!w){showToast('Popup blocked — allow popups to view the report.','error');return;}
-    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:26px;color:#111;}h1{font-size:16px;text-align:center;margin:0;}h2{font-size:12.5px;text-align:center;font-weight:normal;margin:2px 0 0;}table{width:100%;border-collapse:collapse;margin-top:14px;font-size:10px;}th,td{border:1px solid #000;padding:3px 5px;}th{background:#f0f0f0;}td.center,th.center{text-align:center;}.tprint{position:fixed;top:8px;right:8px;padding:8px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;}.muted{color:#555;font-size:10px;margin-top:10px;line-height:1.5;}</style></head><body><button class="tprint" onclick="window.print()">Print / Save as PDF</button>'+html+'</body></html>');
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:26px;color:#111;}h1{font-size:16px;text-align:center;margin:0;}h2{font-size:12.5px;text-align:center;font-weight:normal;margin:2px 0 0;}table{width:100%;border-collapse:collapse;margin-top:14px;font-size:10px;}th,td{border:1px solid #000;padding:3px 5px;}th{background:#f0f0f0;}td.center,th.center{text-align:center;}.tprint{position:fixed;top:8px;right:8px;padding:8px 14px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;}.muted{color:#555;font-size:10px;margin-top:10px;line-height:1.5;}</style></head><body><button class="tprint" onclick="window.print()">Print / Save as PDF</button>'+html+'<script src="{% static 'js/notifications.js' %}?v=3"></script>
+</body></html>');
     w.document.close();
   }
   window.openSF1=function(){
@@ -3438,7 +3450,7 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
   function renderVCRoster(){
     var v=getVC(vcActiveID);if(!v)return;
     var wrap=document.getElementById('viewVCRoster');if(!wrap)return;
-    var students=(v.students||[]).map(function(lrn){return state.students.find(function(s){return s.lrn===lrn;});}).filter(Boolean);
+    var students=sortedStudentRoster((v.students||[]).map(function(lrn){return state.students.find(function(s){return s.lrn===lrn;});}).filter(Boolean));
     var html='<div style="background:#eff6ff;border:1px solid #fde68a;border-radius:9px;padding:12px;font-size:12.5px;color:#92400e;margin-bottom:14px;">'
       +'<i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>'+students.length+' student(s) enrolled. '
       +(v.type==='Applied'?'For <strong>Applied (Core)</strong> subjects, students are auto-enrolled by section upon creation.':'For <strong>Elective</strong> subjects, students may come from different sections. Use <strong>Add Student</strong> or <strong>Bulk Import</strong> to enroll.')
@@ -3522,12 +3534,12 @@ const active=state.students.filter(s=>s.status!=='Alumni'&&s.status!=='Archived'
     var v=getVC(vcActiveID);if(!v)return;
     var q=((document.getElementById('vcStudentSearch')||{}).value||'').trim().toLowerCase();
     var box=document.getElementById('vcStudentResults');if(!box)return;
-    var list=state.students.filter(function(s){
+    var list=sortedStudentRoster(state.students.filter(function(s){
       if(s.status==='Alumni')return false;
       if((v.students||[]).indexOf(s.lrn)!==-1)return false;
       if(v.type==='Applied'&&!(s.grade===v.grade&&s.section===v.section))return false;
       return true;
-    });
+    }));
     if(q)list=list.filter(function(s){return (s.first+' '+s.last+' '+s.lrn+' '+s.grade+' '+(s.section||'')).toLowerCase().indexOf(q)!==-1;});
     if(!list.length){box.innerHTML='<div style="text-align:center;padding:22px 12px;color:var(--text-muted);font-size:13px;">No available students found matching this query.</div>';return;}
     box.innerHTML=list.slice(0,50).map(function(s){
@@ -4463,5 +4475,6 @@ window.csrfToken = (function () {
 <script src="{% static 'js/tass_poll.js' %}"></script>
 <script>window.onTassPollRefresh = function(){ return fetch("/dashboards/live-data/",{credentials:"same-origin",cache:"no-store",headers:{"Accept":"application/json"}}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d)window.applyRegistrarPayload(d);}).catch(function(){}); };</script>
 <script src="/static/js/pilot_guard.js"></script>
+<script src="{% static 'js/notifications.js' %}?v=3"></script>
 </body> 
 </html>  

@@ -1518,8 +1518,8 @@ html,body{ width:100%; overflow-x:hidden; }
       <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
     </div>
     <div class="profile-fields">
-      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50"></div>
-      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100"></div>
+      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50" readonly disabled></div>
+      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
@@ -2373,7 +2373,7 @@ function renderACAnnouncements(){
   if(!el) return;
   const list=Array.isArray(window.acAnnouncements)?window.acAnnouncements:[];
   if(!list.length){TASS.empty.list(el,{source:'announcements.list'});return;}
-  el.innerHTML = list.map(a=>'<div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--gray-100);"><div class="notif-dot-icon" style="background:#fef3c7;color:#d97706;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullhorn"></i></div><div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+escHtml(a.title)+'</div><div style="font-size:12px;color:var(--gray-600);margin-top:3px;line-height:1.4;">'+escHtml(a.content)+'</div><div style="font-size:11px;color:var(--gray-400);margin-top:4px;"><i class="fa-regular fa-clock"></i> Posted '+escHtml(a.date)+'</div></div></div>').join('');
+  el.innerHTML = list.map(a=>'<div data-notification-record-type="announcement" data-notification-record="school-'+escHtml(String(a.id||'').replace(/^s/,''))+'" style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--gray-100);"><div class="notif-dot-icon" style="background:#fef3c7;color:#d97706;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullhorn"></i></div><div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+escHtml(a.title)+'</div><div style="font-size:12px;color:var(--gray-600);margin-top:3px;line-height:1.4;">'+escHtml(a.content)+'</div><div style="font-size:11px;color:var(--gray-400);margin-top:4px;"><i class="fa-regular fa-clock"></i> Posted '+escHtml(a.date)+'</div></div></div>').join('');
 }
 
 function renderAnnouncementsView(){renderACAnnouncements();}
@@ -3475,5 +3475,6 @@ window.csrfToken = (function () {
 <script src="/static/js/profile_bridge.js?v=4"></script>
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
+<script src="{% static 'js/notifications.js' %}?v=3"></script>
 </body>
 </html>

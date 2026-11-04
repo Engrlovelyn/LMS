@@ -14,7 +14,7 @@ from django.db.utils import DatabaseError, ProgrammingError
 from django.urls import reverse
 
 from apps.accounts import campus
-from apps.accounts.ordering import order_students
+from apps.accounts.ordering import order_students, order_teachers
 from apps.accounts.account_admin import (
     locked_accounts_queryset,
     serialize_locked_account,
@@ -36,6 +36,7 @@ from apps.assessments.models import (
     Assessment,
     AssessmentAssignment,
     AssessmentPart,
+    AssessmentProctoringEvent,
     StudentGrade,
     Submission,
 )
@@ -398,6 +399,16 @@ def _calendar_payload(user, today=None):
         Q(start_date__lte=last) & (Q(end_date__isnull=True) | Q(end_date__gte=first))
     ).select_related("created_by", "updated_by")
 
+    if user and user.is_authenticated:
+        user_groups = set(user.groups.values_list("name", flat=True))
+        is_student = "student" in user_groups and not user.is_superuser
+        is_teacher = "teacher" in user_groups and not user.is_superuser
+        is_admin_like = user.is_superuser or bool(user_groups & {"system_admin", "principal", "elementary_principal", "registrar"})
+        if is_student and not is_admin_like:
+            rows = rows.exclude(audience="teachers")
+        elif is_teacher and not is_admin_like:
+            rows = rows.exclude(audience="students")
+
     can_edit = bool(
         user
         and user.is_authenticated
@@ -408,6 +419,7 @@ def _calendar_payload(user, today=None):
         "today": today.isoformat(),
         "canEdit": can_edit,
         "categories": [{"key": key, "label": label} for key, label in SchoolEvent.CATEGORY_CHOICES],
+        "audiences": [{"key": key, "label": label} for key, label in getattr(SchoolEvent, "AUDIENCE_CHOICES", [("all","Everyone"),("students","Students Only"),("teachers","Teachers Only")])],
         "events": [
             {
                 "id": ev.id,
@@ -421,6 +433,7 @@ def _calendar_payload(user, today=None):
                 "endTime": ev.end_time.strftime("%H:%M") if ev.end_time else None,
                 "location": ev.location or "",
                 "status": ev.status,
+                "audience": getattr(ev, "audience", "all"),
             }
             for ev in rows.order_by("start_date", "title")
         ],
@@ -1164,7 +1177,6 @@ def system_admin_context(user):
         leading_order=(
             "academic_year__start_date",
             "section__grade_level",
-            "section__name",
         ),
     ):
         sp = se.student
@@ -1444,10 +1456,10 @@ def system_admin_context(user):
     ]
     option_teachers = [
         {"id": t.id, "name": t.get_full_name()}
-        for t in (
+        for t in order_teachers(
             User.objects.filter(groups__name="teacher", is_active=True)
-            .order_by("email")[:200]
-        )
+            .select_related("employee_profile")
+        )[:200]
     ]
     vc_options = {
         "year": (active_year_obj.label if active_year_obj else None),
@@ -2000,14 +2012,22 @@ def _assessment_builder_payload(assessment):
                 "type": qtype,
                 "mode": mode,
                 "partId": part_id,
+                "itemKey": item_key,
                 "text": item.get("question", ""),
                 "points": item.get("point", 0),
-                "media": None,
+                "media": ({
+                    "kind": "image",
+                    "name": "Question image",
+                    "data": item.get("image", ""),
+                } if str(item.get("image", "")).startswith("data:image/") else None),
                 "optImgs": {},
             }
             if qtype == "mc":
                 options = [str(c) for c in (item.get("choices") or [])]
                 q["options"] = options
+                for choice_index, image in enumerate(item.get("choice_images") or []):
+                    if image and choice_index < 4 and str(image).startswith("data:image/"):
+                        q["optImgs"][chr(65 + choice_index)] = image
                 try:
                     q["correct"] = options.index(str(item.get("correct_answer", "")))
                 except ValueError:
@@ -3281,7 +3301,9 @@ def teacher_context(user):
         )
         if part is not None:
             try:
-                attachment_url = part.attached_file.url
+                attachment_url = reverse(
+                    "assessments:assessment_attachment", args=[a.pk, part.pk]
+                )
                 attachment_name = str(part.attached_file.name).rsplit("/", 1)[-1]
             except Exception:
                 attachment_url = ""
@@ -3300,12 +3322,69 @@ def teacher_context(user):
                 "cls": vc.section.name if vc.section else "",
                 "lifecycle": lifecycle,
                 "hasManual": builder_has_manual,
+                "canEdit": a.created_by_id == user.pk,
                 "parts": builder_parts,
                 "questions": builder_questions,
                 "attachmentUrl": attachment_url,
                 "attachmentName": attachment_name,
             }
         )
+
+    teacher_subject_ids = my_classes.values_list("subject_id", flat=True).distinct()
+    repository_assessments = (
+        Assessment.objects.filter(
+            subject_id__in=teacher_subject_ids,
+        )
+        .select_related("subject")
+        .prefetch_related("parts")
+        .annotate(repository_share_count=Count("assignments", distinct=True))
+        .order_by("subject__grade_level", "subject__name", "title", "pk")
+    )
+    assessment_repository_json = []
+    for assessment in repository_assessments:
+        repository_parts = list(assessment.parts.all())
+        repository_questions = []
+        for part in repository_parts:
+            mode = "objective" if part.is_objective else "manual"
+            for item in (part.items or {}).values():
+                repository_questions.append({
+                    "points": item.get("point", 0) if isinstance(item, dict) else 0,
+                    "mode": mode,
+                })
+        attachment = next((part for part in repository_parts if part.attached_file), None)
+        attachment_url = ""
+        attachment_name = ""
+        if attachment:
+            attachment_url = reverse(
+                "assessments:assessment_attachment",
+                args=[assessment.pk, attachment.pk],
+            )
+            attachment_name = str(attachment.attached_file.name).rsplit("/", 1)[-1]
+        assessment_repository_json.append({
+            "id": assessment.pk,
+            "title": assessment.title,
+            "subject": assessment.subject.name if assessment.subject_id else "",
+            "subjectId": assessment.subject_id,
+            "type": assessment.get_assessment_method_display(),
+            "items": len(repository_questions),
+            "questions": repository_questions,
+            "parts": [{
+                "label": part.get_question_type_display(),
+                "mode": "objective" if part.is_objective else "manual",
+            } for part in repository_parts],
+            "instructions": assessment.instructions or "",
+            "openDate": assessment.available_at.isoformat() if assessment.available_at else "",
+            "deadline": assessment.submission_deadline.isoformat() if assessment.submission_deadline else "",
+            "lifecycle": "open",
+            "attachmentUrl": attachment_url,
+            "attachmentName": attachment_name,
+            "canEdit": assessment.created_by_id == user.pk,
+            "meta": timezone.localtime(assessment.submission_deadline).strftime("%b %d, %Y")
+            if assessment.submission_deadline else "",
+            "shares": assessment.repository_share_count,
+            "updated": timezone.localtime(assessment.created_at).strftime("%b %d, %Y")
+            if assessment.created_at else "",
+        })
 
     # School-wide announcements (posted by the Principal) reach every teacher
     # dashboard. Class announcements stay separate because a teacher may edit
@@ -3332,9 +3411,10 @@ def teacher_context(user):
     announcements_json = [
         {
             "id": ca.id,
+            "announcement_id": ca.id,
             "kind": "class",
             "classroomId": ca.virtual_classroom_id,
-            "title": (ca.content[:90] if ca.content else "Class announcement"),
+            "title": (ca.title or (ca.content[:90] if ca.content else "Class announcement")),
             "body": ca.content or "",
             "postedBy": (
                 ca.posted_by.get_full_name() if ca.posted_by_id else ""
@@ -3420,6 +3500,49 @@ def teacher_context(user):
                 "time": _iso(ca.posted_at),
             }
         )
+    integrity_events = AssessmentProctoringEvent.objects.filter(
+        assessment__assignments__virtual_classroom__in=my_classes,
+        student__vc_enrollments__virtual_classroom__in=my_classes,
+        student__vc_enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        event_type__in=(
+            AssessmentProctoringEvent.EVENT_FOCUS_LOST,
+            AssessmentProctoringEvent.EVENT_VISIBILITY_HIDDEN,
+            AssessmentProctoringEvent.EVENT_SCREENSHOT_KEY,
+            AssessmentProctoringEvent.EVENT_COPY_ATTEMPT,
+            AssessmentProctoringEvent.EVENT_CONTEXT_MENU,
+        ),
+    ).select_related("assessment", "student").distinct().order_by("-created_at")[:32]
+    for event in integrity_events:
+        matching_assignment = AssessmentAssignment.objects.filter(
+            assessment_id=event.assessment_id,
+            virtual_classroom__in=my_classes,
+            virtual_classroom__enrollments__student_id=event.student_id,
+            virtual_classroom__enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).select_related("virtual_classroom__subject", "virtual_classroom__section").order_by(
+            "virtual_classroom_id", "pk"
+        ).first()
+        if not matching_assignment:
+            continue
+        vc = matching_assignment.virtual_classroom
+        prof = event.student
+        student_name = " ".join(filter(None, [prof.first_name, prof.last_name])) or prof.lrn or "Student"
+        class_label = vc.section.name if vc.section_id else (vc.subject.name if vc.subject_id else "Class")
+        activity_json.append(
+            {
+                "icon": "fa-camera" if event.event_type == AssessmentProctoringEvent.EVENT_SCREENSHOT_KEY else "fa-triangle-exclamation",
+                "bg": "#fee2e2",
+                "color": "#dc2626",
+                "text": '{}: {} during "{}" ({}).'.format(
+                    student_name,
+                    event.get_event_type_display().lower(),
+                    event.assessment.title,
+                    class_label,
+                ),
+                "time": _iso(event.created_at),
+                "recordType": "proctoring",
+                "recordId": event.pk,
+            }
+        )
     activity_json.sort(key=lambda x: x["time"] or "", reverse=True)
     activity_json = activity_json[:16]
 
@@ -3467,6 +3590,10 @@ def teacher_context(user):
                     "lrn": prof.lrn or "",
                     "name": " ".join(filter(None, [prof.first_name, prof.last_name]))
                     or (prof.user.get_full_name() if prof.user else prof.lrn or "Student"),
+                    "first": prof.first_name or "",
+                    "last": prof.last_name or "",
+                    "sex": prof.sex or "",
+                    "grade": vc.section.grade_level if vc.section_id else None,
                     "classroom_id": vc.id,
                     "classroom": (vc.section.name if vc.section else "")
                     or (vc.subject.name if vc.subject else ""),
@@ -3505,6 +3632,7 @@ def teacher_context(user):
             "attendance": attendance_rate,
         },
         "assessments": assessments_json,
+        "assessment_repository": assessment_repository_json,
         "notifications": notifications_json,
         "announcements": announcements_json,
         "school_announcements": school_announcements_json,
@@ -3739,7 +3867,6 @@ def _roster_directory(active_year_obj):
         leading_order=(
             "academic_year__start_date",
             "section__grade_level",
-            "section__name",
         ),
     ):
         sp = se.student
@@ -4029,7 +4156,7 @@ def principal_context(user):
         "linear-gradient(135deg,#0891b2,#22d3ee)",
     ]
 
-    teachers_qs = (
+    teachers_qs = order_teachers(
         User.objects.filter(
             groups__name="teacher",
             status="active",
@@ -4499,7 +4626,7 @@ def assistant_principal_context(user):
         _non_archived_users()
         .filter(groups__name="teacher")
         .select_related("employee_profile")
-        .order_by("email")
+        .all()
     ):
         teacher_subject = (
             VirtualClassroom.objects.filter(teacher=teacher, status=STATUS_ACTIVE)
@@ -4752,14 +4879,18 @@ def student_context(user):
             )
     pending.sort(key=lambda p: p["deadline"] or now)
 
+    from apps.communication.models import user_matches_target_role
+
     class_ann = (
         ClassAnnouncement.objects.filter(virtual_classroom__in=my_vcs, status=STATUS_ACTIVE)
         .select_related("virtual_classroom__subject", "posted_by")
         .order_by("-posted_at")
     )
+    class_ann = [ca for ca in class_ann if user_matches_target_role(user, getattr(ca, "target_role", "all"))]
     school_ann = campus.filter_school_announcements(
         SchoolAnnouncement.objects.select_related("posted_by"), user
     ).filter(status=STATUS_ACTIVE).order_by("-posted_at")
+    school_ann = [sa for sa in school_ann if user_matches_target_role(user, getattr(sa, "target_role", "all"))]
 
     grades = StudentGrade.objects.filter(student=profile).order_by("-computed_at")[:6]
 
@@ -4821,12 +4952,12 @@ def student_context(user):
         dl = a.submission_deadline
         if submitted:
             status = "closed"
-        elif dl and dl < now:
+        elif dl and dl <= now:
             status = "overdue"
+        elif a.available_at and a.available_at > now:
+            status = "scheduled"
         elif a.lifecycle_stage == Assessment.STAGE_COMPLETED:
             status = "closed"
-        elif dl:
-            status = "scheduled"
         else:
             status = "open"
         assessments_json.append(
@@ -4845,6 +4976,7 @@ def student_context(user):
                 "type": a.get_assessment_method_display().lower() or "assignment",
                 "pts": int(a.total_possible_score or 0),
                 "deadline": _dt(dl) or "Open",
+                "available_at": _dt(a.available_at),
                 "status": status,
                 "submitted": submitted,
                 "color": ASSESSMENT_COLOURS.get(status, "#1e5faf"),
@@ -4927,7 +5059,7 @@ def student_context(user):
             "classroom_id": (ca.virtual_classroom_id if ca.virtual_classroom_id else None),
             "announcement_id": ca.pk,
             "subject": _subj_label(ca.virtual_classroom.subject) if ca.virtual_classroom.subject else "Class",
-            "title": (ca.content[:60] if ca.content else "Class announcement"),
+            "title": (ca.title or (ca.content[:60] if ca.content else "Class announcement")),
             "body": ca.content or "",
             "by": (ca.posted_by.get_full_name() if ca.posted_by else "Teacher"),
             "date": _tod(ca.posted_at),
@@ -4942,7 +5074,7 @@ def student_context(user):
     from apps.dashboards.student_live import announcements_for
 
     announcements_by_classroom = {
-        str(vc.pk): announcements_for(vc) for vc in my_vcs
+        str(vc.pk): announcements_for(vc, user) for vc in my_vcs
     }
 
     # Learning materials per virtual classroom (keyed by classroom id, not by
@@ -4998,8 +5130,8 @@ def student_context(user):
                 "time": "Now",
             }
         )
-    if school_ann.exists():
-        first = school_ann.first()
+    if school_ann:
+        first = school_ann[0]
         notifs_json.append(
             {
                 "icon": "fa-bullhorn",
@@ -5371,9 +5503,10 @@ def _qa_real_students(active_year, section_lookup):
     enrollments = StudentEnrollment.objects.filter(status=StudentEnrollment.STATUS_ENROLLED)
     if active_year:
         enrollments = enrollments.filter(academic_year=active_year)
-    enrollments = enrollments.select_related(
-        "student__user", "section"
-    ).order_by("section__grade_level", "section__name", "student__last_name")
+    enrollments = order_students(
+        enrollments.select_related("student__user", "section"),
+        prefix="student__",
+    )
     real_students = []
     for enr in enrollments:
         prof = enr.student
@@ -5416,7 +5549,10 @@ def _qa_real_sections(active_year):
 
 
 def _qa_real_teachers(active_year, now, week_ago):
-    teachers_users = User.objects.filter(groups__name="teacher", status="active").select_related("employee_profile")
+    teachers_users = order_teachers(
+        User.objects.filter(groups__name="teacher", status="active")
+        .select_related("employee_profile")
+    )
     real_teachers = []
     for teacher in teachers_users:
         prof = getattr(teacher, "employee_profile", None)

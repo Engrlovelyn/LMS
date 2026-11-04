@@ -12,8 +12,9 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(ClassAnnouncement)
 class ClassAnnouncementAdmin(admin.ModelAdmin):
-    list_display = ("virtual_classroom", "posted_by", "posted_at", "status")
+    list_display = ("title", "virtual_classroom", "posted_by", "posted_at", "status")
     list_filter = ("virtual_classroom", "status")
+    search_fields = ("title", "content")
 
 
 @admin.register(SchoolAnnouncement)

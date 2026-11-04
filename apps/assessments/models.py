@@ -352,6 +352,33 @@ class AssessmentAssignment(models.Model):
         return f"{self.assessment} -> {self.virtual_classroom}"
 
 
+class AssessmentAttempt(models.Model):
+    """One server-timed working attempt, separate from a final submission."""
+
+    assignment = models.ForeignKey(
+        AssessmentAssignment, on_delete=models.CASCADE, related_name="attempts"
+    )
+    student = models.ForeignKey(
+        "accounts.StudentProfile", on_delete=models.CASCADE, related_name="assessment_attempts"
+    )
+    started_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    answers = models.JSONField(default=dict, blank=True)
+    revision = models.PositiveIntegerField(default=0)
+    last_saved_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "student"], name="unique_assessment_attempt_per_student"
+            )
+        ]
+
+    def __str__(self):
+        return f"Attempt {self.pk}: {self.student} - {self.assignment}"
+
+
 # ---------------------------------------------------------------------------
 # Submission
 # ---------------------------------------------------------------------------

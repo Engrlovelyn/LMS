@@ -2038,8 +2038,8 @@ html,body{ width:100%; overflow-x:hidden; }
       <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
     </div>
     <div class="profile-fields">
-      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50"></div>
-      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100"></div>
+      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50" readonly disabled></div>
+      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
@@ -3735,7 +3735,7 @@ function renderStudents(){
   var filtered = range
     ? all.filter(function (r) { return studentLevelCode(r.grade) === saStudentLevel; })
     : all;
-  var rows = dirFilter(filtered, q && q.value, ['name', 'lrn', 'section', 'email', 'status']);
+  var rows = dirFilter(filtered, q && q.value, ['name', 'lrn', 'section', 'email', 'status']).slice().sort(function(a,b){var ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10),gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);ga=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;gb=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;if(ga!==gb)return ga-gb;var sex=function(r){return r.sex==='M'?0:(r.sex==='F'?1:2);};if(sex(a)!==sex(b))return sex(a)-sex(b);return String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'})||String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});});
   var grid = document.getElementById('studentsStats');
   var sub = document.getElementById('studentsSub');
   var ttl = document.getElementById('studentsTableTitle');
@@ -4221,7 +4221,7 @@ function renderAnnouncements(){
   var all=announcementData();
   if(!all.length){ list.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-bullhorn" style="font-size:30px;margin-bottom:10px;display:block;opacity:.5;"></i>No announcements yet. Post the first school-wide announcement above.</div>'; return; }
   list.innerHTML=all.map(function(a){
-    return '<div style="border:1px solid var(--card-border);border-radius:12px;padding:16px 18px;background:var(--card-bg);">'+
+    return '<div data-notification-record-type="announcement" data-notification-record="school-'+esc(a.id||'')+'" style="border:1px solid var(--card-border);border-radius:12px;padding:16px 18px;background:var(--card-bg);">'+
       '<div style="display:flex;align-items:flex-start;gap:12px;">'+
       '<span style="width:36px;height:36px;border-radius:10px;background:var(--light-blue);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bullhorn"></i></span>'+
       '<div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:700;color:var(--navy);">'+esc(a.title)+'</div>'+
@@ -6236,5 +6236,6 @@ window.csrfToken = (function () {
 .repo-detail-row .rd-key{flex:0 0 130px;color:var(--gray-600);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding-top:1px}
 .repo-detail-row .rd-val{flex:1;min-width:0;color:var(--navy);font-weight:600;word-break:break-word}
 </style>
+<script src="{% static 'js/notifications.js' %}?v=3"></script>
 </body>
 </html>

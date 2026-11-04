@@ -17,6 +17,7 @@ the import direction already used by ``assessments.views._notify``.
 """
 
 import logging
+from urllib.parse import urlencode
 
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -54,27 +55,312 @@ def _reverse_or_blank(name, *args):
         return ""
 
 
-def notification_target(n):
-    """The most specific page a notification should open.
+def _teacher_dashboard_target(n, user):
+    """Build an in-app destination for the active teacher dashboard SPA."""
+    if not user or not user.groups.filter(name="teacher").exists():
+        return ""
 
-    Announcements store the generic list URL so a row survives an edit, but the
-    click should land on the exact notice rather than the top of the list: the
-    list page anchors every announcement, so append the row's id. Everything
-    else keeps the single destination it stored.
-    """
-    if n.source_type == "class_announcement" and n.source_id and n.virtual_classroom_id:
-        base = _reverse_or_blank("classrooms:classroom_detail", n.virtual_classroom_id)
-        if base:
-            return "{}?tab=announcements#announcement-{}".format(base, n.source_id)
-        base = _reverse_or_blank("communication:announcements")
-        if base:
-            return "{}?type=class#announcement-{}".format(base, n.source_id)
-    if n.source_type in ("school_announcement", "class_announcement") and n.source_id:
+    classroom_id = n.virtual_classroom_id
+    record_id = n.source_id
+    record_type = ""
+    tab = "dashboard"
+
+    if n.source_type == "assessment_proctoring_event":
+        from apps.assessments.models import AssessmentAssignment, AssessmentProctoringEvent
+        from apps.virtual_classrooms.models import VirtualClassroomEnrollment
+
+        event = AssessmentProctoringEvent.objects.filter(pk=n.source_id).first()
+        if not event or not classroom_id:
+            return ""
+        assignment_exists = AssessmentAssignment.objects.filter(
+            assessment_id=event.assessment_id,
+            virtual_classroom_id=classroom_id,
+            virtual_classroom__teacher=user,
+            virtual_classroom__status="active",
+            virtual_classroom__enrollments__student_id=event.student_id,
+            virtual_classroom__enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).exists()
+        if not assignment_exists:
+            return ""
+        tab = "activitylog"
+        record_type = "proctoring"
+    elif n.notification_type == Notification.TYPE_ASSESSMENT:
+        from apps.assessments.models import AssessmentAssignment
+
+        tab = "assessment"
+        record_type = "assessment"
+        if n.source_type in ("assessment_assignment", "assessment_reminder"):
+            assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
+            if not assignment:
+                return ""
+            if classroom_id and assignment.virtual_classroom_id != classroom_id:
+                return ""
+            classroom_id = assignment.virtual_classroom_id
+            record_id = assignment.assessment_id
+    elif n.source_type == "resource_placement":
+        from apps.teaching_learning.models import LearningResourcePlacement
+
+        placement = LearningResourcePlacement.objects.filter(pk=n.source_id).first()
+        if not placement:
+            return ""
+        classroom_id = placement.virtual_classroom_id
+        record_id = placement.pk
+        record_type = "resource"
+        tab = "tla"
+    elif n.notification_type == Notification.TYPE_MATERIAL:
+        tab = "tla"
+        record_type = "resource"
+        if n.source_type == "resource" and classroom_id:
+            from apps.teaching_learning.models import LearningResourcePlacement
+
+            placement = LearningResourcePlacement.objects.filter(
+                resource_id=n.source_id, virtual_classroom_id=classroom_id
+            ).order_by("-placed_at").first()
+            if placement:
+                record_id = placement.pk
+    elif n.source_type in ("class_announcement", "school_announcement"):
+        tab = "announcements"
+        record_type = "announcement"
+        if n.source_type == "school_announcement":
+            record_id = "school-{}".format(n.source_id)
+    elif n.source_type == "attendance":
+        tab = "attendance"
+        record_type = "attendance"
+    elif n.notification_type == Notification.TYPE_MESSAGE:
+        tab = "messages"
+        record_type = "message"
+
+    if classroom_id:
+        from apps.virtual_classrooms.models import VirtualClassroom
+
+        if not VirtualClassroom.objects.filter(
+            pk=classroom_id, teacher=user, status="active"
+        ).exists():
+            return ""
+
+    params = {"notification_tab": tab}
+    if classroom_id:
+        params["notification_classroom"] = classroom_id
+    if record_id and record_type:
+        params["notification_record_type"] = record_type
+        params["notification_record"] = record_id
+    return "{}?{}".format(reverse("dashboards:teacher"), urlencode(params))
+
+
+def _student_dashboard_target(n, user):
+    """Resolve a student's notification to the active student dashboard SPA."""
+    if not user or getattr(user, "student_profile", None) is None:
+        return ""
+
+    classroom_id = n.virtual_classroom_id
+    record_id = n.source_id
+    record_type = ""
+    tab = "announcements"
+
+    if n.notification_type == Notification.TYPE_ASSESSMENT:
+        from apps.assessments.models import AssessmentAssignment
+
+        tab = "assessments"
+        record_type = "assessment"
+        if n.source_type in ("assessment_assignment", "assessment_reminder"):
+            assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
+            if not assignment:
+                return ""
+            if classroom_id and assignment.virtual_classroom_id != classroom_id:
+                return ""
+            classroom_id = assignment.virtual_classroom_id
+            record_id = assignment.assessment_id
+    elif n.source_type == "resource_placement":
+        from apps.teaching_learning.models import LearningResourcePlacement
+
+        placement = LearningResourcePlacement.objects.filter(pk=n.source_id).first()
+        if not placement:
+            return ""
+        classroom_id = placement.virtual_classroom_id
+        record_id = placement.pk
+        record_type = "resource"
+        tab = "materials"
+    elif n.notification_type == Notification.TYPE_MATERIAL:
+        tab = "materials"
+        record_type = "resource"
+    elif n.source_type in ("class_announcement", "school_announcement"):
+        tab = "announcements"
+        record_type = "announcement"
+        if n.source_type == "school_announcement":
+            record_id = "school-{}".format(n.source_id)
+    elif n.source_type == "attendance":
+        tab = "attendance"
+        record_type = "attendance"
+    elif n.notification_type == Notification.TYPE_MESSAGE:
+        tab = "messages"
+        record_type = "message"
+
+    if classroom_id:
+        from apps.virtual_classrooms.models import VirtualClassroomEnrollment
+
+        if not VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom_id=classroom_id,
+            student__user=user,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).exists():
+            return ""
+
+    params = {"notification_tab": tab}
+    if classroom_id:
+        params["notification_classroom"] = classroom_id
+    if record_id and record_type:
+        params["notification_record_type"] = record_type
+        params["notification_record"] = record_id
+    return "{}?{}".format(reverse("dashboards:student"), urlencode(params))
+
+
+def _other_dashboard_target(n, user):
+    """Keep school-wide announcement links inside each active role dashboard."""
+    if not user or n.source_type != "school_announcement":
+        return ""
+    dashboards = (
+        ("assistant_principal", "dashboards:academic_coordinator"),
+        ("principal", "dashboards:principal"),
+        ("elementary_principal", "dashboards:principal"),
+        ("registrar", "dashboards:registrar"),
+        ("system_admin", "dashboards:system_admin"),
+        ("quality_audit", "dashboards:quality_audit"),
+    )
+    for role, route_name in dashboards:
+        if user.groups.filter(name=role).exists():
+            params = urlencode({
+                "notification_tab": "announcements",
+                "notification_record_type": "announcement",
+                "notification_record": "school-{}".format(n.source_id),
+                "notification_id": n.pk,
+            })
+            return "{}?{}".format(reverse(route_name), params)
+    return ""
+
+
+def notification_target(n, user=None):
+    """The most specific page a notification should open."""
+    # The standalone teacher dashboard is the current UI. Route teacher bell
+    # clicks there and let its query handler open the selected classroom/tab.
+    teacher_target = _teacher_dashboard_target(n, user)
+    if teacher_target:
+        return teacher_target
+    student_target = _student_dashboard_target(n, user)
+    if student_target:
+        return student_target
+    other_target = _other_dashboard_target(n, user)
+    if other_target:
+        return other_target
+    if n.notification_type == Notification.TYPE_ASSESSMENT and n.source_type in ("assessment", "assessment_assignment") and n.source_id:
+        from apps.assessments.models import Assessment, AssessmentAssignment
+
+        if n.source_type == "assessment_assignment":
+            assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
+            assessment_id = assignment.assessment_id if assignment else None
+            classroom_id = assignment.virtual_classroom_id if assignment else None
+            if assignment and n.virtual_classroom_id and classroom_id != n.virtual_classroom_id:
+                assessment_id = None
+        else:
+            assessment_id = n.source_id if Assessment.objects.filter(pk=n.source_id).exists() else None
+            classroom_id = n.virtual_classroom_id
+            if assessment_id and classroom_id and not AssessmentAssignment.objects.filter(
+                assessment_id=assessment_id, virtual_classroom_id=classroom_id
+            ).exists():
+                assessment_id = None
+        if not assessment_id:
+            return ""
+        if classroom_id:
+            url = _reverse_or_blank("classrooms:classroom_detail", classroom_id)
+            if url:
+                return "{}?tab=assessment#assessment-{}".format(url, assessment_id)
+        url = _reverse_or_blank("assessments:assessment_detail", assessment_id)
+        if url:
+            return url
+        url = _reverse_or_blank("assessments:assessment_submit", assessment_id)
+        if url:
+            return url
+    if n.notification_type == Notification.TYPE_ASSESSMENT and n.source_type == "assessment_reminder" and n.source_id:
+        from apps.assessments.models import AssessmentAssignment
+
+        assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
+        if assignment and (
+            not n.virtual_classroom_id
+            or assignment.virtual_classroom_id == n.virtual_classroom_id
+        ):
+            url = _reverse_or_blank("classrooms:classroom_detail", assignment.virtual_classroom_id)
+            if url:
+                return "{}?tab=assessment#assessment-{}".format(url, assignment.assessment_id)
+        return ""
+    if n.source_type == "resource_placement" and n.source_id:
+        from apps.teaching_learning.models import LearningResource, LearningResourcePlacement
+
+        placement = LearningResourcePlacement.objects.filter(pk=n.source_id).select_related(
+            "virtual_classroom", "resource"
+        ).first()
+        if placement and placement.virtual_classroom_id and placement.resource.status == LearningResource.STATUS_ACTIVE:
+            url = _reverse_or_blank("teaching:class_materials", placement.virtual_classroom_id)
+            if url:
+                return "{}#resource-placement-{}".format(url, placement.pk)
+            url = _reverse_or_blank("classrooms:classroom_detail", placement.virtual_classroom_id)
+            if url:
+                return "{}?tab=materials".format(url)
+        return ""
+    if n.notification_type == Notification.TYPE_MATERIAL and n.source_type == "resource" and n.source_id and n.virtual_classroom_id:
+        from apps.teaching_learning.models import LearningResource, LearningResourcePlacement
+
+        placement = LearningResourcePlacement.objects.filter(
+            resource_id=n.source_id,
+            virtual_classroom_id=n.virtual_classroom_id,
+            resource__status=LearningResource.STATUS_ACTIVE,
+        ).order_by("-placed_at").first()
+        if placement:
+            url = _reverse_or_blank("teaching:class_materials", n.virtual_classroom_id)
+            if url:
+                return "{}#resource-placement-{}".format(url, placement.pk)
+        return ""
+    if n.source_type in ("class_announcement", "school_announcement") and n.source_id:
+        if n.source_type == "class_announcement" and n.virtual_classroom_id:
+            base = _reverse_or_blank("classrooms:classroom_detail", n.virtual_classroom_id)
+            if base:
+                return "{}?tab=announcements&type=class#announcement-{}".format(base, n.source_id)
         base = _reverse_or_blank("communication:announcements")
         if base:
             kind = "school" if n.source_type == "school_announcement" else "class"
             return "{}?type={}#announcement-{}".format(base, kind, n.source_id)
-    return n.url or ""
+        if n.source_type == "class_announcement" and n.virtual_classroom_id:
+            base = _reverse_or_blank("classrooms:classroom_detail", n.virtual_classroom_id)
+            if base:
+                return "{}?tab=announcements#announcement-{}".format(base, n.source_id)
+    if n.source_type == "attendance" and n.virtual_classroom_id:
+        from apps.attendance.models import AttendanceSession
+
+        session = AttendanceSession.objects.filter(
+            pk=n.source_id, virtual_classroom_id=n.virtual_classroom_id
+        ).first()
+        base = _reverse_or_blank("classrooms:classroom_detail", n.virtual_classroom_id)
+        if base:
+            fragment = "#attendance-session-{}".format(session.pk) if session else ""
+            return "{}?tab=attendance{}".format(base, fragment)
+    if n.notification_type == Notification.TYPE_MESSAGE:
+        if n.source_type == "private_message" and n.source_id:
+            from .models import PrivateMessage
+
+            msg = PrivateMessage.objects.filter(pk=n.source_id).first()
+            if msg:
+                base = _reverse_or_blank("communication:private_message_thread", msg.sender_id)
+                return "{}#message-{}".format(base, msg.pk) if base else ""
+        if n.source_type == "group_message" and n.source_id:
+            from .models import GroupMessage
+
+            msg = GroupMessage.objects.filter(pk=n.source_id).first()
+            if msg:
+                base = _reverse_or_blank("communication:group_message_thread", msg.virtual_classroom_id)
+                return "{}#message-{}".format(base, msg.pk) if base else ""
+        return ""
+    # Fallback to stored url
+    if n.url:
+        return n.url
+    return ""
 
 
 def _bulk_create(recipients, *, virtual_classroom, notification_type, source_type, source_id, title, message, url, exclude_user_id=None):
@@ -126,6 +412,12 @@ def notify_class_announcement(announcement):
     if not recipients:
         return 0
     body = (announcement.content or "").strip()
+    base = _reverse_or_blank("communication:announcements")
+    if base:
+        url = "{}?type=class#announcement-{}".format(base, announcement.pk)
+    else:
+        base2 = _reverse_or_blank("classrooms:classroom_detail", vc.pk)
+        url = "{}?tab=announcements#announcement-{}".format(base2, announcement.pk) if base2 else ""
     return _bulk_create(
         recipients,
         virtual_classroom=vc,
@@ -134,7 +426,7 @@ def notify_class_announcement(announcement):
         source_id=announcement.pk,
         title="New Class Announcement",
         message=(body[:140] + "…") if len(body) > 140 else body,
-        url=_reverse_or_blank("classrooms:classroom_detail", vc.pk),
+        url=url,
         exclude_user_id=announcement.posted_by_id,
     )
 
@@ -315,6 +607,9 @@ def sync_attendance_notification(
         else "your class"
     )
     session_date = getattr(session, "session_date", None)
+    url = _reverse_or_blank("classrooms:classroom_detail", getattr(virtual_classroom, "pk", None))
+    if url:
+        url = "{}?tab=attendance".format(url)
     _, was_created = Notification.objects.get_or_create(
         **lookup,
         defaults={
@@ -325,12 +620,68 @@ def sync_attendance_notification(
                 subject,
                 session_date.strftime("%b %d, %Y") if session_date else "",
             ),
-            "url": _reverse_or_blank(
-                "classrooms:classroom_detail", getattr(virtual_classroom, "pk", None)
-            ),
+            "url": url,
         },
     )
     return int(was_created)
+
+
+def notify_private_message(message):
+    """Persist a bell notice for the recipient of a direct message."""
+    from .models import PrivateMessage
+
+    if not isinstance(message, PrivateMessage):
+        return 0
+    try:
+        _, created = Notification.objects.get_or_create(
+            recipient_id=message.recipient_id,
+            notification_type=Notification.TYPE_MESSAGE,
+            source_type="private_message",
+            source_id=message.pk,
+            defaults={
+                "title": "New Message",
+                "message": (message.content or "New message")[:200],
+                "url": _reverse_or_blank("communication:private_message_thread", message.sender_id),
+            },
+        )
+        return int(created)
+    except Exception:
+        logger.exception("Could not persist a private-message notification")
+        return 0
+
+
+def notify_group_message(message):
+    """Persist one class-message notice per active classmate, excluding sender."""
+    from .models import GroupMessage
+
+    if not isinstance(message, GroupMessage):
+        return 0
+    vc = message.virtual_classroom
+    recipients = set(active_student_user_ids(vc))
+    if vc.teacher_id:
+        recipients.add(vc.teacher_id)
+    recipients.discard(message.sender_id)
+    url = _reverse_or_blank("communication:group_message_thread", vc.pk)
+    created = 0
+    try:
+        for uid in recipients:
+            _, was_created = Notification.objects.get_or_create(
+                recipient_id=uid,
+                notification_type=Notification.TYPE_MESSAGE,
+                source_type="group_message",
+                source_id=message.pk,
+                defaults={
+                    "virtual_classroom": vc,
+                    "title": "New Class Message",
+                    "message": (message.content or "New message")[:200],
+                    "url": "{}#message-{}".format(url, message.pk) if url else "",
+                },
+            )
+            created += int(was_created)
+        return created
+    except Exception:
+        logger.exception("Could not persist a group-message notification")
+        return created
 
 
 def can_access(notification, user):
@@ -345,6 +696,53 @@ def can_access(notification, user):
         return False
     if notification.recipient_id != user.pk and not user.is_superuser:
         return False
+    if notification.notification_type == Notification.TYPE_ASSESSMENT and notification.source_id:
+        from apps.assessments.models import Assessment, AssessmentAssignment, AssessmentProctoringEvent
+        from apps.virtual_classrooms.models import VirtualClassroomEnrollment
+
+        if notification.source_type == "assessment_proctoring_event":
+            event = AssessmentProctoringEvent.objects.filter(pk=notification.source_id).first()
+            if not event or not notification.virtual_classroom_id:
+                return False
+            return AssessmentAssignment.objects.filter(
+                assessment_id=event.assessment_id,
+                virtual_classroom_id=notification.virtual_classroom_id,
+                virtual_classroom__teacher=user,
+                virtual_classroom__status="active",
+                virtual_classroom__enrollments__student_id=event.student_id,
+                virtual_classroom__enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+            ).exists()
+        if notification.source_type == "assessment":
+            if not Assessment.objects.filter(pk=notification.source_id).exists():
+                return False
+            if notification.virtual_classroom_id and not AssessmentAssignment.objects.filter(
+                assessment_id=notification.source_id,
+                virtual_classroom_id=notification.virtual_classroom_id,
+            ).exists():
+                return False
+        elif notification.source_type in ("assessment_assignment", "assessment_reminder"):
+            assignment = AssessmentAssignment.objects.filter(pk=notification.source_id).first()
+            if not assignment or (
+                notification.virtual_classroom_id
+                and assignment.virtual_classroom_id != notification.virtual_classroom_id
+            ):
+                return False
+    if notification.notification_type == Notification.TYPE_MATERIAL and notification.source_type == "resource_placement" and notification.source_id:
+        from apps.teaching_learning.models import LearningResourcePlacement
+
+        if not LearningResourcePlacement.objects.filter(
+            pk=notification.source_id,
+            virtual_classroom_id=notification.virtual_classroom_id,
+        ).exists():
+            return False
+    if notification.notification_type == Notification.TYPE_ATTENDANCE and notification.source_id:
+        from apps.attendance.models import AttendanceSession
+
+        if not AttendanceSession.objects.filter(
+            pk=notification.source_id,
+            virtual_classroom_id=notification.virtual_classroom_id,
+        ).exists():
+            return False
     # Re-check the role audience at click time, so a notification generated
     # before an account changed role cannot still open a notice it may no
     # longer read.
@@ -357,10 +755,45 @@ def can_access(notification, user):
             else ClassAnnouncement
         )
         source = model.objects.filter(pk=notification.source_id).first()
-        if source is not None and not user_matches_target_role(
+        if source is None or getattr(source, "status", "active") != "active":
+            return False
+        if not user_matches_target_role(
             user, getattr(source, "target_role", "all")
         ):
             return False
+        if notification.source_type == "class_announcement" and (
+            source.virtual_classroom_id != notification.virtual_classroom_id
+        ):
+            return False
+        if notification.source_type == "school_announcement":
+            from apps.accounts import campus as campus_helpers
+
+            if (source.audience or campus_helpers.WHOLE_SCHOOL) not in campus_helpers.readable_audiences(user):
+                return False
+    if notification.notification_type == Notification.TYPE_MESSAGE:
+        if user.is_superuser:
+            return True
+        if notification.source_type == "private_message" and notification.source_id:
+            from .models import PrivateMessage
+            from .access import can_message
+
+            msg = PrivateMessage.objects.filter(pk=notification.source_id).first()
+            return bool(msg and user.pk == msg.recipient_id and can_message(user, msg.sender))
+        if notification.source_type == "group_message" and notification.source_id:
+            from .models import GroupMessage
+
+            msg = GroupMessage.objects.filter(pk=notification.source_id).first()
+            if not msg:
+                return False
+            vc = msg.virtual_classroom
+            if vc.teacher_id == user.pk:
+                return True
+            return VirtualClassroomEnrollment.objects.filter(
+                virtual_classroom=vc,
+                student__user=user,
+                status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+            ).exists()
+        return False
     vc = notification.virtual_classroom
     if vc is None:
         return True

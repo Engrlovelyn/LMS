@@ -88,7 +88,7 @@ def _session_stats(session):
 def classroom_list(request):
     q = request.GET.get("q", "").strip()
     classrooms = _classrooms_for_user(request.user).select_related(
-        "subject", "section", "academic_year", "teacher"
+        "subject", "section", "academic_year", "teacher", "teacher__employee_profile"
     )
     if q:
         classrooms = classrooms.filter(
@@ -100,7 +100,7 @@ def classroom_list(request):
             | Q(teacher__employee_profile__last_name__icontains=q)
             | Q(grading_period__icontains=q)
         )
-    classrooms = classrooms.order_by("subject__name", "section__name")
+    classrooms = classrooms.order_by("section__grade_level", "subject__name", "section__name")
     return render(request, "virtual_classrooms/classroom_list.html", {"classrooms": classrooms, "q": q})
 
 
@@ -234,6 +234,14 @@ def classroom_detail(request, pk):
     announcements = classroom.announcements.filter(
         status=ClassAnnouncement.STATUS_ACTIVE
     ).order_by("-posted_at")
+    try:
+        from apps.communication.views import _filter_by_target_role
+
+        announcements = _filter_by_target_role(announcements, request.user)
+    except Exception:
+        from apps.communication.models import user_matches_target_role
+
+        announcements = [a for a in announcements if user_matches_target_role(request.user, getattr(a, "target_role", "all"))]
 
     try:
         group_messages = (

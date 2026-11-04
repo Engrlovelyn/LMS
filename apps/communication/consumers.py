@@ -99,6 +99,9 @@ class ChatConsumer(WebsocketConsumer):
                 self._error("You do not share a class with this user.")
                 return
             msg = PrivateMessage.objects.create(sender=user, recipient=peer, content=body)
+            from apps.communication.notifications import notify_private_message
+
+            notify_private_message(msg)
             payload = self._payload(msg, kind="dm", thread=f"p-{peer.pk}", peer_id=peer.pk)
             for room in (f"user-{peer.pk}", f"user-{user.pk}"):
                 async_to_sync(self.channel_layer.group_send)(
@@ -112,6 +115,9 @@ class ChatConsumer(WebsocketConsumer):
                 self._error("You do not have access to this class chat.")
                 return
             msg = GroupMessage.objects.create(sender=user, virtual_classroom=classroom, content=body)
+            from apps.communication.notifications import notify_group_message
+
+            notify_group_message(msg)
             payload = self._payload(msg, kind="group", thread=f"c-{classroom.pk}", classroom_id=classroom.pk)
             async_to_sync(self.channel_layer.group_send)(
                 f"class-{classroom.pk}", {"type": "chat.message", "payload": payload}

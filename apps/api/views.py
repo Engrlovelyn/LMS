@@ -10,6 +10,8 @@ All endpoints are login-required, POST, JSON. The front-end JS sends the same
 objects it previously stored in localStorage.
 """
 
+import base64
+import binascii
 import json
 import os
 import re
@@ -1988,7 +1990,7 @@ def my_classroom(request, vc_id):
 
     from apps.dashboards.student_live import student_classroom_payload
 
-    return _ok(**student_classroom_payload(profile, enrolled.virtual_classroom))
+    return _ok(**student_classroom_payload(profile, enrolled.virtual_classroom, user=request.user))
 
 
 @login_required
@@ -2132,6 +2134,7 @@ def classroom_detail(request, vc_id):
     ).order_by("-placed_at")
     resources = [
         {
+            "placement_id": placement.pk,
             "id": placement.resource.pk,
             "title": placement.resource.title,
             "typeLabel": placement.resource.get_resource_type_display(),
@@ -2182,7 +2185,10 @@ def classroom_detail(request, vc_id):
         if part is None:
             return "", ""
         try:
-            return part.attached_file.url, os.path.basename(part.attached_file.name)
+            return (
+                reverse("assessments:assessment_attachment", args=[assessment.pk, part.pk]),
+                os.path.basename(part.attached_file.name),
+            )
         except Exception:
             return "", ""
 
@@ -2278,6 +2284,7 @@ def classroom_detail(request, vc_id):
     announcements = [
         {
             "id": announcement.pk,
+            "title": announcement.title or (announcement.content[:90] if announcement.content else "Class announcement"),
             "content": announcement.content,
             "postedBy": _full_name(announcement.posted_by),
             "postedAt": announcement.posted_at.strftime("%b %d, %Y · %I:%M %p")
@@ -2311,6 +2318,7 @@ def classroom_detail(request, vc_id):
 @api_role_required(*STAFF_ROLES)
 def class_announcements(request):
     data = _payload(request)
+    title = (data.get("title") or "").strip()[:200]
     content = (data.get("content") or data.get("body") or "").strip()
     if not content:
         return _err("Announcement content is required.")
@@ -2330,10 +2338,10 @@ def class_announcements(request):
                 target_role, ", ".join(sorted(VALID_TARGET_ROLES))
             )
         )
-    ann = ClassAnnouncement.objects.filter(virtual_classroom=vc, content=content).first()
+    ann = ClassAnnouncement.objects.filter(virtual_classroom=vc, title=title, content=content).first()
     if ann is None:
         ann = ClassAnnouncement.objects.create(
-            virtual_classroom=vc, posted_by=request.user, content=content,
+            virtual_classroom=vc, posted_by=request.user, title=title, content=content,
             status="archived" if archived else "active",
             target_role=target_role,
         )
@@ -2350,7 +2358,12 @@ def class_announcements(request):
         _notify_classroom_change(vc, request.user, ["announcements"])
     except Exception:
         pass
-    return _ok(count=1, virtual_classroom_id=vc.pk)
+    return _ok(count=1, virtual_classroom_id=vc.pk, announcement={
+        "id": ann.pk, "announcement_id": ann.pk, "classroomId": vc.pk,
+        "title": ann.title or (ann.content[:90] if ann.content else "Class announcement"),
+        "body": ann.content, "createdAt": ann.posted_at.isoformat(),
+        "archived": ann.status == "archived",
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -2454,11 +2467,21 @@ def submissions(request):
 
     assignment = None
     aid = data.get("assessment_id")
-    if aid and str(aid).isdigit():
+    assignment_id = data.get("assignment_id")
+    if assignment_id and str(assignment_id).isdigit():
         assignment = AssessmentAssignment.objects.filter(
-            assessment_id=int(aid), virtual_classroom_id__in=enrolled
+            pk=int(assignment_id), virtual_classroom_id__in=enrolled
         ).select_related("assessment").first()
-    if assignment is None and title:
+        if assignment and aid and str(assignment.assessment_id) != str(aid):
+            return _err("The assignment does not belong to this assessment.", 400)
+    elif aid and str(aid).isdigit():
+        matching = AssessmentAssignment.objects.filter(
+            assessment_id=int(aid), virtual_classroom_id__in=enrolled
+        ).select_related("assessment")
+        if matching.count() > 1:
+            return _err("assignment_id is required when this assessment is assigned to multiple classes.", 400)
+        assignment = matching.first()
+    if assignment is None and title and not assignment_id:
         assignment = (
             AssessmentAssignment.objects.filter(
                 virtual_classroom_id__in=enrolled,
@@ -2471,13 +2494,17 @@ def submissions(request):
         return _err("No matching assessment was found for this submission.", 404)
 
     assessment = assignment.assessment
-    if assessment.status == Assessment.STATUS_ARCHIVED:
-        return _err("This assessment is no longer accepting submissions.", 403)
-    now = timezone.now()
-    if assessment.available_at and assessment.available_at > now:
+    from apps.assessments.scheduling import assessment_window
+
+    state = assessment_window(assessment)
+    if state == "upcoming":
         return _err("This assessment is not yet available for submission.", 403)
-    if assessment.submission_deadline and assessment.submission_deadline < now:
-        return _err("The submission deadline for this assessment has passed.", 403)
+    if state == "closed":
+        return _err("This assessment has closed and is no longer accepting submissions.", 403)
+
+    upload = request.FILES.get("file")
+    if upload is None:
+        return _err("Attach a file or submit answers through the active assessment attempt.", 400)
 
     submission, created = Submission.objects.get_or_create(
         assessment_assignment=assignment, student=student
@@ -2488,31 +2515,21 @@ def submissions(request):
         if submission.responses.exists() or submission.attached_file:
             return _err("You have already submitted this assessment.", 409)
 
-    if score is not None and str(score) != "":
-        try:
-            submission.total_score = float(score)
-            submission.grading_status = Submission.GRADING_COMPLETE
-            submission.graded_at = timezone.now()
-            submission.save(
-                update_fields=["total_score", "grading_status", "graded_at"]
-            )
-        except (TypeError, ValueError):
-            pass
+    # A student's client-side score is never authoritative. Objective scoring
+    # runs from saved responses on the server; uploaded work stays ungraded.
 
-    upload = request.FILES.get("file")
     parts = list(assignment.assessment.parts.order_by("order"))
-    if upload is not None:
-        if parts:
-            response, _ = SubmissionResponse.objects.get_or_create(
-                submission=submission, part=parts[0]
-            )
-            response.response_file = upload
-            if note:
-                response.response_data = {"note": note}
-            response.save()
-        else:
-            submission.attached_file = upload
-            submission.save(update_fields=["attached_file"])
+    if parts:
+        response, _ = SubmissionResponse.objects.get_or_create(
+            submission=submission, part=parts[0]
+        )
+        response.response_file = upload
+        if note:
+            response.response_data = {"note": note}
+        response.save()
+    else:
+        submission.attached_file = upload
+        submission.save(update_fields=["attached_file"])
 
     _log(
         request.user,
@@ -2533,62 +2550,89 @@ def submissions(request):
 @login_required
 @require_POST
 def submission_autosave(request):
-    """Periodically save student answers as a draft (autosave)."""
-    from apps.assessments.models import AssessmentAssignment, Submission, SubmissionResponse
+    """Save a versioned draft to its authenticated, server-timed attempt."""
+    from django.db import transaction
+
+    from apps.assessments.forms import SubmitForm
+    from apps.assessments.models import AssessmentAttempt, Submission
+    from apps.assessments.scheduling import assessment_window
 
     student = _student(request.user)
     if student is None:
         return _err("Only students can save drafts.", 403)
 
     data = _payload(request)
-    aid = data.get("assessment_id")
-    if not aid or not str(aid).isdigit():
-        return _err("assessment_id is required.")
-    assignment = AssessmentAssignment.objects.filter(
-        assessment_id=int(aid)
-    ).select_related("assessment").first()
-    if assignment is None:
-        return _err("Assessment not found.", 404)
-    enrolled = VirtualClassroomEnrollment.objects.filter(
-        student=student,
-        virtual_classroom_id=assignment.virtual_classroom_id,
-        status=STATUS_ACTIVE,
-    ).exists()
-    if not enrolled:
-        return _err("You are not enrolled in this class.", 403)
-
-    assessment = assignment.assessment
-    if assessment.status == Assessment.STATUS_ARCHIVED:
-        return _err("This assessment is no longer accepting submissions.", 403)
     now = timezone.now()
-    if assessment.available_at and assessment.available_at > now:
-        return _err("This assessment is not yet available.", 403)
-    if assessment.submission_deadline and assessment.submission_deadline < now:
-        return _err("The submission deadline has passed.", 403)
-
-    submission, created = Submission.objects.get_or_create(
-        assessment_assignment=assignment,
+    required_ids = ("assessment_id", "assignment_id", "attempt_id", "revision")
+    if any(not str(data.get(key, "")).isdigit() for key in required_ids):
+        return _err("assessment_id, assignment_id, attempt_id and revision are required.")
+    attempt = AssessmentAttempt.objects.select_related(
+        "assignment__assessment", "student__user"
+    ).filter(
+        pk=int(data["attempt_id"]),
         student=student,
-    )
-    if not created and (submission.responses.exists() or submission.attached_file):
-        return _err("You have already submitted this assessment.", 409)
+        assignment_id=int(data["assignment_id"]),
+        assignment__assessment_id=int(data["assessment_id"]),
+    ).first()
+    if attempt is None:
+        return _err("Assessment attempt not found for this student.", 404)
+    assessment = attempt.assignment.assessment
+    state = assessment_window(assessment, now)
+    if state == "upcoming":
+        return _err("This assessment is not yet available.", 403)
+    if state == "closed":
+        return _err("This assessment is closed.", 403)
+    if attempt.submitted_at:
+        return _err("This assessment attempt has already been submitted.", 409)
+    if Submission.objects.filter(
+        assessment_assignment=attempt.assignment, student=student
+    ).exists():
+        return _err("This assessment has already been submitted.", 409)
+    if now >= attempt.expires_at:
+        return _err("The assessment timer has expired.", 409)
 
-    answers = data.get("answers") or {}
+    answers = data.get("answers")
+    if not isinstance(answers, dict):
+        return _err("answers must be an object keyed by assessment question.")
     parts = list(assessment.parts.order_by("order"))
-    for part in parts:
-        pkey = str(part.pk)
-        part_data = answers.get(pkey) if isinstance(answers, dict) else None
-        if part_data is None and isinstance(answers, dict):
-            part_data = answers.get(part.pk)
-        if part_data is None:
-            continue
-        response, _ = SubmissionResponse.objects.get_or_create(
-            submission=submission,
-            part=part,
-        )
-        response.response_data = part_data
-        response.save(update_fields=["response_data"])
-    return _ok(saved=True, submission_id=submission.pk)
+    answer_form = SubmitForm(parts=parts)
+    unknown = set(answers) - set(answer_form.fields)
+    if unknown:
+        return _err("One or more question IDs do not belong to this assessment.", 400)
+    normalized = {}
+    for field_name, value in answers.items():
+        field = answer_form.fields[field_name]
+        if not isinstance(value, (str, int, float, list, type(None))):
+            return _err("Answer format is invalid.", 400)
+        try:
+            if value not in (None, "", []):
+                field.clean(value)
+            normalized[field_name] = value
+        except Exception:
+            return _err("An answer is not valid for its question.", 400)
+
+    try:
+        revision = int(data["revision"])
+    except (TypeError, ValueError):
+        return _err("revision must be an integer.")
+    with transaction.atomic():
+        locked = AssessmentAttempt.objects.select_for_update().filter(
+            pk=attempt.pk, student=student
+        ).first()
+        if locked is None:
+            return _err("Assessment attempt not found.", 404)
+        if revision <= locked.revision:
+            return _ok(saved=True, stale=True, revision=locked.revision, answers=locked.answers,
+                       last_saved_at=locked.last_saved_at.isoformat() if locked.last_saved_at else None)
+        now = timezone.now()
+        state = assessment_window(assessment, now)
+        if state != "available" or now >= locked.expires_at or locked.submitted_at:
+            return _err("The assessment attempt is no longer accepting answers.", 409)
+        locked.answers = normalized
+        locked.revision = revision
+        locked.last_saved_at = now
+        locked.save(update_fields=["answers", "revision", "last_saved_at"])
+    return _ok(saved=True, stale=False, revision=revision, last_saved_at=now.isoformat())
 
 
 # ---------------------------------------------------------------------------
@@ -3223,7 +3267,7 @@ def learning_resources(request):
         LearningResource.objects.filter(status=LearningResource.STATUS_ACTIVE)
         .select_related("subject", "uploaded_by")
         .prefetch_related("placements__topic")
-        .order_by("-created_at")
+        .order_by("subject__grade_level", "subject__name", "title", "pk")
     )
     is_teacher = (
         request.user.groups.filter(name="teacher").exists()
@@ -3487,6 +3531,34 @@ def attendance(request):
 # ---------------------------------------------------------------------------
 # POST /api/assessments/ — teacher assessment builder publish
 # ---------------------------------------------------------------------------
+_ASSESSMENT_IMAGE_MAX_BYTES = 350 * 1024
+
+
+def _assessment_image_data(value):
+    """Validate and retain a small raster image data URL from the builder."""
+    if isinstance(value, dict):
+        if value.get("kind") != "image":
+            return ""
+        value = value.get("data") or ""
+    if not isinstance(value, str) or not value.startswith("data:image/"):
+        # Older builder versions sent the filename only; it cannot be rendered.
+        return ""
+    match = re.fullmatch(
+        r"data:image/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/]*={0,2})",
+        value,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        raise ValidationError("Assessment images must be valid PNG, JPEG, WEBP, or GIF files.")
+    try:
+        raw = base64.b64decode(match.group(2), validate=True)
+    except (ValueError, binascii.Error):
+        raise ValidationError("An assessment image could not be decoded.")
+    if len(raw) > _ASSESSMENT_IMAGE_MAX_BYTES:
+        raise ValidationError("Each assessment image must be 350 KB or smaller after compression.")
+    return value
+
+
 @login_required
 @require_POST
 @api_perm_required("update_assessment_custom", "archive_assessment_custom", "create_assessment_custom")
@@ -3548,7 +3620,27 @@ def assessments(request):
     available_at = _parse_dt(data.get("openDate"))
     submission_deadline = _parse_dt(data.get("deadline"))
 
-    assessment = Assessment.objects.filter(subject=vc.subject, created_by=request.user, title=title).order_by("-created_at").first()
+    requested_assessment_id = data.get("assessment_id")
+    if requested_assessment_id:
+        try:
+            requested_assessment_id = int(requested_assessment_id)
+        except (TypeError, ValueError):
+            return _err("Invalid assessment_id.", 400)
+        assessment = Assessment.objects.filter(
+            pk=requested_assessment_id,
+            subject=vc.subject,
+            created_by=request.user,
+            assignments__virtual_classroom=vc,
+        ).first()
+        if assessment is None:
+            return _err("Assessment not found or you cannot edit it.", 403)
+        if assessment.title != title:
+            assessment.title = title
+            assessment.save(update_fields=["title"])
+    else:
+        assessment = Assessment.objects.filter(
+            subject=vc.subject, created_by=request.user, title=title
+        ).order_by("-created_at").first()
     if assessment is None:
         assessment = Assessment.objects.create(
             subject=vc.subject, academic_year=vc.academic_year, created_by=request.user, title=title,
@@ -3572,8 +3664,17 @@ def assessments(request):
         if update_fields:
             assessment.save(update_fields=update_fields)
 
+    # Publishing from the teacher builder makes this assessment visible to
+    # students. A title match above can find an older archived record, and the
+    # student dashboard intentionally filters archived assessments out.
+    if assessment.status != Assessment.STATUS_ACTIVE:
+        assessment.status = Assessment.STATUS_ACTIVE
+        assessment.save(update_fields=["status"])
+
     assignment, _ = AssessmentAssignment.objects.get_or_create(
-        assessment=assessment, virtual_classroom=vc, assigned_by=request.user
+        assessment=assessment,
+        virtual_classroom=vc,
+        defaults={"assigned_by": request.user},
     )
     try:
         notif_service.notify_assessment_assignment(assignment)
@@ -3581,7 +3682,7 @@ def assessments(request):
         pass
 
     questions = data.get("questions") or []
-    if questions and not assessment.parts.exists():
+    if questions:
         type_code = {
             "mc": AssessmentPart.TYPE_MULTIPLE_CHOICE,
             "multiple_choice": AssessmentPart.TYPE_MULTIPLE_CHOICE,
@@ -3613,12 +3714,39 @@ def assessments(request):
             points = int(q.get("points") or q.get("point") or 1)
             options = q.get("options") or []
             item = {"question": qtext, "point": points}
+            try:
+                media = q.get("media")
+                question_image = _assessment_image_data(media)
+                if question_image:
+                    item["image"] = question_image
+            except ValidationError as exc:
+                return _err("Question image: {}".format("; ".join(exc.messages)), 400)
             if qtype == AssessmentPart.TYPE_MULTIPLE_CHOICE and options:
-                options = [str(o) for o in options if str(o).strip() != ""]
-                item["choices"] = options
-                correct = q.get("correct") or 0
-                idx = int(correct) if str(correct).isdigit() and int(correct) < len(options) else 0
-                item["correct_answer"] = options[idx] if options else qtext
+                choices = []
+                choice_images = []
+                source_indexes = []
+                opt_images = q.get("optImgs") if isinstance(q.get("optImgs"), dict) else {}
+                for source_index, raw_option in enumerate(options[:4]):
+                    letter = chr(65 + source_index)
+                    try:
+                        image = _assessment_image_data(opt_images.get(letter, ""))
+                    except ValidationError as exc:
+                        return _err("Choice {} image: {}".format(letter, "; ".join(exc.messages)), 400)
+                    text = str(raw_option or "").strip()
+                    if not text and not image:
+                        continue
+                    choices.append(text or "Choice {}".format(letter))
+                    choice_images.append(image)
+                    source_indexes.append(source_index)
+                item["choices"] = choices
+                item["choice_images"] = choice_images
+                correct = q.get("correct", 0)
+                try:
+                    correct_source = int(correct)
+                except (TypeError, ValueError):
+                    correct_source = 0
+                selected_index = source_indexes.index(correct_source) if correct_source in source_indexes else 0
+                item["correct_answer"] = choices[selected_index] if choices else qtext
             elif qtype == AssessmentPart.TYPE_TRUE_FALSE:
                 item["choices"] = ["True", "False"]
                 tf = q.get("tf")
@@ -3649,14 +3777,59 @@ def assessments(request):
                 item["grading_rubric"] = q.get("rubric") or []
             grouped[qtype].append((len(grouped[qtype]) + 1, item))
 
-        for qtype, pairs in grouped.items():
-            items = {f"item_{i}": item for i, item in pairs}
-            try:
-                AssessmentPart.objects.create(
-                    assessment=assessment, question_type=qtype, order=assessment.parts.count(), items=items
-                )
-            except ValidationError:
-                continue
+        # Existing question parts keep their identity so historical submissions
+        # continue to point at the same records. Update only the image fields for
+        # a question edited in the builder; newly created assessments still use
+        # the full compiled question data below.
+        if assessment.parts.exists():
+            for question in questions:
+                if not isinstance(question, dict):
+                    continue
+                part_token = str(question.get("partId") or "")
+                item_key = str(question.get("itemKey") or "")
+                if not (part_token.startswith("p") and part_token[1:].isdigit() and item_key):
+                    continue
+                part = AssessmentPart.objects.filter(
+                    pk=part_token[1:], assessment=assessment
+                ).first()
+                if part is None or item_key not in (part.items or {}):
+                    continue
+                part_items = dict(part.items)
+                saved_item = dict(part_items[item_key])
+                try:
+                    image = _assessment_image_data(question.get("media"))
+                except ValidationError as exc:
+                    return _err("Question image: {}".format("; ".join(exc.messages)), 400)
+                if image:
+                    saved_item["image"] = image
+                else:
+                    saved_item.pop("image", None)
+                if isinstance(question.get("optImgs"), dict) and "choices" in saved_item:
+                    images = []
+                    for choice_index in range(len(saved_item.get("choices") or [])):
+                        letter = chr(65 + choice_index)
+                        try:
+                            images.append(_assessment_image_data(question["optImgs"].get(letter, "")))
+                        except ValidationError as exc:
+                            return _err("Choice {} image: {}".format(letter, "; ".join(exc.messages)), 400)
+                    if any(images):
+                        saved_item["choice_images"] = images
+                    else:
+                        saved_item.pop("choice_images", None)
+                part_items[item_key] = saved_item
+                if part_items[item_key] != part.items[item_key]:
+                    part.items = part_items
+                    part.save(update_fields=["items"])
+
+        if not assessment.parts.exists():
+            for qtype, pairs in grouped.items():
+                items = {f"item_{i}": item for i, item in pairs}
+                try:
+                    AssessmentPart.objects.create(
+                        assessment=assessment, question_type=qtype, order=assessment.parts.count(), items=items
+                    )
+                except ValidationError:
+                    continue
 
     _log(request.user, f"assessment_saved:{title}", entity_type="Assessment", entity_id=assessment.pk)
     try:
@@ -4183,14 +4356,34 @@ def _broadcast(rooms, payload):
 
 
 def _shares_classroom(user, peer):
-    """True when a direct message between `user` and `peer` is allowed.
-
-    The rule itself lives in apps.communication.access so the REST endpoint and
-    the WebSocket consumer enforce exactly the same thing.
-    """
     from apps.communication.access import can_message
-
-    return can_message(user, peer)
+    if can_message(user, peer):
+        return True
+    # Try to be permissive - check if they share any classroom relationship
+    try:
+        from apps.communication.views import _classrooms_for_user
+        from apps.virtual_classrooms.models import VirtualClassroomEnrollment
+        uc = _classrooms_for_user(user)
+        pc = _classrooms_for_user(peer)
+        if uc.filter(pk__in=pc).exists():
+            return True
+        # teacher-student
+        if hasattr(peer, 'student_profile'):
+            if uc.filter(enrollments__student=peer.student_profile, enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE).exists():
+                return True
+        if hasattr(user, 'student_profile'):
+            if uc.filter(teacher=peer).exists() or pc.filter(teacher=user).exists():
+                return True
+    except Exception:
+        pass
+    # If they both have send_private_message permission, allow
+    try:
+        from apps.accounts.decorators import has_permission
+        if has_permission(user, 'send_private_message') and has_permission(peer, 'send_private_message'):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 @login_required
@@ -4343,6 +4536,7 @@ def messages(request):
         if not _shares_classroom(user, peer):
             return _err("You do not share a class with this user.", 403)
         msg = PrivateMessage.objects.create(sender=user, recipient=peer, content=body)
+        notif_service.notify_private_message(msg)
         _log(user, "private_message_sent", entity_type="PrivateMessage", entity_id=msg.pk)
         _broadcast(
             [f"user-{peer.pk}", f"user-{user.pk}"],
@@ -4355,6 +4549,7 @@ def messages(request):
         if classroom is None or classroom not in _classrooms_for_user(user):
             return _err("You do not have access to this class chat.", 403)
         msg = GroupMessage.objects.create(sender=user, virtual_classroom=classroom, content=body)
+        notif_service.notify_group_message(msg)
         _log(user, "group_message_sent", entity_type="GroupMessage", entity_id=msg.pk)
         _broadcast(
             [f"class-{classroom.pk}"],
@@ -4434,6 +4629,8 @@ def _event_json(ev):
         "location": ev.location or "",
         "status": ev.status,
         "statusLabel": ev.get_status_display(),
+        "audience": getattr(ev, "audience", "all"),
+        "audienceLabel": ev.get_audience_display() if hasattr(ev, "get_audience_display") else "Everyone",
         "academicYear": ev.academic_year.label if ev.academic_year else None,
         "createdBy": (ev.created_by.get_full_name() if ev.created_by else None),
         "updatedBy": (ev.updated_by.get_full_name() if ev.updated_by else None),
@@ -4477,6 +4674,11 @@ def _apply_event_fields(ev, data, user):
         if status not in {key for key, _ in SchoolEvent.STATUS_CHOICES}:
             raise ValidationError({"status": "Unknown status {!r}.".format(status)})
         ev.status = status
+    if "audience" in data:
+        audience = str(data.get("audience") or SchoolEvent.AUDIENCE_ALL)
+        if audience not in {key for key, _ in SchoolEvent.AUDIENCE_CHOICES}:
+            raise ValidationError({"audience": "Unknown audience {!r}.".format(audience)})
+        ev.audience = audience
     # A one-day activity stores its end date equal to its start date, so when
     # the start moves and the client sends no new end date, carry the end date
     # across by the same offset. Without this, moving a single-day activity
@@ -4530,6 +4732,14 @@ def calendar(request, event_id=None):
             qs = qs.filter(status=params["status"])
         if params.get("category"):
             qs = qs.filter(category=params["category"])
+        user = request.user
+        user_groups = set(user.groups.values_list("name", flat=True))
+        is_student = "student" in user_groups and not user.is_superuser and not user_groups & {"teacher"}
+        is_teacher = "teacher" in user_groups and not user.is_superuser
+        if is_student and not (user.is_superuser or user_groups & {"principal", "elementary_principal", "system_admin", "registrar"}):
+            qs = qs.exclude(audience=SchoolEvent.AUDIENCE_TEACHERS)
+        elif is_teacher and not (user.is_superuser or user_groups & {"principal", "elementary_principal", "system_admin", "registrar"}):
+            qs = qs.exclude(audience=SchoolEvent.AUDIENCE_STUDENTS)
         events = [_event_json(ev) for ev in qs.order_by("start_date", "title")]
         return _ok(events=events, canEdit=_can_edit_calendar(request.user),
                    start=start.isoformat(), end=end.isoformat())

@@ -14,6 +14,12 @@ urlpatterns = [
     path("<int:pk>/assign/", views.assessment_assign, name="assessment_assign"),
     path("<int:pk>/submit/", views.assessment_submit, name="assessment_submit"),
     path(
+        "<int:pk>/parts/<int:part_pk>/attachment/",
+        views.assessment_attachment,
+        name="assessment_attachment",
+    ),
+    path("<int:pk>/proctor/", views.record_proctoring_event, name="assessment_proctor"),
+    path(
         "<int:pk>/proctoring/event/",
         views.record_proctoring_event,
         name="record_proctoring_event",

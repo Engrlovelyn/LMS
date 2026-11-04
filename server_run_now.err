@@ -1,6 +1,0 @@
-Watching for file changes with StatReloader
-HTTP GET /?fbclid=IwY2xjawU_uY5leHRuA2FlbQIxMQBwZG9mBXNydGMGYXBwX2lkDDM1MDY4NTUzMTcyOAABHvkSO5IqZpsMSaLVaJIzZcJTWU-apWqkDEn32cHL1tHtCV7Il6o7q0yPqbJE_aem_QiU9egD1wT7JWWQjL1uJ-g 302 [0.21, 127.0.0.1:62275]
-HTTP GET /accounts/login/?next=/%3Ffbclid%3DIwY2xjawU_uY5leHRuA2FlbQIxMQBwZG9mBXNydGMGYXBwX2lkDDM1MDY4NTUzMTcyOAABHvkSO5IqZpsMSaLVaJIzZcJTWU-apWqkDEn32cHL1tHtCV7Il6o7q0yPqbJE_aem_QiU9egD1wT7JWWQjL1uJ-g 200 [0.04, 127.0.0.1:62275]
-HTTP GET /static/dashboards/img/TASS_logo_clear.png 200 [0.04, 127.0.0.1:62275]
-Not Found: /favicon.ico
-HTTP GET /favicon.ico 404 [0.08, 127.0.0.1:62275]

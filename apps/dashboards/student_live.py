@@ -11,8 +11,10 @@ Everything here is scoped to a single ``VirtualClassroom`` that the student is
 actively enrolled in, so a student can never receive another classroom's work.
 """
 
+import os
 import re
 
+from django.urls import reverse
 from django.utils import timezone
 
 RESOURCE_ICONS = {
@@ -63,11 +65,11 @@ def quiz_assessment_key(title):
 
 
 def _fmt_dt(value):
-    return timezone.localtime(value).strftime("%b %d, Y · %I:%M %p") if value else None
+    return timezone.localtime(value).strftime("%b %d, %Y · %I:%M %p") if value else None
 
 
 def _fmt_d(value):
-    return timezone.localtime(value).strftime("%b %d, Y") if value else None
+    return timezone.localtime(value).strftime("%b %d, %Y") if value else None
 
 
 def _subj_label(subject):
@@ -106,6 +108,8 @@ def materials_for(vc):
                 "resource_id": res.pk if res else None,
                 "name": (res.title[:80] if res else "Learning Resource"),
                 "description": (res.description[:160] if res and res.description else ""),
+                "resource_type": rtype,
+                "file_name": os.path.basename(res.file.name) if has_file else "",
                 "icon": RESOURCE_ICONS.get(rtype, "fa-solid fa-file"),
                 "color": "#1e5faf",
                 "topic": (pl.topic.name if pl.topic_id and pl.topic else ""),
@@ -114,6 +118,9 @@ def materials_for(vc):
                 "date": _fmt_d(pl.placed_at),
                 "download_url": (
                     "/teaching/resources/{}/download/".format(res.pk) if has_file else ""
+                ),
+                "preview_url": (
+                    reverse("teaching:resource_preview", args=[res.pk]) if has_file else ""
                 ),
                 "link_url": (res.external_link if rtype == "link" and res else ""),
             }
@@ -145,12 +152,12 @@ def assessments_for(vc, profile, now=None):
         deadline = a.submission_deadline
         if aa.pk in submitted_ids:
             status = "closed"
-        elif deadline and deadline < now:
+        elif deadline and deadline <= now:
             status = "overdue"
+        elif a.available_at and a.available_at > now:
+            status = "scheduled"
         elif a.lifecycle_stage == Assessment.STAGE_COMPLETED:
             status = "closed"
-        elif deadline:
-            status = "scheduled"
         else:
             status = "open"
         attached = next(
@@ -161,18 +168,22 @@ def assessments_for(vc, profile, now=None):
             {
                 "key": "assess-{}".format(aa.pk),
                 "assignment_id": aa.pk,
+                "assessment_id": a.pk,
                 "classroom_id": vc.pk,
                 "title": a.title,
                 "subject": _subj_label(subject).strip(),
                 "type": (a.get_assessment_method_display() or "assignment").lower(),
                 "pts": int(a.total_possible_score or 0),
                 "deadline": _fmt_dt(deadline) or "Open",
+                "available_at": _fmt_dt(a.available_at),
                 "status": status,
                 "color": ASSESSMENT_COLOURS.get(status, "#1e5faf"),
                 "period": vc.grading_period or "Quarter 1",
                 "instr": a.instructions or "",
                 "submitted": aa.pk in submitted_ids,
-                "attachmentUrl": attached.attached_file.url if attached else "",
+                "attachmentUrl": reverse(
+                    "assessments:assessment_attachment", args=[a.pk, attached.pk]
+                ) if attached else "",
                 "attachmentName": str(attached.attached_file.name).rsplit("/", 1)[-1] if attached else "",
             }
         )
@@ -180,16 +191,15 @@ def assessments_for(vc, profile, now=None):
 
 
 def quiz_banks_for(vc, profile, now=None):
-    """Objective questions for this classroom, shaped for the browser quiz taker.
+    """Question labels for dashboard cards, without exposing answer keys.
 
     Keyed by the slug of the assessment title (matching ``quizAssessmentKey`` in
     the student template) so ``openQuizTaker`` can find the questions for the
-    card the student clicked. Only the parts a student can answer are included;
-    the ``correct`` index/answer is carried alongside so the taker can score
-    multiple-choice and true/false items immediately, but the server remains the
-    record of truth once the submission is posted.
+    card the student clicked. The actual attempt is rendered on the protected
+    assessment page; answer keys never reach the browser dashboard.
     """
     from apps.assessments.models import Assessment, AssessmentAssignment
+    from apps.assessments.scheduling import assessment_window
 
     now = now or timezone.now()
     rows = (
@@ -204,6 +214,8 @@ def quiz_banks_for(vc, profile, now=None):
     banks = {}
     for aa in rows:
         assessment = aa.assessment
+        if assessment_window(assessment, now) != "available":
+            continue
         questions = []
         for part in assessment.parts.all():
             kind = PART_TYPE_TO_QUIZ_KIND.get(part.question_type)
@@ -220,40 +232,38 @@ def quiz_banks_for(vc, profile, now=None):
                 if kind == "mc":
                     choices = list(item.get("choices") or [])
                     entry["options"] = choices
-                    correct = item.get("correct_answer")
-                    if correct in choices:
-                        entry["correct"] = choices.index(correct)
-                elif kind == "tf":
-                    correct = str(item.get("correct_answer", "")).strip().lower()
-                    entry["correct"] = "true" if correct in ("true", "t", "yes") else "false"
                 questions.append(entry)
         if questions:
             banks[quiz_assessment_key(assessment.title)] = questions
     return banks
 
 
-def announcements_for(vc):
+def announcements_for(vc, user=None):
     """Class announcements posted in this classroom."""
-    from apps.communication.models import ClassAnnouncement
+    from apps.communication.models import ClassAnnouncement, user_matches_target_role
 
     rows = (
         ClassAnnouncement.objects.filter(virtual_classroom=vc, status=ClassAnnouncement.STATUS_ACTIVE)
         .select_related("virtual_classroom__subject", "posted_by")
         .order_by("-posted_at")
     )
-    return [
-        {
-            "key": "ann-{}".format(ca.pk),
-            "announcement_id": ca.pk,
-            "classroom_id": vc.pk,
-            "subject": _subj_label(ca.virtual_classroom.subject) if ca.virtual_classroom_id else "Class",
-            "title": (ca.content[:60] if ca.content else "Class announcement"),
-            "body": ca.content or "",
-            "by": (ca.posted_by.get_full_name() if ca.posted_by_id else "Teacher"),
-            "date": _fmt_d(ca.posted_at),
-        }
-        for ca in rows
-    ]
+    result = []
+    for ca in rows:
+        if user is not None and not user_matches_target_role(user, getattr(ca, "target_role", "all")):
+            continue
+        result.append(
+            {
+                "key": "ann-{}".format(ca.pk),
+                "announcement_id": ca.pk,
+                "classroom_id": vc.pk,
+                "subject": _subj_label(ca.virtual_classroom.subject) if ca.virtual_classroom_id else "Class",
+                "title": (ca.title or (ca.content[:60] if ca.content else "Class announcement")),
+                "body": ca.content or "",
+                "by": (ca.posted_by.get_full_name() if ca.posted_by_id else "Teacher"),
+                "date": _fmt_d(ca.posted_at),
+            }
+        )
+    return result
 
 
 def attendance_for(vc, profile):
@@ -296,7 +306,7 @@ def attendance_for(vc, profile):
     }
 
 
-def student_classroom_payload(profile, vc, now=None):
+def student_classroom_payload(profile, vc, now=None, user=None):
     """Everything a student sees for one virtual classroom."""
     now = now or timezone.now()
     return {
@@ -310,7 +320,7 @@ def student_classroom_payload(profile, vc, now=None):
         "materials": materials_for(vc),
         "assessments": assessments_for(vc, profile, now=now),
         "quizBanks": quiz_banks_for(vc, profile, now=now),
-        "announcements": announcements_for(vc),
+        "announcements": announcements_for(vc, user),
         "attendance": attendance_for(vc, profile),
         "generated_at": timezone.localtime(now).isoformat(),
     }

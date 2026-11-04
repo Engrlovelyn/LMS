@@ -1,7 +1,5 @@
 /**
  * SVI LMS profile editor persistence.
- * Save to the server first; only show the local success state after the API
- * confirms the profile and any selected avatar were stored.
  */
 (function () {
   'use strict';
@@ -120,17 +118,13 @@
 
 /**
  * SVI LMS — "My Profile" view-first controller.
- *
- * Every dashboard's My Profile modal now opens read-only, with a single
- * "Edit Profile" button. Clicking it unlocks the editable fields (name, email
- * and contact) plus the photo picker, and reveals "Save Changes". Saving or
- * reopening the modal always returns to the read-only view. All dashboards
- * load this file last, so a single implementation covers each of them.
+ * Name and email are not editable by users.
  */
 (function () {
   'use strict';
 
-  var FIELDS = ['profileName', 'profileEmail', 'profileContact'];
+  var LOCKED_FIELDS = ['profileName', 'profileEmail'];
+  var EDITABLE_FIELDS = ['profileContact'];
 
   function modalRoot() {
     var el = document.getElementById('profileName');
@@ -163,23 +157,48 @@
     return btn;
   }
 
+  function lockField(el) {
+    if (!el) return;
+    el.readOnly = true;
+    el.setAttribute('readonly', 'readonly');
+    el.disabled = true;
+    el.setAttribute('disabled', 'disabled');
+  }
+
   function setEdit(edit) {
     var root = modalRoot();
     if (!root) return;
 
-    for (var i = 0; i < FIELDS.length; i++) {
-      var el = document.getElementById(FIELDS[i]);
+    for (var i = 0; i < LOCKED_FIELDS.length; i++) {
+      var el = document.getElementById(LOCKED_FIELDS[i]);
       if (!el) continue;
-      var view = document.getElementById(FIELDS[i] + '_view');
+      lockField(el);
+      var view = document.getElementById(LOCKED_FIELDS[i] + '_view');
       if (!view) {
         view = document.createElement('div');
-        view.id = FIELDS[i] + '_view';
+        view.id = LOCKED_FIELDS[i] + '_view';
         view.className = 'profile-view-val';
         if (el.parentNode) el.parentNode.insertBefore(view, el.nextSibling);
       }
       view.textContent = (el.value && String(el.value).trim()) ? el.value : '—';
-      view.style.display = edit ? 'none' : '';
-      el.style.display = edit ? '' : 'none';
+      view.style.display = '';
+      el.style.display = 'none';
+    }
+
+    for (var j = 0; j < EDITABLE_FIELDS.length; j++) {
+      var el2 = document.getElementById(EDITABLE_FIELDS[j]);
+      if (!el2) continue;
+      var view2 = document.getElementById(EDITABLE_FIELDS[j] + '_view');
+      if (!view2) {
+        view2 = document.createElement('div');
+        view2.id = EDITABLE_FIELDS[j] + '_view';
+        view2.className = 'profile-view-val';
+        if (el2.parentNode) el2.parentNode.insertBefore(view2, el2.nextSibling);
+      }
+      view2.textContent = (el2.value && String(el2.value).trim()) ? el2.value : '—';
+      view2.style.display = edit ? 'none' : '';
+      el2.style.display = edit ? '' : 'none';
+      el2.readOnly = !edit;
     }
 
     var photo = root.querySelector('.profile-photo-btn');
@@ -200,22 +219,17 @@
     enterEdit: function () { setEdit(true); }
   };
 
-  var origOpen = window.openProfile;
-  if (typeof origOpen === 'function') {
-    window.openProfile = function () {
-      var r = origOpen.apply(this, arguments);
+  function applyLocks() {
+    var root = modalRoot();
+    if (root) {
+      LOCKED_FIELDS.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) lockField(el);
+      });
       setEdit(false);
-      return r;
-    };
+    }
   }
 
-  try {
-    var style = document.createElement('style');
-    style.textContent =
-      '.profile-view-val{display:block;padding:10px 14px;border:1px dashed var(--card-border,#cbd5e1);border-radius:10px;background:var(--gray-50,#f8fafc);color:var(--text-primary,#0f172a);font-size:13.5px;font-weight:600;margin:2px 0 4px;}' +
-      '.profile-box .profile-view-val:empty::before{content:"—";}' +
-      '.profile-box .form-control.profile-readonly{background:var(--gray-100,#f1f5f9);cursor:default;}' +
-      '.profile-box .form-control.profile-readonly:focus{box-shadow:none;border-color:var(--card-border,#e2e8f0);}';
-    document.head.appendChild(style);
-  } catch (e) {}
-})();
+  function boot() {
+    applyLocks();
+    

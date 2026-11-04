@@ -1479,8 +1479,8 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
     </div>
     <div class="profile-fields">
-      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50"></div>
-      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100"></div>
+      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50" readonly disabled></div>
+      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
@@ -2108,24 +2108,24 @@ function buildDetailPanel(sid,status){
     '<button onclick="setAttendSub(\''+sid+'\',\'excused\')" '+subBtnStyle(sub,'excused')+'><i class="fa-solid fa-file-shield"></i> Excused</button>'+
     '</div>'+
     (excused?('<div class="att-helper">'+
-      '<div class="att-helper-label" style="margin-top:0;">JUSTIFICATION (REQUIRED)</div>'+
+      '<div class="att-helper-label" style="margin-top:0;">JUSTIFICATION (REQUIRED)</div>'+ 
       '<textarea class="form-control" rows="2" id="excuse-just-'+sid+'" placeholder="e.g. Student was absent due to a medical appointment; medical certificate attached." oninput="excuseJust(\''+sid+'\',this.value)" style="font-size:13px;resize:vertical;"></textarea>'+
       '<div class="att-helper-msg" id="excuse-just-msg-'+sid+'"></div>'+
-      '<div class="att-helper-label" style="margin-top:18px;">SUPPORTING DOCUMENT / PROOF (REQUIRED)</div>'+
+      '<div class="att-helper-label" style="margin-top:18px;">SUPPORTING DOCUMENT / PROOF (OPTIONAL)</div>'+ 
       '<label class="att-upload" id="excuse-preview-'+sid+'">'+
       '<input type="file" accept=".png,.jpg,.pdf,.doc,.docx" style="display:none;" onchange="previewExcuse(this,\''+sid+'\')"/>'+
       '<span class="att-row">'+
       '<i class="fa-solid fa-cloud-arrow-up ic"></i>'+
       '<span class="main" id="excuse-main-'+sid+'">Click to upload excuse letter or proof</span>'+
       '</span>'+
-      '<span class="sub" id="excuse-sub-'+sid+'">PNG, JPG, PDF, DOC &middot; Max 5MB &middot; <strong>Required</strong></span></label></div>'):'')+
+      '<span class="sub" id="excuse-sub-'+sid+'">PNG, JPG, PDF, DOC &middot; Max 5MB &middot; Optional supporting document</span></label></div>'):'')+
     '</div>';
 }
 
 const attendExcuses={};
 function excuseJust(sid,val){attendExcuses[sid]=attendExcuses[sid]||{just:'',file:null};attendExcuses[sid].just=(val||'').trim();const m=document.getElementById('excuse-just-msg-'+sid);if(m){const ok=attendExcuses[sid].just.length>=5;m.textContent=ok?'':';Justification is required (minimum 5 characters).'.slice(1);m.className='att-helper-msg '+(ok?'ok':'err');}}
 window.excuseJust=excuseJust;
-function previewExcuse(input,sid){attendExcuses[sid]=attendExcuses[sid]||{just:'',file:null};if(input.files&&input.files[0]){const f=input.files[0];attendExcuses[sid].file=f;const wrap=document.getElementById('excuse-preview-'+sid);if(wrap){wrap.classList.add('ok');const mn=document.getElementById('excuse-main-'+sid),sb=document.getElementById('excuse-sub-'+sid);if(mn)mn.textContent=f.name;if(sb)sb.innerHTML=''+(f.size/1024).toFixed(1)+' KB uploaded &middot; <strong>Required evidence attached</strong>';}showToast('Excuse letter attached!','success');}else{attendExcuses[sid].file=null;}}
+function previewExcuse(input,sid){attendExcuses[sid]=attendExcuses[sid]||{just:'',file:null};if(input.files&&input.files[0]){const f=input.files[0];attendExcuses[sid].file=f;const wrap=document.getElementById('excuse-preview-'+sid);if(wrap){wrap.classList.add('ok');const mn=document.getElementById('excuse-main-'+sid),sb=document.getElementById('excuse-sub-'+sid);if(mn)mn.textContent=f.name;if(sb)sb.innerHTML=''+(f.size/1024).toFixed(1)+' KB uploaded &middot; Optional document attached';}showToast('Excuse letter attached!','success');}else{attendExcuses[sid].file=null;}}
 function collectExcuseData(){const ex={};Object.keys(attendExcuses).forEach(k=>{const d=attendExcuses[k];if(!d)return;ex[k]={just:d.just||'',file:d.file?(d.file.name||'attached'):null};});return ex;}
 window.collectExcuseData=collectExcuseData;
 function setAttendStatus(sid,status){attendRecords[sid]=status;attendSub[sid]=attendSub[sid]||{};renderAttendList();}
@@ -2150,11 +2150,11 @@ function saveAttend(){
   for(const sid in attendRecords){
     if(attendRecords[sid]==='A'&&((attendSub[sid]||{}).sub)=='excused'){
       const ex=attendExcuses[sid];
-      if(!ex||(ex.just||'').length<5||!ex.file){
+      if(!ex||(ex.just||'').length<5){
         const just=(ex&&ex.just)||'';
         const msg=document.getElementById('excuse-just-msg-'+sid);
-        if(msg)msg.textContent=just.length<5?'Justification is required (minimum 5 characters).':'Supporting document / proof is required.';
-        showToast('Complete required excuse details first','error');
+        if(msg)msg.textContent='Justification is required (minimum 5 characters).';
+        showToast('Add a brief justification for the excused absence.','error');
         return;
       }
     }
@@ -2441,7 +2441,27 @@ function backToStudents(){
 // ── ANNOUNCEMENTS ──
 function openAnnounceModal(){openModal('announceModal');}
 let announcementsFeed=[];
-function postAnnouncement(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('announceModal')))return;const title=document.getElementById('announceTitle').value.trim();const body=document.getElementById('announceBody').value.trim();if(!title||!body){showToast('Please fill in all fields','error');return;}announcementsFeed.unshift({kind:'class',title,body,createdAt:new Date().toISOString(),meta:'Posted just now'});window._lastAnnouncement={title,body};closeModal('announceModal');document.getElementById('announceTitle').value='';document.getElementById('announceBody').value='';if(typeof renderAnnouncements==='function')renderAnnouncements();showToast('Announcement posted!','success');if(typeof logActivity==='function')logActivity('Posted announcement "'+title+'" to your Virtual Classroom.','fa-bullhorn','#fef3c7','#d97706');}
+async function postAnnouncement(){
+  if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('announceModal')))return;
+  const title=document.getElementById('announceTitle').value.trim();
+  const body=document.getElementById('announceBody').value.trim();
+  const vc=window.currentVCId;
+  if(!title||!body){showToast('Please fill in all fields','error');return;}
+  if(!vc){showToast('Open a virtual classroom before posting an announcement.','error');return;}
+  const token=window.csrfToken||((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
+  try{
+    const response=await fetch('/api/class-announcements/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':decodeURIComponent(token)},body:JSON.stringify({virtual_classroom_id:vc,title:title,content:body,target_role:'all'})});
+    const result=await response.json();
+    if(!response.ok||!result||result.ok===false)throw new Error((result&&result.error)||'Could not post the announcement. Please try again.');
+    const saved=result.announcement||{id:null,announcement_id:null,classroomId:vc,title:title,body:body,createdAt:new Date().toISOString(),archived:false};
+    const state=window.teacherFRState;
+    if(state){state.announcements=state.announcements||[];if(!state.announcements.some(function(a){return saved.id&&String(a.id||a.announcement_id)===String(saved.id);}))state.announcements.unshift(Object.assign({kind:'class'},saved));}
+    closeModal('announceModal');document.getElementById('announceTitle').value='';document.getElementById('announceBody').value='';
+    if(typeof renderAnnouncements==='function')renderAnnouncements();
+    showToast('Announcement posted and shared with this class.','success');
+    if(typeof logActivity==='function')logActivity('Posted announcement "'+title+'" to your Virtual Classroom.','fa-bullhorn','#fef3c7','#d97706');
+  }catch(error){showToast(error&&error.message?error.message:'Unable to post announcement. Check your connection and retry.','error');}
+}
 
 // ── CREATE CLASS ──
 function openCreateClassModal(){selectedClassColor='linear-gradient(90deg,#f59e0b,#fbbf24)';document.getElementById('createClassStatus').style.display='none';openModal('createClassModal');}
@@ -2947,7 +2967,7 @@ function saveResourceLink(title,url,topicName,onSaved){
   }).catch(function(err){showToast((err&&err.message)||'Could not save the resource link.','error');});
 }
 
-function addMaterialToList(item){const icons={pdf:'fa-file-pdf',vid:'fa-film',doc:'fa-file',img:'fa-image',aud:'fa-headphones',ppt:'fa-file-powerpoint',lnk:'fa-link'};const list=document.getElementById('uploadedFilesList');const el=document.createElement('div');el.className='material-item clickable';el.innerHTML='<div class="material-icon '+item.type+'"><i class="fa-solid '+(icons[item.type]||'fa-file')+'"></i></div><div style="flex:1;"><div class="material-name">'+e(item.name)+'</div><div class="material-meta">'+e(item.meta)+'</div></div><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();this.closest(\'.material-item\').remove();showToast(\'Removed\',\'success\')"><i class="fa-solid fa-trash"></i></button>';if(item.url)el.onclick=()=>showToast('Opening: '+item.name,'success');list.appendChild(el);}
+function addMaterialToList(item){const icons={pdf:'fa-file-pdf',vid:'fa-film',doc:'fa-file',img:'fa-image',aud:'fa-headphones',ppt:'fa-file-powerpoint',lnk:'fa-link'};const list=document.getElementById('uploadedFilesList');const el=document.createElement('div');el.className='material-item clickable';el.dataset.notificationRecordType='resource';el.dataset.notificationRecord=item.placementId||'';el.innerHTML='<div class="material-icon '+item.type+'"><i class="fa-solid '+(icons[item.type]||'fa-file')+'"></i></div><div style="flex:1;"><div class="material-name">'+e(item.name)+'</div><div class="material-meta">'+e(item.meta)+'</div></div><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();this.closest(\'.material-item\').remove();showToast(\'Removed\',\'success\')"><i class="fa-solid fa-trash"></i></button>';if(item.url)el.onclick=()=>showToast('Opening: '+item.name,'success');list.appendChild(el);}
 function fmt(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
 
 function openAddTopicModal(){document.getElementById('topicTitleInput').value='';document.getElementById('topicDescInput').value='';openModal('addTopicModal');}
@@ -2958,7 +2978,7 @@ function renderTopics(){
   if(topics.length===0){c.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-folder-open" style="font-size:28px;display:block;margin-bottom:10px;opacity:.3;"></i>No topics yet. Click <strong>Add Topic</strong> to get started.</div>';return;}
   c.innerHTML=topics.map((t,i)=>{
     const matIcons={pdf:'fa-file-pdf',vid:'fa-film',doc:'fa-file',img:'fa-image',aud:'fa-headphones',ppt:'fa-file-powerpoint',lnk:'fa-link'};
-    const mats=t.materials.map(m=>'<div class="material-item clickable" style="margin-bottom:6px;"><div class="material-icon '+m.type+'"><i class="fa-solid '+(matIcons[m.type]||'fa-file')+'"></i></div><div style="flex:1;"><div class="material-name">'+e(m.name)+'</div><div class="material-meta">'+e(m.meta)+'</div></div><button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="event.stopPropagation();removeMaterial('+i+',\''+m.name+'\')"><i class="fa-solid fa-trash"></i></button></div>').join('');
+    const mats=t.materials.map(m=>'<div class="material-item clickable" data-notification-record-type="resource" data-notification-record="'+e(m.placementId||'')+'" style="margin-bottom:6px;"><div class="material-icon '+m.type+'"><i class="fa-solid '+(matIcons[m.type]||'fa-file')+'"></i></div><div style="flex:1;"><div class="material-name">'+e(m.name)+'</div><div class="material-meta">'+e(m.meta)+'</div></div><button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="event.stopPropagation();removeMaterial('+i+',\''+m.name+'\')"><i class="fa-solid fa-trash"></i></button></div>').join('');
 
     // Upload type selector panel
     const utBtns=uploadTypes.map(ut=>'<button class="upload-type-btn'+(t.selectedUploadType===ut.key?' selected':'')+'" onclick="selectUploadType('+i+',\''+ut.key+'\')" type="button"><div class="ut-icon" style="background:'+ut.bg+';color:'+ut.color+';"><i class="fa-solid '+ut.icon+'"></i></div><div class="ut-label">'+ut.label+'</div></button>').join('');
@@ -3091,7 +3111,7 @@ function toggleBuilderPartMenu(ev){ev.stopPropagation();const m=document.getElem
 function closeBuilderPartMenu(){const m=document.getElementById('builderPartMenu');if(m)m.style.display='none';document.querySelectorAll('.part-edit-menu').forEach(x=>x.style.display='none');}
 document.addEventListener('click',closeBuilderPartMenu);
 window.addBuilderPart=addBuilderPart;window.setCurrentPart=setCurrentPart;window.removeBuilderPart=removeBuilderPart;window.togglePartEditMenu=togglePartEditMenu;window.changePartType=changePartType;window.toggleBuilderPartMenu=toggleBuilderPartMenu;window.closeBuilderPartMenu=closeBuilderPartMenu;
-function openAssessmentBuilder(){builderQuestions=[];resetBuilderParts();window.managedEditOriginal=null;window.managedEditTitle=null;document.getElementById('builderStep1').style.display='block';document.getElementById('builderStep2').style.display='none';document.getElementById('bTitle').value='';document.getElementById('bOpenDate').value='';document.getElementById('bDeadline').value='';// Reset step indicators
+function openAssessmentBuilder(){builderQuestions=[];resetBuilderParts();window.managedEditOriginal=null;window.managedEditTitle=null;window.managedEditAssessmentId=null;window.managedEditClassroomId=null;document.getElementById('builderStep1').style.display='block';document.getElementById('builderStep2').style.display='none';document.getElementById('bTitle').value='';document.getElementById('bOpenDate').value='';document.getElementById('bDeadline').value='';// Reset step indicators
 document.getElementById('bstep1').className='builder-step active';document.getElementById('bstep2').className='builder-step';renderBuilderQs();openModal('assessBuilderModal');}
 
 function goToBuilderStep2(){
@@ -3116,13 +3136,14 @@ function backToBuilderStep1(){document.getElementById('builderStep2').style.disp
 function renderBuilderQs(){const list=document.getElementById('qBuilderList');if(!list)return;list.innerHTML='';let tot=0;const parts=builderParts.length?builderParts:[{id:'p1',label:'Part I – Objective',mode:'objective'}];parts.forEach(p=>{const qs=builderQuestions.filter(q=>q.partId===p.id);if(!qs.length)return;const pTot=qs.reduce((s,q)=>s+q.points,0);tot+=pTot;list.innerHTML+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--accent);border:1px solid var(--card-border);border-left:3px solid '+(p.mode==='objective'?'#16a34a':'#ea580c')+';border-radius:9px;margin-top:16px;"><i class="fa-solid fa-layer-group" style="color:'+(p.mode==='objective'?'#16a34a':'#ea580c')+';"></i><span style="font-size:12.5px;font-weight:700;color:var(--navy);">'+e(p.label)+'</span><span class="fr-mode-badge '+(p.mode==='objective'?'auto':'manual')+'">'+(p.mode==='objective'?'Auto-Graded':'Manual Grading')+'</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--blue);">'+pTot+' pts &middot; '+qs.length+' item(s)</span></div>';qs.forEach(q=>{const idx=builderQuestions.indexOf(q);const mode=QTYPE_MODE[q.type]==='subjective'?'manual':'auto';let choices='';if(q.type==='mc'&&q.options&&q.options.length){const filled=q.options.map((o,oi)=>({o:o,i:oi,im:(q.optImgs&&q.optImgs[oi])||''})).filter(x=>String(x.o||'').trim()!==''||x.im!=='');const optTxt=filled.map((x)=>'<div style="padding:6px 10px;border:1px solid var(--card-border);border-radius:8px;background:var(--off-white);font-size:12px;display:flex;align-items:center;gap:8px;"><span style="font-size:10.5px;background:'+(x.i===q.correct?'var(--blue)':'var(--gray-100)')+';color:'+(x.i===q.correct?'#fff':'var(--text-muted)')+';border-radius:6px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">'+String.fromCharCode(65+x.i)+'</span><span style="flex:1;min-width:0;">'+e(x.o)+(x.im?' <i class="fa-solid fa-image" style="color:var(--blue);"></i>':'')+'</span>'+(x.i===q.correct?'<i class="fa-solid fa-check" style="color:#16a34a;" title="Correct answer"></i>':'')+'</div>').join('');choices='<div style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;">'+optTxt+'</div>';}else if(q.type==='tf'&&q.tf!==undefined){choices='<div style="margin-top:8px;"><span class="fr-mode-badge auto">Correct Answer: <strong>'+(q.tf===true?'True':'False')+'</strong></span></div>';}list.innerHTML+='<div class="q-card"><div style="display:flex;align-items:center;gap:10px;padding:10px 15px;border-bottom:1px solid var(--card-border);"><div class="q-num">'+(idx+1)+'</div><div style="flex:1;font-size:13.5px;font-weight:700;color:var(--navy);line-height:1.45;min-width:0;">'+e(q.text)+'</div><span style="white-space:nowrap;font-size:12px;font-weight:700;color:var(--blue);flex-shrink:0;">'+q.points+'pts</span><button class="btn btn-outline btn-sm" style="color:var(--blue);flex-shrink:0;" onclick="editQuestion('+idx+')" title="Edit question"><i class="fa-solid fa-pen"></i></button><button class="btn btn-outline btn-sm" style="color:var(--danger);flex-shrink:0;" onclick="deleteQ('+idx+')" title="Delete question"><i class="fa-solid fa-trash"></i></button></div><div class="q-card-body">'+choices+'</div></div>';});});if(!builderQuestions.length){list.innerHTML='';}const pd=document.getElementById('totalPtsDisplay'),qd=document.getElementById('totalQsDisplay');if(pd)pd.textContent=builderQuestions.reduce((s,q)=>s+q.points,0);if(qd)qd.textContent=builderQuestions.length;}
 
 function selectTF(val,btn){tfSelected=val;document.getElementById('tfTrue').className='tf-btn'+(val==='true'?' sel-true':'');document.getElementById('tfFalse').className='tf-btn'+(val==='false'?' sel-false':'');}
-let qMediaAttached=null,optImgAttached={};
-function attachQMedia(input,kind){if(!input.files[0])return;const f=input.files[0];if(kind==='auto')kind=f.type.indexOf('image/')===0?'image':f.type.indexOf('audio/')===0?'audio':f.type.indexOf('video/')===0?'video':'file';qMediaAttached={kind,name:f.name};const icon=kind==='image'?'fa-image':kind==='audio'?'fa-headphones':'fa-film';const color=kind==='image'?'#d97706':kind==='audio'?'#16a34a':'#7c3aed';let preview='';if(kind==='image'){const url=URL.createObjectURL(f);preview='<img src="'+url+'" alt="">';}document.getElementById('qMediaPreview').innerHTML='<div class="q-media-preview">'+preview+'<i class="fa-solid '+icon+'" style="color:'+color+';font-size:16px;"></i><div style="flex:1;"><div style="font-weight:600;">'+e(f.name)+'</div><div style="font-size:10.5px;color:var(--text-muted);">'+kind.toUpperCase()+' · '+fmt(f.size)+'</div></div><button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="qMediaAttached=null;document.getElementById(\'qMediaPreview\').innerHTML=\'\'"><i class="fa-solid fa-xmark"></i></button></div>';showToast(kind+' attached to question','success');}
-function attachOptImg(input,letter){if(!input.files[0])return;const f=input.files[0];const url=URL.createObjectURL(f);optImgAttached[letter]=f.name;const wrap=input.closest('.mc-opt-input');const old=wrap.querySelector('.opt-img-thumb');if(old)old.remove();const img=document.createElement('img');img.src=url;img.className='opt-img-thumb';img.title=f.name;wrap.appendChild(img);mcChoiceGuard();showToast('Image added to choice '+letter,'success');}
+let qMediaAttached=null,optImgAttached={},qMediaLoading=false,optImgLoading={};
+function compressAssessmentImage(file){return new Promise(function(resolve,reject){const reader=new FileReader();reader.onerror=function(){reject(new Error('Could not read this image.'));};reader.onload=function(){const image=new Image();image.onerror=function(){reject(new Error('This image could not be opened.'));};image.onload=function(){let scale=Math.min(1,1100/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');const encode=function(){canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);canvas.toBlob(function(blob){if(!blob){reject(new Error('Could not compress this image.'));return;}if(blob.size>280*1024&&scale>0.55){scale*=0.78;encode();return;}if(blob.size>350*1024){reject(new Error('This image is too large. Choose a smaller picture.'));return;}const out=new FileReader();out.onerror=function(){reject(new Error('Could not prepare this image.'));};out.onload=function(){resolve(String(out.result||''));};out.readAsDataURL(blob);},'image/jpeg',0.76);};encode();};image.src=String(reader.result||'');};reader.readAsDataURL(file);});}
+function attachQMedia(input,kind){if(!input.files[0])return;const f=input.files[0];if(kind==='auto')kind=f.type.indexOf('image/')===0?'image':f.type.indexOf('audio/')===0?'audio':f.type.indexOf('video/')===0?'video':'file';const previewEl=document.getElementById('qMediaPreview');if(kind==='image'){qMediaLoading=true;previewEl.innerHTML='<div class="q-media-preview"><span>Preparing image…</span></div>';compressAssessmentImage(f).then(function(data){qMediaAttached={kind:'image',name:f.name,data:data};qMediaLoading=false;previewEl.innerHTML='<div class="q-media-preview"><img src="'+data+'" alt=""><i class="fa-solid fa-image" style="color:#d97706;font-size:16px;"></i><div style="flex:1;"><div style="font-weight:600;">'+e(f.name)+'</div><div style="font-size:10.5px;color:var(--text-muted);">Image · compressed for assessment</div></div><button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="qMediaAttached=null;document.getElementById(\'qMediaPreview\').innerHTML=\'\'"><i class="fa-solid fa-xmark"></i></button></div>';showToast('Image attached to question','success');}).catch(function(error){qMediaLoading=false;qMediaAttached=null;previewEl.innerHTML='';showToast(error.message||'Could not load that image.','error');});return;}qMediaAttached={kind,name:f.name};const icon=kind==='audio'?'fa-headphones':'fa-film';const color=kind==='audio'?'#16a34a':'#7c3aed';previewEl.innerHTML='<div class="q-media-preview"><i class="fa-solid '+icon+'" style="color:'+color+';font-size:16px;"></i><div style="flex:1;"><div style="font-weight:600;">'+e(f.name)+'</div><div style="font-size:10.5px;color:var(--text-muted);">'+kind.toUpperCase()+' · '+fmt(f.size)+'</div></div></div>';showToast(kind+' attached to question','success');}
+function attachOptImg(input,letter){if(!input.files[0])return;const f=input.files[0];const wrap=input.closest('.mc-opt-input');const old=wrap.querySelector('.opt-img-thumb');if(old)old.remove();optImgLoading[letter]=true;compressAssessmentImage(f).then(function(data){optImgAttached[letter]=data;optImgLoading[letter]=false;const img=document.createElement('img');img.src=data;img.className='opt-img-thumb';img.title=f.name;wrap.appendChild(img);mcChoiceGuard();showToast('Image added to choice '+letter,'success');}).catch(function(error){optImgLoading[letter]=false;delete optImgAttached[letter];showToast(error.message||'Could not load that choice image.','error');});}
 let editingQuestionIdx=null;
 function mcChoiceGuard(){const letters=['A','B','C','D'];const filled=i=>{const el=document.getElementById('optText'+letters[i]);return !!((el&&el.value.trim())||optImgAttached[letters[i]]);};const radios=document.querySelectorAll('input[name="mcCorrect"]');let idx=-1;for(let i=0;i<radios.length;i++)if(radios[i].checked){idx=i;break;}if(idx>=0&&filled(idx))return;for(let i=0;i<radios.length;i++){if(filled(i)){radios[i].checked=true;return;}}if(radios[0])radios[0].checked=true;}
-function addQuestion(){const text=document.getElementById('qText').value.trim();const pts=Math.min(Math.max(parseInt(document.getElementById('qPoints').value)||2,1),100);if(!text){showToast('Please enter a question','error');return;}const cur=builderParts.find(p=>p.id===currentPartId);if(!cur){showToast('Please add a part first','error');return;}const qtype=cur.qtype||'mc';const mode=QTYPE_MODE[qtype]==='subjective'?'manual':'auto';selectedQType=qtype;const data={type:qtype,mode,partId:cur.id,text,points:pts,media:qMediaAttached,optImgs:Object.assign({},optImgAttached)};if(qtype==='mc'){const letters=['A','B','C','D'];const options=letters.map(L=>{const el=document.getElementById('optText'+L);return el?el.value.trim():'';});const filledIdx=letters.map((L,i)=>(options[i]||optImgAttached[L])?i:-1).filter(i=>i>=0);if(filledIdx.length<2){showToast('Please fill in at least two choices','error');return;}const radios=document.getElementsByName('mcCorrect');let correct=0;for(let i=0;i<radios.length;i++){if(radios[i].checked){correct=i;break;}}if(!(options[correct]||optImgAttached[letters[correct]])){correct=filledIdx[0];if(radios[correct])radios[correct].checked=true;}data.options=options;data.correct=correct;}else if(qtype==='tf'){data.tf=tfSelected==='true';}else if(qtype==='mt'){data.match=document.getElementById('mtItems').value.trim();if(!data.match){showToast('Please enter the matching pairs','error');return;}}else if(qtype==='id'){data.idAns=document.getElementById('idAnswer').value.trim();if(!data.idAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='sa'){data.saAns=document.getElementById('saAnswer').value.trim();if(!data.saAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='es'||qtype==='pp'||qtype==='cs'||qtype==='nr'||qtype==='pt'){data.rubric=document.getElementById('esRubric').value.trim();}if(editingQuestionIdx!==null){const found=builderQuestions[editingQuestionIdx];if(found){Object.assign(found,data,{partId:found.partId});}editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question Successfully Updated.','success');return;}builderQuestions.push(data);resetQuestionForm();renderBuilderQs();showToast('Question added!'+(mode==='manual'?' Manual grading required for this item.':''),'success');}
-function resetQuestionForm(){document.getElementById('qText').value='';const pts=document.getElementById('qPoints');if(pts)pts.value='2';document.getElementById('qMediaPreview').innerHTML='';qMediaAttached=null;optImgAttached={};document.querySelectorAll('.opt-img-thumb').forEach(t=>t.remove());document.querySelectorAll('.opt-field').forEach(f=>f.value='');document.querySelectorAll('input[name="mcCorrect"]').forEach((r,i)=>r.checked=i===0);tfSelected='true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn sel-true';if(tF)tF.className='tf-btn';const mi=document.getElementById('mtItems');if(mi)mi.value='';const ia=document.getElementById('idAnswer');if(ia)ia.value='';const sa=document.getElementById('saAnswer');if(sa)sa.value='';const er=document.getElementById('esRubric');if(er)er.value='';const ab=document.getElementById('qAddBtn');if(ab)ab.innerHTML='<i class="fa-solid fa-plus"></i> Add Question';const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='none';}
+function addQuestion(){if(qMediaLoading||Object.keys(optImgLoading).some(function(k){return optImgLoading[k];})){showToast('Wait for the selected image to finish preparing.','error');return;}const text=document.getElementById('qText').value.trim();const pts=Math.min(Math.max(parseInt(document.getElementById('qPoints').value)||2,1),100);if(!text){showToast('Please enter a question','error');return;}const cur=builderParts.find(p=>p.id===currentPartId);if(!cur){showToast('Please add a part first','error');return;}const qtype=cur.qtype||'mc';const mode=QTYPE_MODE[qtype]==='subjective'?'manual':'auto';selectedQType=qtype;const data={type:qtype,mode,partId:cur.id,text,points:pts,media:qMediaAttached,optImgs:Object.assign({},optImgAttached)};if(qtype==='mc'){const letters=['A','B','C','D'];const options=letters.map(L=>{const el=document.getElementById('optText'+L);return el?el.value.trim():'';});const filledIdx=letters.map((L,i)=>(options[i]||optImgAttached[L])?i:-1).filter(i=>i>=0);if(filledIdx.length<2){showToast('Please fill in at least two choices','error');return;}const radios=document.getElementsByName('mcCorrect');let correct=0;for(let i=0;i<radios.length;i++){if(radios[i].checked){correct=i;break;}}if(!(options[correct]||optImgAttached[letters[correct]])){correct=filledIdx[0];if(radios[correct])radios[correct].checked=true;}data.options=options;data.correct=correct;}else if(qtype==='tf'){data.tf=tfSelected==='true';}else if(qtype==='mt'){data.match=document.getElementById('mtItems').value.trim();if(!data.match){showToast('Please enter the matching pairs','error');return;}}else if(qtype==='id'){data.idAns=document.getElementById('idAnswer').value.trim();if(!data.idAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='sa'){data.saAns=document.getElementById('saAnswer').value.trim();if(!data.saAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='es'||qtype==='pp'||qtype==='cs'||qtype==='nr'||qtype==='pt'){data.rubric=document.getElementById('esRubric').value.trim();}if(editingQuestionIdx!==null){const found=builderQuestions[editingQuestionIdx];if(found){Object.assign(found,data,{partId:found.partId});}editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question Successfully Updated.','success');return;}builderQuestions.push(data);resetQuestionForm();renderBuilderQs();showToast('Question added!'+(mode==='manual'?' Manual grading required for this item.':''),'success');}
+function resetQuestionForm(){document.getElementById('qText').value='';const pts=document.getElementById('qPoints');if(pts)pts.value='2';document.getElementById('qMediaPreview').innerHTML='';qMediaAttached=null;qMediaLoading=false;optImgAttached={};optImgLoading={};document.querySelectorAll('.opt-img-thumb').forEach(t=>t.remove());document.querySelectorAll('.opt-field').forEach(f=>f.value='');document.querySelectorAll('input[name="mcCorrect"]').forEach((r,i)=>r.checked=i===0);tfSelected='true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn sel-true';if(tF)tF.className='tf-btn';const mi=document.getElementById('mtItems');if(mi)mi.value='';const ia=document.getElementById('idAnswer');if(ia)ia.value='';const sa=document.getElementById('saAnswer');if(sa)sa.value='';const er=document.getElementById('esRubric');if(er)er.value='';const ab=document.getElementById('qAddBtn');if(ab)ab.innerHTML='<i class="fa-solid fa-plus"></i> Add Question';const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='none';}
 function editQuestion(idx){const q=builderQuestions[idx];if(!q)return;document.getElementById('qText').value=q.text||'';const pts=document.getElementById('qPoints');if(pts)pts.value=q.points||2;if(builderParts.length){const p=builderParts.find(x=>x.id===q.partId);if(p){currentPartId=p.id;selectedQType=p.qtype||'mc';}}syncBuilderForm();if(q.type==='mc'){const opts=(q.options&&q.options.length)?q.options:['','','',''];['A','B','C','D'].forEach((L,i)=>{const el=document.getElementById('optText'+L);if(el)el.value=opts[i]||'';});optImgAttached={};if(q.optImgs){['A','B','C','D'].forEach(L=>{if(q.optImgs[L])optImgAttached[L]=q.optImgs[L];});}const radios=document.getElementsByName('mcCorrect');const ci=(typeof q.correct==='number')?q.correct:0;for(let i=0;i<radios.length;i++)radios[i].checked=i===ci;mcChoiceGuard();}else if(q.type==='tf'){tfSelected=q.tf===false?'false':'true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn'+(tfSelected==='true'?' sel-true':'');if(tF)tF.className='tf-btn'+(tfSelected==='false'?' sel-false':'');}else if(q.type==='mt'){const mi=document.getElementById('mtItems');if(mi)mi.value=q.match||'';}else if(q.type==='id'){const ia=document.getElementById('idAnswer');if(ia)ia.value=q.idAns||'';}else if(q.type==='sa'){const sa=document.getElementById('saAnswer');if(sa)sa.value=q.saAns||'';}else if(q.type==='es'||['pp','cs','nr','pt'].includes(q.type)){const er=document.getElementById('esRubric');if(er)er.value=q.rubric||'';}if(q.media)qMediaAttached=q.media;editingQuestionIdx=idx;const ab=document.getElementById('qAddBtn');if(ab){ab.innerHTML='<i class="fa-solid fa-pen"></i> Update Question';const form=ab.closest('.q-form');if(form)form.scrollIntoView({behavior:'smooth',block:'center'});}const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='inline-flex';showToast('Editing question '+(idx+1)+' — update the fields then click Save.','info');}
 function cancelEditQuestion(){editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question edit cancelled.','info');}
 function deleteQ(idx){builderQuestions.splice(idx,1);if(editingQuestionIdx===idx)editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Removed','success');}
@@ -3492,7 +3513,7 @@ function logActivity(text,icon,bg,color){
 function renderRecentActivity(){
   const el=document.getElementById('recentActivityList');if(!el)return;
   if(!activityFeed.length){el.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';return;}
-  el.innerHTML=activityFeed.map(a=>'<div class="log-item"><div class="notif-dot-icon" style="background:'+a.bg+';color:'+a.color+';"><i class="fa-solid '+a.icon+'"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">'+e(a.text)+'</div><div class="notif-time">'+e(a.time)+'</div></div></div>').join('');
+  el.innerHTML=activityFeed.map(a=>'<div class="log-item"'+(a.recordType&&a.recordId?' data-notification-record-type="'+e(a.recordType)+'" data-notification-record="'+e(a.recordId)+'"':'')+'><div class="notif-dot-icon" style="background:'+a.bg+';color:'+a.color+';"><i class="fa-solid '+a.icon+'"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">'+e(a.text)+'</div><div class="notif-time">'+e(a.time)+'</div></div></div>').join('');
 }
 function renderDashboardUpcoming(){
   const el=document.getElementById('upcomingDeadlinesList');if(!el)return;
@@ -3571,7 +3592,7 @@ function hydrateTopicsFromClassroom(d){
     return {
       title:name,desc:prev.desc||'',open:!!prev.open,showUploadSelector:!!prev.showUploadSelector,
       selectedUploadType:prev.selectedUploadType||null,
-      materials:(byTopic[name]||[]).map(function(r){return {type:materialTypeForResource(r),name:r.title,meta:materialMetaForResource(r),url:((r.fileUrl||r.externalLink)||''),description:''};})
+      materials:(byTopic[name]||[]).map(function(r){return {type:materialTypeForResource(r),name:r.title,meta:materialMetaForResource(r),url:((r.fileUrl||r.externalLink)||''),placementId:r.placement_id||'',description:''};})
     };
   });
   if(typeof renderTopics==='function')renderTopics();
@@ -3595,7 +3616,7 @@ function hydrateGeneralFilesFromClassroom(d){
   const list=document.getElementById('uploadedFilesList');if(!list)return;
   list.innerHTML='';
   (d.resources||[]).filter(function(r){return String(r.topic||'')==='General Resources';}).forEach(function(r){
-    addMaterialToList({type:materialTypeForResource(r),name:r.title,meta:materialMetaForResource(r),url:r.fileUrl||r.externalLink||''});
+    addMaterialToList({type:materialTypeForResource(r),name:r.title,meta:materialMetaForResource(r),url:r.fileUrl||r.externalLink||'',placementId:r.placement_id||''});
   });
 }
 function applyClassroomPayload(key, d) {
@@ -3631,7 +3652,7 @@ function renderAnnouncements(){
   }).slice().sort(function(a,b){return String(b.createdAt||'')<String(a.createdAt||'')?-1:(String(b.createdAt||'')>String(a.createdAt||'')?1:0);});
   if(!clsAnn.length){list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No announcements yet.</div>';return;}
   list.innerHTML=clsAnn.map(a=>{
-    return '<div class="announce-item" style="border-left-color:var(--blue);">'+
+    return '<div class="announce-item" data-notification-record-type="announcement" data-notification-record="'+e(a.id||a.announcement_id||'')+'" style="border-left-color:var(--blue);">'+
       '<div class="title"><span class="notif-sent-badge" style="font-size:10px;margin-right:6px;vertical-align:middle;"><i class="fa-solid fa-bell"></i> Notification sent</span>'+e(a.title||'')+'</div>'+
       '<div class="body">'+e(a.body||'')+'</div>'+
       '<div class="meta"><span><i class="fa-regular fa-calendar"></i> '+e(timeAgoText(a.createdAt))+'</span></div></div>';
@@ -3831,11 +3852,11 @@ function renderAssessmentLibrary(){
     return '<div class="repository-item">'+
       '<div class="repo-main">'+
       '<i class="fa-solid '+(ASSESS_TYPE_ICONS[a.type]||'fa-clipboard-list')+'" style="font-size:22px;color:'+assessTypeColor(a.type)+'"></i>'+
-      '<div class="repo-body"><strong>'+a.title+'</strong><div style="font-size:11px;color:var(--text-muted)">'+a.subject+' · '+a.type+' · '+a.items+' · '+a.meta+'</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-share-nodes"></i> Shared by '+a.shares+' teachers · Updated '+a.updated+'</div></div>'+
+      '<div class="repo-body"><strong>'+e(a.title)+'</strong><div style="font-size:11px;color:var(--text-muted)">'+e(a.subject)+' · '+e(a.type)+' · '+e(a.items)+' questions · '+e(a.meta)+'</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-share-nodes"></i> Assigned to '+e(a.shares)+' classroom(s) · Updated '+e(a.updated)+'</div></div>'+
       '</div>'+
       '<div class="repo-actions">'+
       '<button class="btn btn-outline btn-sm" onclick="copyAssessmentToBuilder(\''+escT+'\')"><i class="fa-solid fa-copy"></i> Copy to Classroom</button>'+
-      '<button class="btn btn-outline btn-sm" onclick="downloadSharedAssessment(\''+escT+'\')"><i class="fa-solid fa-download"></i> Download</button>'+
+      '<button class="btn btn-outline btn-sm" onclick="viewTeacherAssessment(\''+escT+'\','+Number(a.id||0)+')"><i class="fa-solid fa-eye"></i> View</button>'+
       '</div></div>';
   }).join('');
 }
@@ -4262,7 +4283,7 @@ function showMessageAttachment(input){
       let btns='<button class="btn btn-outline btn-sm fr-assessment-view" onclick="event.stopPropagation();viewTeacherAssessment(\''+escT+'\')"><i class="fa-solid fa-eye"></i> View Assessment</button><button class="btn btn-outline btn-sm fr-manage-assessment" onclick="event.stopPropagation();openAssessmentBuilderForEdit(\''+escT+'\')"><i class="fa-solid fa-pen"></i> Edit</button>';
       if(a.hasManual&&lc.label!=='Completed')btns+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openManualGrade(\''+escT+'\')"><i class="fa-solid fa-user-pen"></i> Grade Subjective</button>';
       if(lc.label==='Awaiting Grading'||lc.label==='Grading in Progress')btns+='<button class="btn btn-success btn-sm" onclick="event.stopPropagation();markAssessmentCompleted(\''+escT+'\')"><i class="fa-solid fa-check-double"></i> Mark Completed</button>';
-      return '<div class="assessment-item" onclick="viewTeacherAssessment(\''+escT+'\')">'+
+      return '<div class="assessment-item" data-notification-record-type="assessment" data-notification-record="'+e(a.id||'')+'" onclick="viewTeacherAssessment(\''+escT+'\')">'+
         '<span class="assess-badge '+assessTypeBadge(a.type)+'">'+reportAssessType(a.type)+'</span>'+
         '<div style="flex:1;min-width:200px;"><div class="assess-title">'+e(a.title)+'</div><div class="assess-meta">'+e(partsTxt)+'</div><div class="assess-meta" style="margin-top:3px;display:flex;gap:12px;flex-wrap:wrap;">'+meta.map(m=>'<span>'+e(m)+'</span>').join('')+'</div></div>'+
         '<span class="assess-status '+lc.cls+'">'+e(lc.label)+'</span>'+
@@ -4292,6 +4313,8 @@ function showMessageAttachment(input){
     builderQuestions=JSON.parse(JSON.stringify(found.questions));
     currentPartId=builderParts.length?builderParts[0].id:null;
     window.managedEditOriginal=title;
+    window.managedEditAssessmentId=found.id||null;
+    window.managedEditClassroomId=found.classroomId||window.currentVCId||null;
     try{document.getElementById('bTitle').value=found.title||''}catch(e){}
     try{document.getElementById('bOpenDate').value=found.openDate||''}catch(e){}
     try{document.getElementById('bDeadline').value=found.deadline||''}catch(e){}
@@ -4300,8 +4323,10 @@ function showMessageAttachment(input){
     renderBuilderParts();renderBuilderQs();
     goToBuilderStep2();
   };
-  window.viewTeacherAssessment=function(title){
-    const a=(state.assessments||[]).find(x=>x.title===title)||{title:title,type:'Assessment',instructions:'',openDate:'',deadline:'',parts:[],questions:[],hasManual:false,lifecycle:'open'};
+  window.viewTeacherAssessment=function(title, assessmentId){
+    const a=(state.assessments||[]).find(x=>(assessmentId&&String(x.id)===String(assessmentId))||(!assessmentId&&x.title===title))||
+      (typeof assessmentSource==='function'?assessmentSource().find(x=>(assessmentId&&String(x.id)===String(assessmentId))||(!assessmentId&&x.title===title)):null)||
+      {title:title,type:'Assessment',instructions:'',openDate:'',deadline:'',parts:[],questions:[],hasManual:false,lifecycle:'open',canEdit:false};
     const lc=assessLifecycleOf(a);
     const qs=a.questions||[];
     const manual=qs.filter(q=>q.mode==='manual').length;
@@ -4326,7 +4351,7 @@ function showMessageAttachment(input){
       '<div style="font-size:11.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Assessment Parts</div>'+
       partsHtml+
       '<div style="margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--card-border);"><div style="font-size:11.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Submission Status</div>'+subStatus+'</div>'+
-      '<div class="modal-footer"><button class="btn btn-outline" onclick="document.getElementById(\'tempViewAssessment\').remove()">Close</button><button class="btn btn-primary" onclick="document.getElementById(\'tempViewAssessment\').remove();openAssessmentBuilderForEdit(\''+escTitle+'\')"><i class="fa-solid fa-pen"></i> Edit Assessment</button></div>'+
+      '<div class="modal-footer"><button class="btn btn-outline" onclick="document.getElementById(\'tempViewAssessment\').remove()">Close</button>'+(a.canEdit?'<button class="btn btn-primary" onclick="document.getElementById(\'tempViewAssessment\').remove();openAssessmentBuilderForEdit(\''+escTitle+'\')"><i class="fa-solid fa-pen"></i> Edit Assessment</button>':'')+'</div>'+
     '</div></div>';
     document.body.insertAdjacentHTML('beforeend',html);
   };
@@ -4344,6 +4369,8 @@ function showMessageAttachment(input){
     const deadline=document.getElementById('bDeadline')?.value||'';
     const parts=JSON.parse(JSON.stringify(builderParts||[]));
     const questions=JSON.parse(JSON.stringify(builderQuestions||[]));
+    const imagePayloadSize=questions.reduce(function(total,q){let size=0;if(q&&q.media){size+=String(q.media.data||'').length;}Object.keys((q&&q.optImgs)||{}).forEach(function(key){size+=String(q.optImgs[key]||'').length;});return total+size;},0);
+    if(imagePayloadSize>1800000){showToast('Assessment images are too large to save together. Use fewer or smaller pictures.','error');return;}
     const hasManual=questions.some(q=>q.mode==='manual');
     const editKey=(window.managedEditOriginal!==undefined&&window.managedEditOriginal!==null)?window.managedEditOriginal:null;
     const isEdit=!!editKey;
@@ -4353,10 +4380,12 @@ function showMessageAttachment(input){
     if(isEdit&&!confirm('Are you sure you want to update this assessment?')){showToast('Assessment update cancelled.','error');return;}
     // Persist new assessments before the legacy local UI reports success. The
     // background bridge can retry later, but it must not be the only save path.
-    if(!isEdit&&!window.__assessmentSaveConfirmed){
+    if(!window.__assessmentSaveConfirmed){
       if(window.__assessmentSavePending)return;
-      if(!vcId){showToast('Open a virtual classroom before publishing an assessment.','error');return;}
-      const savePayload={virtual_classroom_id:vcId,title,type:document.getElementById('bType')?.value||'Quiz',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',questions:questions.filter(q=>q&&q.text)};
+      const saveClassroomId=vcId||window.managedEditClassroomId;
+      if(!saveClassroomId){showToast('Open the assessment classroom before saving.','error');return;}
+      const savePayload={virtual_classroom_id:saveClassroomId,title,type:document.getElementById('bType')?.value||'Quiz',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',questions:questions.filter(q=>q&&q.text)};
+      if(isEdit&&window.managedEditAssessmentId)savePayload.assessment_id=window.managedEditAssessmentId;
       window.__assessmentSavePending=true;
       fetch('/api/assessments/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(savePayload)})
         .then(r=>r.json().then(data=>({response:r,data:data})))
@@ -4381,6 +4410,8 @@ function showMessageAttachment(input){
           state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
         }
         window.managedEditOriginal=null;
+        window.managedEditAssessmentId=null;
+        window.managedEditClassroomId=null;
         state.notifications=state.notifications||[];
         state.notifications.unshift({id:'upd_'+Date.now(),type:'assessment_updated',title:title,msg:'"'+title+'" was updated. Changes are reflected in the selected Virtual Classroom.',createdAt:new Date().toISOString()});
         showToast('Assessment Successfully Updated.','success');
@@ -4408,7 +4439,7 @@ function showMessageAttachment(input){
   // Attendance: save actual front-end records by date and use them on subsequent opens.
   const oldSaveAttend=window.saveAttend;
   window.saveAttend=function(){
-    // Business rule: an Absent (Excused) student REQUIRES a descriptive justification and supporting document.
+    // An excused absence needs a brief reason; uploading supporting documentation is optional.
     const missing=[];
     if(typeof attendRecords!=='undefined'&&typeof attendExcuses!=='undefined'){
       Object.keys(attendRecords).forEach(sid=>{
@@ -4416,7 +4447,6 @@ function showMessageAttachment(input){
         if(attendRecords[sid]==='A'&&sub.sub==='excused'){
           const d=attendExcuses[sid]||{just:'',file:null};
           if(!d.just||d.just.length<5)missing.push(sid+' (missing justification)');
-          else if(!d.file)missing.push(sid+' (missing supporting document)');
         }
       });
     }
@@ -4450,10 +4480,6 @@ function showMessageAttachment(input){
     showToast('Attendance record stored for this date.','success');
     if(typeof logActivity==='function')logActivity('Marked attendance for '+state.classes.length+' class(es) on '+stamp+'.','fa-calendar-check','#ffedd5','#ea580c');
   };
-
-  // Announcements: persist teacher-created class announcements.
-  const oldPost=window.postAnnouncement;
-  window.postAnnouncement=function(){if(typeof oldPost==='function')oldPost();const la=window._lastAnnouncement;if(la&&la.title&&la.body){const vc=window.currentVCId;if(!vc){showToast('Open a virtual classroom before posting an announcement.','error');return;}state.announcements.unshift({kind:'class',classroomId:vc,title:la.title,body:la.body,createdAt:new Date().toISOString(),archived:false});persist();}window._lastAnnouncement=null;if(typeof renderAnnouncements==='function')renderAnnouncements();};
 
   // Export helpers for reports and submissions.
   function downloadCSV(filename,rows){const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500);}
@@ -4907,7 +4933,7 @@ function showMessageAttachment(input){
     opts=opts||{};
     const meta=[a.postedBy?'From '+a.postedBy:'School Administration'];
     if(a.createdAt)meta.push(timeAgoText(a.createdAt));
-    return '<div class="announce-item" style="border-left-color:#7c3aed;">'+
+    return '<div class="announce-item" data-notification-record-type="announcement" data-notification-record="'+e(a.id||'')+'" style="border-left-color:#7c3aed;">'+
       '<div class="title"><span class="notif-sent-badge" style="font-size:10px;margin-right:6px;vertical-align:middle;background:#f3e8ff;color:#6b21a8;border-color:#c4b5fd;"><i class="fa-solid fa-bullhorn"></i> School-wide</span>'+e(a.title||'Announcement')+'</div>'+
       '<div class="body">'+e(a.body||'')+'</div>'+
       '<div class="meta"><span><i class="fa-regular fa-clock"></i> '+e(meta.join('  \u00b7  '))+'</span></div>'+
@@ -4941,7 +4967,7 @@ function showMessageAttachment(input){
       return;
     }
     const own=rows.map(function(a,i){
-      return '<div class="announce-item" style="border-left-color:var(--blue);">'+
+    return '<div class="announce-item" data-notification-record-type="announcement" data-notification-record="'+e(a.id||'')+'" style="border-left-color:var(--blue);">'+
         '<div class="title"><span class="notif-sent-badge" style="font-size:10px;margin-right:6px;vertical-align:middle;"><i class="fa-solid fa-bell"></i> Notification sent</span>'+e(a.title||'')+'</div>'+
         '<div class="body">'+e(a.body||'')+'</div>'+
         '<div class="meta"><span><i class="fa-regular fa-calendar"></i> '+e(timeAgoText(a.createdAt))+'</span></div>'+
@@ -5931,6 +5957,7 @@ function applyTeacherPayload(D) {
       });
       realRecs.push({
         id: s.id, name: nm, initials: initials,
+        grade: s.grade, sex: s.sex, last: s.last || '', first: s.first || '',
         grad: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
         score: sc.graded ? sc.avg + '%' : '—',
         status: (typeof repStatus === 'function' ? repStatus(rep || { att: att, score: sc, risk: risk }).text
@@ -5941,6 +5968,14 @@ function applyTeacherPayload(D) {
         report: rep || null
       });
     });
+    realRecs.sort(function(a,b){
+      var ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10);var gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);
+      ga=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;gb=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;
+      if(ga!==gb)return ga-gb;
+      var rank=function(x){return x.sex==='M'?0:(x.sex==='F'?1:2);};if(rank(a)!==rank(b))return rank(a)-rank(b);
+      var surname=String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'});if(surname)return surname;
+      return String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});
+    });
     studentRecords.length = 0;
     realRecs.forEach(function (r) { studentRecords.push(r); });
     if (typeof renderStudentList === 'function') { try { renderStudentList(); } catch (e) {} }
@@ -5948,15 +5983,25 @@ function applyTeacherPayload(D) {
 
   if (window.__TASS_REAL__ && typeof assessmentSource === 'function') {
     REAL_ASSESSMENTS.length = 0;
-    (D.assessments || []).forEach(function (a) {
+    (D.assessment_repository || D.assessments || []).forEach(function (a) {
       REAL_ASSESSMENTS.push({
+        id: a.id || null,
         title: a.title || 'Untitled Assessment',
         subject: a.subject || '',
         type: a.type || '',
-        items: a.cls || '',
+        items: a.items != null ? a.items : (a.cls || ''),
         meta: a.deadline || '',
-        shares: '',
-        updated: a.openDate || ''
+        shares: a.shares != null ? a.shares : '',
+        updated: a.openDate || '',
+        instructions: a.instructions || '',
+        openDate: a.openDate || '',
+        deadline: a.deadline || '',
+        lifecycle: a.lifecycle || 'open',
+        parts: a.parts || [],
+        questions: a.questions || [],
+        attachmentUrl: a.attachmentUrl || '',
+        attachmentName: a.attachmentName || '',
+        canEdit: !!a.canEdit
       });
     });
     if (typeof renderAssessmentLibrary === 'function') { try { renderAssessmentLibrary(); } catch (e) {} }
@@ -5995,10 +6040,17 @@ function applyTeacherPayload(D) {
     // does not drop them; everything else in localStorage is school-agnostic
     // demo residue.
     if (D.announcements && D.announcements.length) {
-      var liveAnn = (st.announcements || []).filter(function (a) {
-        return a && !a.archived && a.classroomId != null && String(a.classroomId) === String(window.currentVCId);
+      var byAnnouncementId = {};
+      (st.announcements || []).forEach(function (a) {
+        if (!a) return;
+        var id = a.id || a.announcement_id;
+        if (id) byAnnouncementId[String(id)] = a;
       });
-      st.announcements = liveAnn.concat(D.announcements);
+      D.announcements.forEach(function (a) {
+        var id = a && (a.id || a.announcement_id);
+        if (id) byAnnouncementId[String(id)] = Object.assign({}, byAnnouncementId[String(id)] || {}, a);
+      });
+      st.announcements = Object.keys(byAnnouncementId).map(function (id) { return byAnnouncementId[id]; });
     }
   }
   // School-wide announcements posted by the Principal. Kept apart from
@@ -6055,7 +6107,8 @@ function applyTeacherPayload(D) {
     }
     box.dataset.real = '1';
     box.innerHTML = items.map(function (a) {
-      return '<div class="log-item"><div class="notif-dot-icon" style="background:' + (a.bg || '#fef3c7') + ';color:' + (a.color || '#d97706') + ';"><i class="fa-solid ' + (a.icon || 'fa-flag') + '"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">' + (a.text || '') + '</div><div class="notif-time">' + (a.time || '') + '</div></div></div>';
+      var recordAttrs = a.recordType && a.recordId ? ' data-notification-record-type="' + e(a.recordType) + '" data-notification-record="' + e(a.recordId) + '"' : '';
+      return '<div class="log-item"' + recordAttrs + '><div class="notif-dot-icon" style="background:' + (a.bg || '#fef3c7') + ';color:' + (a.color || '#d97706') + ';"><i class="fa-solid ' + (a.icon || 'fa-flag') + '"></i></div><div style="flex:1;min-width:0;"><div class="notif-text">' + e(a.text || '') + '</div><div class="notif-time">' + e(a.time || '') + '</div></div></div>';
     }).join('');
   };
 
@@ -6068,6 +6121,53 @@ function applyTeacherPayload(D) {
 }
 window.applyTeacherPayload = applyTeacherPayload;
 
+function restoreTeacherNotificationTarget(payload) {
+  var params = new URLSearchParams(window.location.search);
+  var classroomId = params.get('notification_classroom');
+  var tab = params.get('notification_tab') || 'dashboard';
+  if (params.has('notification_tab')) window.__TASS_NOTIFICATION_ROUTE_HANDLED = true;
+  var recordType = params.get('notification_record_type') || '';
+  var recordId = params.get('notification_record') || '';
+  var allowedTabs = {students:1,tla:1,assessment:1,submissions:1,attendance:1,announcements:1,messages:1,performance:1};
+
+  if (tab === 'activitylog') {
+    showView('activitylog');
+  } else if (classroomId) {
+    var classroom = ((payload && payload.classes) || []).find(function (item) {
+      return String(item.id) === String(classroomId);
+    });
+    if (!classroom) return;
+    openClassroom(classroom.title, classroom.section, classroom.color, classroom.id);
+    if (allowedTabs[tab]) {
+      var tabButton = Array.prototype.find.call(document.querySelectorAll('#view-classroom .tab-btn'), function (button) {
+        return button.getAttribute('onclick') && button.getAttribute('onclick').indexOf("switchTab('" + tab + "'") !== -1;
+      });
+      if (tabButton) switchTab(tab, tabButton);
+    }
+  } else if (tab === 'announcements') {
+    showView('dashboard');
+    if (typeof renderSchoolAnnouncements === 'function') renderSchoolAnnouncements();
+  }
+
+  if (recordType && recordId) {
+    var tries = 0;
+    var focusRecord = function () {
+      var rows = document.querySelectorAll('[data-notification-record-type]');
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].getAttribute('data-notification-record-type') === recordType &&
+            rows[i].getAttribute('data-notification-record') === recordId) {
+          rows[i].scrollIntoView({behavior:'smooth',block:'center'});
+          rows[i].setAttribute('tabindex','-1');
+          rows[i].focus({preventScroll:true});
+          return;
+        }
+      }
+      if (++tries < 12 && (classroomId || tab === 'activitylog')) setTimeout(focusRecord, 300);
+    };
+    setTimeout(focusRecord, 300);
+  }
+}
+
 function teacherBackendBridge() {
   var el = document.getElementById('teacher-backend-data');
   if (!el) return;
@@ -6075,6 +6175,7 @@ function teacherBackendBridge() {
   try { D = JSON.parse(el.textContent); } catch (e) { return; }
   if (!D) return;
   applyTeacherPayload(D);
+  restoreTeacherNotificationTarget(D);
 }
 
 // Auto-refresh polling: the teacher's whole dashboard plus whatever classroom
@@ -6104,7 +6205,6 @@ if (document.readyState === 'loading') {
 window.__TASS_BRIDGE__={interval:4000,watch:[
   {key:'tass_teacher_frontend_v3',endpoint:'assessments/',each:true,guard:function(v){return Array.isArray(v.assessments)&&v.assessments.length>0;},map:function(v){return (v.assessments||[]).map(function(a){return {virtual_classroom_id:a.classroomId||window.currentVCId||null,title:a.title,type:a.type,openDate:a.openDate||'',deadline:a.deadline||'',instructions:a.instructions||'',questions:(a.questions||[]).filter(function(q){return q&&q.text;})};});}},
  {key:'tass_teacher_frontend_v3',endpoint:'teacher-content/',each:true,guard:function(v){return Array.isArray(v.topics)&&v.topics.length>0;},map:function(v){return (v.topics||[]).map(function(t){return {action:'topic',name:t.title};});}},
-  {key:'tass_teacher_frontend_v3',endpoint:'class-announcements/',each:true,guard:function(v){return Array.isArray(v.announcements)&&v.announcements.length>0;},map:function(v){return (v.announcements||[]).filter(function(a){return a&&!a.archived&&a.classroomId!=null;}).map(function(a){return {virtual_classroom_id:a.classroomId,title:a.title,content:a.body,archived:false};});}}
 ]};
 </script>
 <script>
@@ -6138,5 +6238,6 @@ window.csrfToken = (function () {
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="{% static 'js/tass_poll.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
+<script src="{% static 'js/notifications.js' %}?v=3"></script>
 </body>
 </html> 

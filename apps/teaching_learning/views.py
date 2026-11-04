@@ -1,13 +1,17 @@
 import mimetypes
 import os
+import re
+import zipfile
+from xml.etree import ElementTree
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import ProtectedError, Q
-from django.http import FileResponse, HttpResponse, HttpResponseForbidden
+from django.http import FileResponse, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_GET
 
 from apps.accounts.decorators import perm_required
 from apps.academic_structure.models import AcademicYear, Subject
@@ -24,47 +28,126 @@ def resource_download(request, pk):
     The file itself lives on shared storage, so the check matters: without it any
     logged-in user could read another section's material by guessing the id.
     """
-    resource = get_object_or_404(LearningResource.objects.select_related("subject"), pk=pk)
+    resource = get_object_or_404(
+        LearningResource.objects.select_related("subject"), pk=pk, status=LearningResource.STATUS_ACTIVE
+    )
     if not resource.file:
         return HttpResponse("No file attached to this resource.", status=404)
 
-    user = request.user
-    if not (user.is_superuser or user.is_staff):
-        as_student = VirtualClassroom.objects.filter(
-            resource_placements__resource=resource,
-            enrollments__student__user=user,
-            enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
-        ).exists()
-        as_teacher = VirtualClassroom.objects.filter(
-            resource_placements__resource=resource, teacher=user,
-        ).exists()
-        # A resource shared to the subject repository is also readable by a
-        # teacher who handles that subject, even before it is placed in one of
-        # their own classrooms. This mirrors the repository list rule.
-        shared_to_subject = (
-            resource.share_to_repository
-            and resource.status == LearningResource.STATUS_ACTIVE
-            and (
-                resource.uploaded_by_id == user.pk
-                or VirtualClassroom.objects.filter(
-                    subject=resource.subject, teacher=user
-                ).exists()
-            )
-        )
-        if not (as_student or as_teacher or shared_to_subject):
-            return HttpResponseForbidden("You do not have access to this material.")
+    if not _can_read_resource(request.user, resource):
+        return HttpResponseForbidden("You do not have access to this material.")
 
     try:
         filename = os.path.basename(resource.file.name)
         content_type, _ = mimetypes.guess_type(filename)
         return FileResponse(
             resource.file.open("rb"),
-            as_attachment=True,
+            as_attachment=request.GET.get("inline") != "1",
             filename=filename,
             content_type=content_type or "application/octet-stream",
         )
     except FileNotFoundError:
         return HttpResponse("The stored file is missing.", status=404)
+
+
+def _can_read_resource(user, resource):
+    if user.is_superuser or user.is_staff:
+        return True
+    as_student = VirtualClassroom.objects.filter(
+        resource_placements__resource=resource,
+        enrollments__student__user=user,
+        enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+    ).exists()
+    as_teacher = VirtualClassroom.objects.filter(
+        resource_placements__resource=resource, teacher=user,
+    ).exists()
+    shared_to_subject = (
+        resource.share_to_repository
+        and resource.status == LearningResource.STATUS_ACTIVE
+        and (
+            resource.uploaded_by_id == user.pk
+            or VirtualClassroom.objects.filter(subject=resource.subject, teacher=user).exists()
+        )
+    )
+    return as_student or as_teacher or shared_to_subject
+
+
+def _office_preview_text(resource, extension):
+    """Extract readable paragraph/slide text from OOXML files without downloading."""
+    if not resource.file or extension not in {"docx", "pptx"}:
+        return ""
+    try:
+        with resource.file.open("rb") as source, zipfile.ZipFile(source) as archive:
+            if extension == "docx":
+                xml = archive.read("word/document.xml")
+                if len(xml) > 10 * 1024 * 1024:
+                    return ""
+                root = ElementTree.fromstring(xml)
+                ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                paragraphs = []
+                for paragraph in root.findall(".//w:p", ns):
+                    text = "".join(node.text or "" for node in paragraph.findall(".//w:t", ns))
+                    if text.strip():
+                        paragraphs.append(text)
+                return "\n\n".join(paragraphs)
+
+            slide_names = [
+                name for name in archive.namelist()
+                if re.fullmatch(r"ppt/slides/slide\d+\.xml", name)
+            ]
+            slide_names.sort(key=lambda name: int(re.search(r"slide(\d+)", name).group(1)))
+            slides = []
+            ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+            for index, name in enumerate(slide_names, start=1):
+                xml = archive.read(name)
+                if len(xml) > 10 * 1024 * 1024:
+                    continue
+                root = ElementTree.fromstring(xml)
+                paragraphs = []
+                for paragraph in root.findall(".//a:p", ns):
+                    text = "".join(node.text or "" for node in paragraph.findall(".//a:t", ns))
+                    if text.strip():
+                        paragraphs.append(text)
+                if paragraphs:
+                    slides.append("Slide {}\n{}".format(index, "\n".join(paragraphs)))
+            return "\n\n".join(slides)
+    except (OSError, KeyError, zipfile.BadZipFile, ElementTree.ParseError, ValueError):
+        return ""
+
+
+@login_required
+@require_GET
+def resource_preview(request, pk):
+    """Return preview metadata/text after the same classroom access check as downloads."""
+    resource = get_object_or_404(
+        LearningResource.objects.select_related("subject"), pk=pk, status=LearningResource.STATUS_ACTIVE
+    )
+    if not _can_read_resource(request.user, resource):
+        return HttpResponseForbidden("You do not have access to this material.")
+    filename = os.path.basename(resource.file.name) if resource.file else ""
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    text = _office_preview_text(resource, extension)
+    if extension in {"txt", "md", "csv"} and resource.file:
+        try:
+            with resource.file.open("rb") as source:
+                raw = source.read(2 * 1024 * 1024 + 1)
+            if len(raw) <= 2 * 1024 * 1024:
+                text = raw.decode("utf-8-sig", errors="replace")
+        except OSError:
+            text = ""
+    text = text[:1_000_000]
+    preview_file_url = reverse("teaching:resource_download", args=[resource.pk]) + "?inline=1"
+    return JsonResponse({
+        "ok": True,
+        "title": resource.title,
+        "description": resource.description,
+        "resource_type": resource.resource_type,
+        "file_name": filename,
+        "extension": extension,
+        "text": text,
+        "preview_file_url": preview_file_url if resource.file else "",
+        "external_url": resource.external_link or "",
+    })
 
 
 def _is_teacher_of(user, vc):
@@ -93,19 +176,35 @@ def _teacher_subject_ids(user):
 def repository_list(request):
     q = request.GET.get("q", "").strip()
     subject_filter = request.GET.get("subject", "").strip()
+    user = request.user
+    user_groups = set(user.groups.values_list("name", flat=True))
     qs = LearningResource.objects.filter(
         share_to_repository=True,
         status=LearningResource.STATUS_ACTIVE,
     )
     is_teacher = (
-        request.user.groups.filter(name="teacher").exists()
-        and not request.user.is_superuser
+        user_groups.filter("teacher").exists() if False else ("teacher" in user_groups)
+        and not user.is_superuser
     )
-    if is_teacher:
+    # More robust check
+    is_teacher_only = ("teacher" in user_groups and not user.is_superuser and not (user_groups & {"assistant_principal", "principal", "elementary_principal", "system_admin"}))
+    if is_teacher_only or ("teacher" in user_groups and not user.is_superuser):
         qs = qs.filter(
-            Q(uploaded_by_id=request.user.id)
-            | Q(subject__virtual_classrooms__teacher_id=request.user.id)
+            Q(uploaded_by_id=user.id)
+            | Q(subject__virtual_classrooms__teacher_id=user.id)
         ).distinct()
+    elif user.is_superuser or (user_groups & {"assistant_principal", "principal", "elementary_principal", "system_admin", "quality_audit"}):
+        pass
+    else:
+        # fallback to teacher-subject scope
+        try:
+            qs = qs.filter(
+                Q(uploaded_by_id=user.id)
+                | Q(subject__virtual_classrooms__teacher_id=user.id)
+            ).distinct()
+        except Exception:
+            pass
+
     if subject_filter.isdigit():
         qs = qs.filter(subject_id=int(subject_filter))
     if q:
@@ -116,11 +215,11 @@ def repository_list(request):
         )
     resources = (
         qs.select_related("subject", "uploaded_by", "academic_year")
-        .order_by("-created_at")
+        .order_by("subject__grade_level", "subject__name", "title", "pk")
     )
     subjects = Subject.objects.filter(status=Subject.STATUS_ACTIVE)
-    if is_teacher:
-        subjects = subjects.filter(id__in=_teacher_subject_ids(request.user))
+    if ("teacher" in user_groups and not user.is_superuser and not (user_groups & {"assistant_principal", "principal", "elementary_principal", "system_admin"})):
+        subjects = subjects.filter(id__in=_teacher_subject_ids(user))
     subjects = subjects.order_by("grade_level", "name")
     return render(
         request,
@@ -189,6 +288,16 @@ def resource_archive(request, pk):
 @perm_required("view_download_learning_resource")
 def class_materials(request, vc_pk):
     vc = get_object_or_404(VirtualClassroom, pk=vc_pk)
+    is_enrolled = VirtualClassroomEnrollment.objects.filter(
+        virtual_classroom=vc,
+        student__user=request.user,
+        status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+    ).exists()
+    if not (request.user.is_superuser or vc.teacher_id == request.user.pk or is_enrolled):
+        from apps.virtual_classrooms.views import _classrooms_for_user
+
+        if vc not in _classrooms_for_user(request.user):
+            return HttpResponseForbidden("You do not have access to this classroom's materials.")
     is_teacher = _is_teacher_of(request.user, vc)
     topics = vc.topics.all()
     placements = (

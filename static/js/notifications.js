@@ -19,7 +19,8 @@
     announcement: { icon: "fa-bullhorn", bg: "#fef3c7", color: "#d97706" },
     material: { icon: "fa-book-open", bg: "#e8f0fb", color: "#1e5faf" },
     assessment: { icon: "fa-file-pen", bg: "#ede9fe", color: "#7c3aed" },
-    attendance: { icon: "fa-calendar-xmark", bg: "#fee2e2", color: "#dc2626" }
+    attendance: { icon: "fa-calendar-xmark", bg: "#fee2e2", color: "#dc2626" },
+    message: { icon: "fa-comment-dots", bg: "#dcfce7", color: "#15803d" }
   };
 
   function cfg() {
@@ -184,6 +185,91 @@
     }
   }
 
+  // Non classroom dashboards also receive school-wide announcements. Keep
+  // those links inside the active role SPA and open its announcements view.
+  // Teacher and student templates handle their richer classroom routes.
+  function restoreRoleDashboardTarget() {
+    if (window.__TASS_NOTIFICATION_ROUTE_HANDLED) return;
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get("notification_tab");
+    if (!tab) return;
+    var recordType = params.get("notification_record_type") || "";
+    var recordId = params.get("notification_record") || "";
+    var notificationId = params.get("notification_id") || "";
+    var candidates = {
+      announcements: ["announcements", "dashboard"],
+      materials: ["materials", "classrooms", "dashboard"],
+      assessments: ["assessments", "assessmentrepo", "dashboard"],
+      attendance: ["attendance", "dashboard"],
+      messages: ["messages", "dashboard"]
+    }[tab] || ["dashboard"];
+    var activeView = "";
+    for (var i = 0; i < candidates.length; i++) {
+      if (document.getElementById("view-" + candidates[i])) {
+        activeView = candidates[i];
+        break;
+      }
+    }
+    if (activeView && typeof window.showView === "function") {
+      try { window.showView(activeView); } catch (e) {}
+    }
+    if (tab === "announcements") {
+      ["renderAnnouncements", "renderACAnnouncements", "renderAnnouncementsView"].forEach(function (name) {
+        if (typeof window[name] === "function") { try { window[name](); } catch (e) {} }
+      });
+    }
+    if (recordType && recordId) {
+      window.setTimeout(function () {
+        var rows = document.querySelectorAll("[data-notification-record-type]");
+        for (var j = 0; j < rows.length; j++) {
+          if (rows[j].getAttribute("data-notification-record-type") === recordType &&
+              rows[j].getAttribute("data-notification-record") === recordId) {
+            rows[j].scrollIntoView({ behavior: "smooth", block: "center" });
+            rows[j].setAttribute("tabindex", "-1");
+            rows[j].focus({ preventScroll: true });
+            break;
+          }
+        }
+      }, 180);
+    }
+    if (notificationId) {
+      var url = cfg().summaryUrl || "/communication/notifications/summary/";
+      fetch(url + (url.indexOf("?") === -1 ? "?" : "&") + "limit=100&_=" + Date.now(), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      }).then(function (response) { return response.ok ? response.json() : null; })
+        .then(function (data) {
+          var item = ((data && data.items) || []).find(function (entry) {
+            return String(entry.id) === String(notificationId);
+          });
+          if (!item) return;
+          var overlay = document.getElementById("tassRoleNotificationDetail");
+          if (!overlay) {
+            overlay = document.createElement("div");
+            overlay.id = "tassRoleNotificationDetail";
+            overlay.setAttribute("role", "dialog");
+            overlay.setAttribute("aria-modal", "true");
+            overlay.style.cssText = "position:fixed;inset:0;z-index:5000;background:rgba(15,23,42,.52);display:flex;align-items:center;justify-content:center;padding:18px;";
+            overlay.innerHTML = '<div style="width:min(620px,100%);max-height:85vh;overflow:auto;background:var(--card-bg,#fff);color:var(--text-primary,#1e293b);border:1px solid var(--card-border,#dbe4f0);border-radius:16px;padding:22px;box-shadow:0 24px 70px rgba(15,23,42,.3);"><div style="display:flex;align-items:flex-start;gap:16px;"><div style="flex:1;min-width:0;"><h2 data-role-notification-title style="font-size:18px;margin:0 0 10px;"></h2><div data-role-notification-message style="white-space:pre-wrap;line-height:1.65;font-size:14px;"></div></div><button type="button" data-role-notification-close class="btn btn-outline btn-sm" aria-label="Close notification">Close</button></div></div>';
+            overlay.addEventListener("click", function (event) {
+              if (event.target === overlay || event.target.hasAttribute("data-role-notification-close")) overlay.remove();
+            });
+            document.addEventListener("keydown", function closeOnEscape(event) {
+              if (event.key === "Escape" && document.getElementById("tassRoleNotificationDetail")) {
+                document.getElementById("tassRoleNotificationDetail").remove();
+                document.removeEventListener("keydown", closeOnEscape);
+              }
+            });
+            document.body.appendChild(overlay);
+          }
+          overlay.querySelector("[data-role-notification-title]").textContent = item.record_title || item.title || "Announcement";
+          overlay.querySelector("[data-role-notification-message]").textContent = item.record_message || item.message || "";
+          var closeButton = overlay.querySelector("[data-role-notification-close]");
+          if (closeButton) closeButton.focus();
+        }).catch(function () {});
+    }
+  }
+
   window.TassNotify = {
     refresh: refresh,
     render: render,
@@ -194,12 +280,14 @@
   // Replace the mock globals the templates wire into onclick= handlers.
   window.toggleNotif = toggleNotif;
   window.markAllRead = markAllRead;
+  window.renderNotifs = refresh;
   if (typeof window.renderStudentNotifs === "function" || document.getElementById("studentNotifList")) {
     window.renderStudentNotifs = refresh;
   }
 
   function boot() {
     document.addEventListener("click", onItemActivate, true);
+    restoreRoleDashboardTarget();
     refresh();
     // A light poll keeps the red dot honest on pages without the live socket,
     // and refresh on the shared dashboard poll whenever it exists.

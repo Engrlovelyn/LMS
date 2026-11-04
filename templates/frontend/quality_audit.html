@@ -1097,8 +1097,8 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
     </div>
     <div class="profile-fields">
-      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50"></div>
-      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100"></div>
+      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50" readonly disabled></div>
+      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
@@ -1385,11 +1385,13 @@ function qaFilter(rows,term,fields){
 }
 function qaTerm(id){ const el=document.getElementById(id); return el?(el.value||'').trim().toLowerCase():''; }
 function qaGradeText(v){ if(v==null||v==='') return '—'; const s=String(v); return s.indexOf('Grade')===0?s:'Grade '+s; }
+function qaStudentSurname(r){if(r.last)return String(r.last);var n=String(r.name||'').trim();if(n.indexOf(',')>=0)return n.split(',')[0].trim();var p=n.split(/\s+/);return p.length?p[p.length-1]:'';}
+function qaStudentCompare(a,b){var ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10),gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);ga=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;gb=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;if(ga!==gb)return ga-gb;var sex=function(r){var s=String(r.sex||r.gender||'').toLowerCase();return s==='m'||s==='male'?0:(s==='f'||s==='female'?1:2);};if(sex(a)!==sex(b))return sex(a)-sex(b);return qaStudentSurname(a).localeCompare(qaStudentSurname(b),undefined,{sensitivity:'base'})||String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});}
 
 function renderQaStudents(){
   const box=document.getElementById('qaStudentsRows');
   if(!box) return;
-  const rows=qaFilter(QA_ROSTER_STUDENTS,qaTerm('qaStudentsSearch'),['name','lrn','section','grade','email']);
+  const rows=qaFilter(QA_ROSTER_STUDENTS,qaTerm('qaStudentsSearch'),['name','lrn','section','grade','email']).slice().sort(qaStudentCompare);
   const grid=document.getElementById('qaStudentsStats');
   const sub=document.getElementById('qaStudentsSub');
   if(sub) sub.textContent=QA_ROSTER_STUDENTS.length?('Every learner record, with their active-year section and academic standing · '+QA_ROSTER_STUDENTS.length+' learner'+(QA_ROSTER_STUDENTS.length===1?'':'s')):'No student records yet.';
@@ -1684,7 +1686,7 @@ let dmLvFilter='all';
 function dmFilter(lv,el){ dmLvFilter=lv; document.querySelectorAll('.t-filter-btn').forEach(b=>b.classList.remove('active')); if(el) el.classList.add('active'); renderStudentList(); }
 function renderStudentList(){
   const search=(document.getElementById('dmSearch')?document.getElementById('dmSearch').value:'').toLowerCase();
-  let rows=DATA.students.map(s=>{ const a=ageOf(s.birth); return { name:fmtName(s), lrn:s.lrn, age:a, grade:s.grade, section:s.section, gender:s.gender, status:s.status, lf:fmtName(s)+' '+s.lrn, lv:levelCode(s.grade) }; });
+  let rows=DATA.students.slice().sort(qaStudentCompare).map(s=>{ const a=ageOf(s.birth); return { name:fmtName(s), lrn:s.lrn, age:a, grade:s.grade, section:s.section, gender:s.gender, status:s.status, lf:fmtName(s)+' '+s.lrn, lv:levelCode(s.grade) }; });
   if(dmLvFilter!=='all') rows=rows.filter(r=>r.lv===dmLvFilter);
   if(search) rows=rows.filter(r=>r.lf.toLowerCase().includes(search));
   document.getElementById('dmStudentTable').innerHTML=rows.map(r=>{
@@ -1715,7 +1717,8 @@ function renderDemographics(){
 
 // ════════════════ TEACHERS ════════════════
 function renderTeachers(){
-  const t=DATA.teachers;
+  const surname=function(row){var n=String(row.name||'').trim();if(n.indexOf(',')>=0)return n.split(',')[0].trim();var p=n.split(/\s+/);return p.length?p[p.length-1]:'';};
+  const t=DATA.teachers.slice().sort(function(a,b){return surname(a).localeCompare(surname(b),undefined,{sensitivity:'base'})||String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'});});
   document.getElementById('tcTotal').textContent=t.length;
   document.getElementById('tcUploads').textContent=t.reduce((s,x)=>s+x.uploads,0);
   document.getElementById('tcAssessments').textContent=t.reduce((s,x)=>s+x.assessments,0);
@@ -2517,5 +2520,6 @@ window.csrfToken = (function () {
 <script src="/static/js/profile_bridge.js?v=4"></script>
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
+<script src="{% static 'js/notifications.js' %}?v=3"></script>
 </body>
 </html>

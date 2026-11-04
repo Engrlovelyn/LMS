@@ -8,6 +8,7 @@ since being enrolled and therefore has not joined the classroom room yet.
 """
 
 import datetime
+import json
 
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import AnonymousUser, Group
@@ -321,6 +322,7 @@ class NotificationBellTests(TestCase):
             academic_year=cls.year, name="Science", grade_level=7
         )
         cls.teacher = User.objects.create_user(email="nb_teacher@tass.local", password="pw")
+        cls.teacher.groups.add(Group.objects.get_or_create(name="teacher")[0])
         cls.vc = VirtualClassroom.objects.create(
             academic_year=cls.year,
             section=cls.section,
@@ -330,6 +332,9 @@ class NotificationBellTests(TestCase):
         cls.student_a, cls.profile_a = _student_user("nb_alice", cls.year, 11)
         cls.student_b, cls.profile_b = _student_user("nb_bob", cls.year, 12)
         cls.outsider, cls.profile_out = _student_user("nb_cara", cls.year, 13)
+        student_group, _ = Group.objects.get_or_create(name="student")
+        for student in (cls.student_a, cls.student_b, cls.outsider):
+            student.groups.add(student_group)
         for u in (cls.student_a, cls.student_b, cls.outsider, cls.teacher):
             u.status = "active"
             u.save(update_fields=["status", "is_active"])
@@ -371,6 +376,42 @@ class NotificationBellTests(TestCase):
             2,
         )
 
+    def test_teacher_post_is_saved_with_title_and_visible_to_enrolled_student(self):
+        from apps.communication.models import ClassAnnouncement, Notification
+
+        endpoint = reverse("api_class_announcements")
+        payload = {
+            "virtual_classroom_id": self.vc.pk,
+            "title": "Lab safety",
+            "content": "Bring your safety goggles.",
+            "target_role": "all",
+        }
+        self.client.login(username=self.teacher.email, password="pw")
+        response = self.client.post(endpoint, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json()
+        self.assertTrue(result["ok"])
+        announcement = ClassAnnouncement.objects.get(pk=result["announcement"]["id"])
+        self.assertEqual(announcement.title, payload["title"])
+        self.assertEqual(announcement.content, payload["content"])
+        self.assertEqual(
+            Notification.objects.filter(
+                source_type="class_announcement", source_id=announcement.pk
+            ).count(),
+            2,
+        )
+
+        self.client.login(username=self.student_a.email, password="pw")
+        visible = self.client.get(reverse("api_my_classroom", args=[self.vc.pk]))
+        self.assertEqual(visible.status_code, 200, visible.content)
+        rows = visible.json()["announcements"]
+        self.assertTrue(any(
+            row["announcement_id"] == announcement.pk
+            and row["title"] == payload["title"]
+            and row["body"] == payload["content"]
+            for row in rows
+        ))
+
     def test_summary_endpoint_is_recipient_scoped(self):
         from apps.communication import notifications as svc
 
@@ -382,6 +423,104 @@ class NotificationBellTests(TestCase):
         self.assertEqual(data["unread_count"], 1)
         self.assertEqual(len(data["items"]), 1)
         self.assertTrue(data["items"][0]["open_url"])
+
+    def test_teacher_notification_opens_the_active_dashboard_classroom_tab(self):
+        from apps.communication.models import Notification
+
+        ann = self._announcement()
+        notification = Notification.objects.create(
+            recipient=self.teacher,
+            virtual_classroom=self.vc,
+            notification_type=Notification.TYPE_ANNOUNCEMENT,
+            source_type="class_announcement",
+            source_id=ann.pk,
+            title="Class announcement",
+            message="New class announcement",
+        )
+        self.client.login(username=self.teacher.email, password="pw")
+
+        summary = self.client.get(reverse("communication:notification_summary")).json()
+        self.assertIn(
+            "notification_classroom={}&notification_record_type=announcement&notification_record={}".format(
+                self.vc.pk, ann.pk
+            ),
+            summary["items"][0]["url"],
+        )
+        opened = self.client.get(
+            reverse("communication:notification_open", args=[notification.pk])
+        )
+        self.assertEqual(opened.status_code, 302)
+        self.assertEqual(opened.url, summary["items"][0]["url"])
+        self.assertIn(reverse("dashboards:teacher"), opened.url)
+        notification.refresh_from_db()
+        self.assertTrue(notification.is_read)
+
+        dashboard = self.client.get(reverse("dashboards:teacher"))
+        self.assertContains(dashboard, "restoreTeacherNotificationTarget")
+
+    def test_student_notification_opens_the_active_student_classroom_tab(self):
+        from apps.communication.models import Notification
+
+        ann = self._announcement()
+        notification = Notification.objects.create(
+            recipient=self.student_a,
+            virtual_classroom=self.vc,
+            notification_type=Notification.TYPE_ANNOUNCEMENT,
+            source_type="class_announcement",
+            source_id=ann.pk,
+            title="Class announcement",
+            message="New class announcement",
+        )
+        self.client.login(username=self.student_a.email, password="pw")
+
+        summary = self.client.get(reverse("communication:notification_summary")).json()
+        target = summary["items"][0]["url"]
+        self.assertIn(reverse("dashboards:student"), target)
+        self.assertIn("notification_tab=announcements", target)
+        self.assertIn("notification_classroom={}".format(self.vc.pk), target)
+
+        opened = self.client.get(
+            reverse("communication:notification_open", args=[notification.pk])
+        )
+        self.assertEqual(opened.status_code, 302)
+        self.assertEqual(opened.url, target)
+        notification.refresh_from_db()
+        self.assertTrue(notification.is_read)
+        dashboard = self.client.get(opened.url)
+        self.assertContains(dashboard, "notification_tab")
+
+    def test_school_announcement_opens_in_another_roles_active_dashboard(self):
+        from apps.communication.models import Notification
+
+        principal = User.objects.create_user(email="nb_principal@tass.local", password="pw")
+        principal.status = "active"
+        principal.save(update_fields=["status", "is_active"])
+        principal.groups.add(Group.objects.get_or_create(name="principal")[0])
+        announcement = SchoolAnnouncement.objects.create(
+            title="School update", content="Schedule update", posted_by=self.teacher
+        )
+        notification = Notification.objects.create(
+            recipient=principal,
+            notification_type=Notification.TYPE_ANNOUNCEMENT,
+            source_type="school_announcement",
+            source_id=announcement.pk,
+            title=announcement.title,
+            message=announcement.content,
+        )
+        self.client.login(username=principal.email, password="pw")
+
+        opened = self.client.get(
+            reverse("communication:notification_open", args=[notification.pk])
+        )
+        self.assertEqual(opened.status_code, 302)
+        self.assertIn(reverse("dashboards:principal"), opened.url)
+        self.assertIn("notification_tab=announcements", opened.url)
+        notification.refresh_from_db()
+        self.assertTrue(notification.is_read)
+        dashboard = self.client.get(opened.url)
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "notifications.js")
+        self.assertContains(dashboard, 'id="view-announcements"')
 
     def test_notifications_page_renders_with_base_header(self):
         from apps.communication import notifications as svc
@@ -430,28 +569,21 @@ class NotificationBellTests(TestCase):
         svc.notify_class_announcement(ann)
         n = Notification.objects.get(recipient=self.student_a)
 
-        # The bell's own feed advertises the anchored URL...
+        # The bell advertises a route into the active student classroom UI.
         self.client.login(username=self.student_a.email, password="pw")
         data = self.client.get(reverse("communication:notification_summary")).json()
         item = data["items"][0]
-        self.assertIn("#announcement-{}".format(ann.pk), item["url"])
-        self.assertIn("type=class", item["url"])
+        self.assertIn(reverse("dashboards:student"), item["url"])
+        self.assertIn("notification_tab=announcements", item["url"])
+        self.assertIn("notification_record={}".format(ann.pk), item["url"])
 
-        # ...and opening the notification redirects straight to that anchor,
-        # where the list page renders a matching id.
+        # Opening the notification marks it read and returns to that SPA route.
         resp = self.client.get(reverse("communication:notification_open", args=[n.pk]))
         self.assertEqual(resp.status_code, 302)
-        self.assertIn("#announcement-{}".format(ann.pk), resp.url)
-
-        from django.contrib.auth.models import Permission
-
-        self.student_a.user_permissions.add(
-            Permission.objects.get(codename="view_announcements_custom")
-        )
-        listing = self.client.get("/communication/announcements/?type=class")
-        self.assertContains(
-            listing, 'id="announcement-{}"'.format(ann.pk)
-        )
+        self.assertEqual(resp.url, item["url"])
+        dashboard = self.client.get(resp.url)
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "notification_classroom")
 
     def test_summary_exposes_in_page_target_for_announcement(self):
         from apps.communication import notifications as svc

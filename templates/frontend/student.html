@@ -1233,7 +1233,6 @@ html{ scroll-behavior:smooth; }
     <div id="quizQuestions"></div>
     <div id="quizResultSection" style="display:none;"></div>
     <div class="modal-footer" id="quizFooter">
-      <button class="btn btn-outline" onclick="confirmQuitQuiz()">Save & Exit</button>
       <button class="btn btn-success" onclick="submitQuiz()"><i class="fa-solid fa-paper-plane"></i> Submit Assessment</button>
     </div>
   </div>
@@ -1288,6 +1287,22 @@ html{ scroll-behavior:smooth; }
   </div>
 </div>
 
+<div class="modal-overlay" id="activeAssessmentModal" aria-hidden="true">
+  <div class="modal-box wide" style="width:min(1040px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:hidden;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:flex-start;gap:16px;border-bottom:1px solid var(--card-border);padding-bottom:14px;margin-bottom:14px;">
+      <div style="flex:1;min-width:0;"><div class="modal-title" id="activeAssessmentTitle">Assessment</div><div class="modal-sub" id="activeAssessmentSub"></div></div>
+      <div style="text-align:right;min-width:104px;"><div style="font-size:11px;color:var(--text-muted);">TIME REMAINING</div><div id="activeAssessmentTimer" role="timer" style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;">--:--</div></div>
+    </div>
+    <div id="activeAssessmentStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Saved</div>
+    <div id="activeAssessmentQuestions" style="overflow:auto;flex:1;min-height:180px;padding:0 3px;"></div>
+    <div id="activeAssessmentError" role="alert" style="display:none;color:var(--danger);font-size:13px;margin-top:10px;"></div>
+    <div class="modal-footer" style="margin-top:12px;">
+      <button class="btn btn-outline" type="button" onclick="closeActiveAssessment()">Close</button>
+      <button class="btn btn-primary" id="activeAssessmentSubmit" type="button" onclick="submitActiveAssessment(false)"><i class="fa-solid fa-paper-plane"></i> Submit Assessment</button>
+    </div>
+  </div>
+</div>
+
 <!-- PROFILE MODAL -->
 <div class="modal-overlay" id="studentProfileModal">
   <div class="modal-box profile-box">
@@ -1297,8 +1312,8 @@ html{ scroll-behavior:smooth; }
       <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="changeProfilePhoto(this)">
     </div>
     <div class="profile-fields">
-      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50"></div>
-      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100"></div>
+      <div class="form-group span2"><label>Full Name</label><input class="form-control" id="profileName" type="text" data-required data-letters data-minlen="2" data-maxlength="50" readonly disabled></div>
+      <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
@@ -1615,8 +1630,10 @@ function switchTab(id, el) {
 // FILE UPLOAD MODAL
 // ════════════════════════════════════════════════
 let currentUploadTypes = '';
-function openSubmitModal(title, allowedTypes) {
+let currentSubmitAssignmentId = null;
+function openSubmitModal(title, allowedTypes, assignmentId) {
   currentUploadTypes = allowedTypes;
+  currentSubmitAssignmentId = assignmentId || null;
   currentSubmitKey = title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'upload';
   document.getElementById('submitModalTitle').textContent = 'Submit: ' + title;
   document.getElementById('submitModalSub').textContent = 'Upload your file for this assessment';
@@ -1661,108 +1678,352 @@ function clearFile() {
   document.getElementById('uploadedFileDisplay').innerHTML = '';
 }
 
-function findStudentMaterial(name, classroomId){
+function findStudentMaterial(name, classroomId, placementId){
   if (!name || typeof STUDENT_MATERIALS==='undefined') return null;
   var cid = classroomId != null ? String(classroomId) : (currentSVCId != null ? String(currentSVCId) : null);
   if (cid && STUDENT_MATERIALS[cid]) {
     var list = STUDENT_MATERIALS[cid];
     for (var i=0;i<list.length;i++) {
       var m=list[i];
-      if (m && (m.name===name || m.original_name===name || m.title===name || (m.file && m.file===name))) return m;
+      if (m && placementId != null && String(m.placement_id) === String(placementId)) return m;
+      if (m && placementId == null && (m.name===name || m.original_name===name || m.title===name || (m.file && m.file===name))) return m;
     }
   }
   return null;
 }
 function resourceKindLabel(m){
-  const n=((m&&m.name)||'').toLowerCase();
+  const n=((m&&(m.file_name||m.name))||'').toLowerCase();
+  if(m&&m.resource_type==='pdf') return 'PDF Document';
+  if(m&&m.resource_type==='presentation') return 'Presentation';
+  if(m&&m.resource_type==='video') return 'Video';
+  if(m&&m.resource_type==='image') return 'Image';
+  if(m&&m.resource_type==='audio') return 'Audio';
+  if(m&&m.resource_type==='link') return 'External Link';
   if(/\.pdf$/.test(n)) return 'PDF Document';
   if(/\.(pptx?|ppt)$/.test(n)) return 'Presentation';
   if(/\.(mp4|mov|avi)$/.test(n)) return 'Video';
   if(/\.(docx?|doc)$/.test(n)) return 'Document';
   return 'Learning Resource';
 }
-function previewResource(name, kind){
-  const m=findStudentMaterial(name)||{name:name,icon:'fa-file',color:'#f59e0b',size:''};
+function previewResource(name, kind, placementId){
+  const m=findStudentMaterial(name, currentSVCId, placementId)||{name:name,icon:'fa-file',color:'#f59e0b',size:'',download_url:'',preview_url:'',link_url:''};
   logStudentActivity('You viewed ' + name, 'visit');
   const titleEl=document.getElementById('resourcePreviewTitle'); if(titleEl) titleEl.textContent=name;
   const subEl=document.getElementById('resourcePreviewSub'); if(subEl) subEl.textContent=resourceKindLabel(m)+(m.size?' · '+m.size:'');
   const body=document.getElementById('resourcePreviewBody');
-  if(body){
-    const isVideo=/\.(mp4|mov|avi)$/i.test(name);
-    if(isVideo){
-      body.innerHTML='<div style="background:#0f172a;border-radius:12px;height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:10px;"><i class="fa-solid fa-film" style="font-size:42px;color:#fcd34d;"></i><div style="font-size:14px;font-weight:600;">'+escHtml(name)+'</div><div style="font-size:11.5px;color:#94a3b8;">Video playback is not available in this prototype.</div></div>';
-    } else {
-      body.innerHTML='<div style="background:var(--accent);border:1px solid var(--gray-100);border-radius:12px;padding:26px 22px;min-height:200px;">'
-        +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><div style="width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:'+m.color+'22;color:'+m.color+';"><i class="fa-solid '+m.icon+'"></i></div><div><div style="font-size:15px;font-weight:700;color:var(--navy);">'+escHtml(name)+'</div><div style="font-size:11.5px;color:var(--text-muted);">'+resourceKindLabel(m)+(m.size?' · '+m.size:'')+'</div></div></div>'
-        +'<div style="font-size:13px;color:var(--gray-600);line-height:1.7;">This learning resource was shared by your teacher for this subject. Use the Download button below to save a copy for offline study.</div></div>';
-    }
-  }
+  if(body) body.innerHTML='<div style="padding:28px;text-align:center;color:var(--text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading resource preview…</div>';
   const dl=document.getElementById('resourcePreviewDownload');
-  if(dl) dl.onclick=function(){ downloadResource(name); };
+  if(dl){
+    dl.style.display=(m.download_url||m.link_url)?'inline-flex':'none';
+    dl.onclick=function(){ downloadResource(name, currentSVCId, placementId); };
+  }
   openModal('resourcePreviewModal');
+  if(!m.preview_url){ renderResourcePreview(m,{preview_file_url:m.download_url,external_url:m.link_url,description:m.description}); return; }
+  fetch(m.preview_url,{credentials:'same-origin',headers:{Accept:'application/json'}})
+    .then(function(response){if(!response.ok)throw new Error('This resource is unavailable or you no longer have access.');return response.json();})
+    .then(function(data){renderResourcePreview(m,data);})
+    .catch(function(error){if(body)body.innerHTML='<div style="padding:24px;color:var(--danger);">'+escHtml(error.message||'Could not load this resource preview.')+'</div>';});
 }
-function downloadResource(name){
-  const m=findStudentMaterial(name);
+function renderResourcePreview(m,data){
+  const body=document.getElementById('resourcePreviewBody'); if(!body)return;
+  const fileUrl=data.preview_file_url||'';
+  const externalUrl=data.external_url||m.link_url||'';
+  const extension=String(data.extension||m.file_name||m.name||'').split('.').pop().toLowerCase();
+  const text=data.text||'';
+  const description=data.description||m.description||'';
+  const safeUrl=(url)=>{try{const parsed=new URL(url,window.location.origin);return (parsed.protocol==='http:'||parsed.protocol==='https:')?parsed.href:'';}catch(e){return '';} };
+  const viewUrl=safeUrl(fileUrl), linkUrl=safeUrl(externalUrl);
+  if(text&&(extension==='docx'||extension==='pptx'||extension==='txt'||extension==='md'||extension==='csv')){
+    body.innerHTML='<div style="max-height:70vh;overflow:auto;padding:24px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;"><h3 style="margin:0 0 14px;color:var(--navy);">'+escHtml(m.name)+'</h3>'+(description?'<p style="margin:0 0 16px;color:var(--text-muted);">'+escHtml(description)+'</p>':'')+'<pre style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:14px;line-height:1.75;color:var(--text-primary);">'+escHtml(text)+'</pre></div>';
+  }else if((extension==='pdf'||m.resource_type==='pdf')&&viewUrl){
+    body.innerHTML='<iframe src="'+escHtml(viewUrl)+'" style="width:100%;height:72vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;" title="'+escHtml(m.name)+'"></iframe>';
+  }else if(['jpg','jpeg','png','gif','webp','bmp'].indexOf(extension)>=0&&viewUrl){
+    body.innerHTML='<div style="max-height:72vh;overflow:auto;text-align:center;padding:12px;background:var(--accent);border-radius:12px;"><img src="'+escHtml(viewUrl)+'" alt="'+escHtml(m.name)+'" style="max-width:100%;max-height:70vh;object-fit:contain;"></div>';
+  }else if(['mp4','mov','avi','webm'].indexOf(extension)>=0&&viewUrl){
+    body.innerHTML='<video controls playsinline style="width:100%;max-height:70vh;background:#000;border-radius:12px;" src="'+escHtml(viewUrl)+'">Your browser cannot play this video.</video>';
+  }else if(['mp3','wav','m4a','aac','ogg'].indexOf(extension)>=0&&viewUrl){
+    body.innerHTML='<div style="padding:30px;background:var(--accent);border-radius:12px;text-align:center;"><i class="fa-solid fa-headphones" style="font-size:34px;color:var(--blue);margin-bottom:14px;"></i><audio controls style="display:block;width:100%;" src="'+escHtml(viewUrl)+'">Your browser cannot play this audio.</audio></div>';
+  }else if(linkUrl){
+    body.innerHTML='<iframe sandbox="allow-scripts allow-forms allow-popups" referrerpolicy="no-referrer" src="'+escHtml(linkUrl)+'" style="width:100%;height:70vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;" title="'+escHtml(m.name)+'"></iframe><p style="margin:8px 0 0;font-size:12px;color:var(--text-muted);">If the website blocks embedded viewing, <a href="'+escHtml(linkUrl)+'" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.</p>';
+  }else{
+    body.innerHTML='<div style="padding:24px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;"><h3 style="margin:0 0 10px;color:var(--navy);">'+escHtml(m.name)+'</h3>'+(description?'<div style="white-space:pre-wrap;line-height:1.7;">'+escHtml(description)+'</div>':'<p style="margin:0;color:var(--text-muted);">A preview is not available for this file format. The resource may still be downloaded.</p>')+(viewUrl?'<p style="margin:14px 0 0;"><a href="'+escHtml(viewUrl)+'" target="_blank" rel="noopener noreferrer">Open file in a new tab</a></p>':'')+'</div>';
+  }
+}
+function downloadResource(name, classroomId, placementId){
+  const m=findStudentMaterial(name, classroomId, placementId);
   const url=(m&&m.download_url)||'';
   const link=(m&&m.link_url)||'';
   if(!url&&!link){ showToast('This resource has no downloadable file.', 'error'); return; }
   const a=document.createElement('a');
-  if(link){ a.href=link; a.target='_blank'; a.rel='noopener'; }
-  else { a.href=url; a.setAttribute('download', ''); }
+  if(link && !url){ a.href=link; a.target='_blank'; a.rel='noopener noreferrer'; }
+  else { a.href=url||link; a.target='_blank'; a.rel='noopener noreferrer'; }
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  logStudentActivity('You downloaded ' + name, 'download');
-  showToast('Download Started: ' + name, 'success');
+  logStudentActivity('You downloaded/viewed ' + name, 'download');
+  showToast('Opening ' + name, 'success');
 }
 
 let currentSubmitKey = '';
-function confirmSubmitWork() {
+async function confirmSubmitWork() {
   const file = document.getElementById('fileInput').files[0];
   if (!file) { showToast('Please select a file first.', 'error'); return; }
   const title = document.getElementById('submitModalTitle').textContent.replace(/^Submit:\s*/, '');
   const noteEl = document.getElementById('submitNotes');
   const note = noteEl ? (noteEl.value || '').trim() : '';
-  const isLate = false;
-  const now = new Date();
   const key = currentSubmitKey || (title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'upload');
-  const assess = (typeof STUDENT_ASSESSMENTS!=='undefined') ? (STUDENT_ASSESSMENTS||[]).find(x=>x&&x.title===title) : null;
-  if (assess) { assess.submitted = true; }
-  setSubmission(key, { title, fileName:file.name, size:file.size, submittedAt:now.toISOString(), late:isLate, type:'upload', note });
-  // Persist the submission + file to PostgreSQL (file stored in R2).
+  const assess = (typeof STUDENT_ASSESSMENTS!=='undefined') ? (STUDENT_ASSESSMENTS||[]).find(x=>x&&(currentSubmitAssignmentId?String(x.assignment_id)===String(currentSubmitAssignmentId):x.title===title)) : null;
+  if (!assess || !assess.assignment_id || !assess.assessment_id) {
+    showToast('This assessment could not be matched to its classroom. Refresh and try again.', 'error');
+    return;
+  }
+  const submitButton = document.querySelector('#submitModal .btn-primary');
+  if (submitButton) submitButton.disabled = true;
   try {
     const fd = new FormData();
     fd.append('title', title);
     fd.append('note', note);
-    if (assess && assess.assessment_id != null) fd.append('assessment_id', assess.assessment_id);
-    if (file) fd.append('file', file);
-    fetch('/api/submissions/', { method:'POST', credentials:'same-origin', headers:{ 'X-CSRFToken':msgCsrf() }, body:fd }).catch(function(){});
-  } catch (e) {}
+    fd.append('assessment_id', assess.assessment_id);
+    fd.append('assignment_id', assess.assignment_id);
+    fd.append('file', file);
+    const response = await fetch('/api/submissions/', { method:'POST', credentials:'same-origin', headers:{ 'X-CSRFToken':msgCsrf(), 'Accept':'application/json' }, body:fd });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      showToast(result.message || 'The assessment is not accepting submissions right now.', 'error');
+      return;
+    }
+  } catch (e) {
+    showToast('Connection lost. Your file was not confirmed as submitted; reconnect and retry.', 'error');
+    return;
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
+  const now = new Date();
+  assess.submitted = true;
+  setSubmission(key, { title, fileName:file.name, size:file.size, submittedAt:now.toISOString(), late:false, type:'upload', note });
   const card = document.querySelector('[data-assessment="'+key+'"]');
   if (card) {
     const status = card.querySelector('.assess-status');
-    if (status) { status.className='assess-status submitted'; status.textContent='✓ Submitted'; }
+    if (status) { status.className='assess-status submitted'; status.textContent='? Submitted'; }
     const actions = card.querySelectorAll('button');
     actions.forEach(b => { if (/Submit/i.test(b.textContent)) { b.disabled=true; b.innerHTML='<i class="fa-solid fa-check"></i> Submitted'; b.className='btn btn-success'; } });
   }
-  logStudentActivity('You submitted ' + title + (isLate ? ' late' : ''), 'submit');
+  logStudentActivity('You submitted ' + title, 'submit');
   closeModal('submitModal');
   showToast('Assessment Successfully Submitted.', 'success');
   if(currentSubject&&typeof renderAssessments==='function')renderAssessments(currentSubject);
   if(typeof renderPendingTasks==='function')renderPendingTasks();
 }
-
 // ════════════════════════════════════════════════
 // QUIZ TAKER
 // ════════════════════════════════════════════════
-function openQuizTaker(title, type) {
+const STUDENT_ASSESSMENT_SUBMIT_URL = "{% url 'assessments:assessment_submit' 0 %}";
+let activeAssessmentState = null;
+let activeAssessmentTimer = null;
+
+function activeAssessmentAnswers(){
+  const state=activeAssessmentState;if(!state)return {};
+  const values={};
+  state.fields.forEach(function(field){values[field.name]=field.kind==='checkboxes'?[]:'';});
+  document.querySelectorAll('#activeAssessmentQuestions [data-answer-field]').forEach(function(input){
+    const name=input.getAttribute('data-answer-field');
+    if(input.type==='checkbox'){if(input.checked)values[name].push(input.value);}
+    else if(input.type==='radio'){if(input.checked)values[name]=input.value;}
+    else values[name]=input.value;
+  });
+  return values;
+}
+function setActiveAssessmentAnswers(values){
+  if(!values)return;
+  document.querySelectorAll('#activeAssessmentQuestions [data-answer-field]').forEach(function(input){
+    const value=values[input.getAttribute('data-answer-field')];
+    if(input.type==='checkbox')input.checked=Array.isArray(value)&&value.map(String).indexOf(String(input.value))>=0;
+    else if(input.type==='radio')input.checked=String(value==null?'':value)===String(input.value);
+    else input.value=value==null?'':value;
+  });
+}
+function activeAssessmentSetStatus(text,color){
+  const el=document.getElementById('activeAssessmentStatus');if(!el)return;
+  el.textContent=text;el.style.color=color||'var(--text-muted)';
+}
+function activeAssessmentImage(url,alt){
+  if(typeof url!=='string'||!/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+=*$/i.test(url))return '';
+  return '<img src="'+escHtml(url)+'" alt="'+escHtml(alt||'Assessment image')+'" style="display:block;max-width:100%;max-height:360px;object-fit:contain;border:1px solid var(--card-border);border-radius:10px;margin:8px 0 12px;background:#fff;">';
+}
+function renderActiveAssessment(data){
+  const title=document.getElementById('activeAssessmentTitle');
+  const sub=document.getElementById('activeAssessmentSub');
+  if(title)title.textContent=data.assessment.title;
+  if(sub)sub.textContent=[data.assessment.subject,data.assessment.classroom].filter(Boolean).join(' · ');
+  const host=document.getElementById('activeAssessmentQuestions');
+  if(!host)return;
+  let html='';
+  (data.parts||[]).forEach(function(part,index){
+    html+='<section style="border:1px solid var(--card-border);border-radius:12px;margin:0 0 14px;background:var(--card-bg);"><header style="padding:13px 16px;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;gap:12px;"><strong>'+escHtml(part.title||('Part '+(index+1)))+'</strong><span style="color:var(--text-muted);font-size:12px;">'+escHtml(part.points)+' pts</span></header><div style="padding:16px;">'+(part.question_text?'<p style="margin:0 0 14px;color:var(--text-muted);white-space:pre-wrap;">'+escHtml(part.question_text)+'</p>':'');
+    (part.questions||[]).forEach(function(question){
+      html+='<article style="margin:0 0 18px;"><div style="font-weight:650;margin-bottom:9px;white-space:pre-wrap;">'+escHtml(question.fields[0]&&question.fields[0].label||question.key)+'</div>'+activeAssessmentImage(question.image,'Question image');
+      question.fields.forEach(function(field){
+        if(question.fields.length>1)html+='<label style="display:block;font-size:13px;margin:10px 0 6px;">'+escHtml(field.label)+'</label>';
+        if(field.kind==='checkboxes'||field.kind==='radios'){
+          var choicePosition=0;
+          html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;">'+(field.choices||[]).filter(function(option){return option.value!=='';}).map(function(option){
+            var image=(question.choice_images||[])[choicePosition++]||'';
+            return '<label style="display:flex;align-items:flex-start;gap:9px;border:1px solid var(--card-border);border-radius:9px;padding:9px 11px;cursor:pointer;"><input data-answer-field="'+escHtml(field.name)+'" data-field-kind="'+field.kind+'" type="'+(field.kind==='checkboxes'?'checkbox':'radio')+'" name="'+escHtml(field.name)+'" value="'+escHtml(option.value)+'" style="margin-top:3px;"><span>'+activeAssessmentImage(image,option.label)+'<span>'+escHtml(option.label)+'</span></span></label>';
+          }).join('')+'</div>';
+        }else if(field.kind==='select'){
+          html+='<select class="form-control" data-answer-field="'+escHtml(field.name)+'" data-field-kind="select">'+(field.choices||[]).map(function(option){return '<option value="'+escHtml(option.value)+'">'+escHtml(option.label)+'</option>';}).join('')+'</select>';
+        }else if(field.kind==='textarea'){
+          html+='<textarea class="form-control" rows="3" data-answer-field="'+escHtml(field.name)+'" data-field-kind="textarea" placeholder="Type your answer here"></textarea>';
+        }else{
+          html+='<input class="form-control" type="'+(field.kind==='number'?'number':'text')+'" data-answer-field="'+escHtml(field.name)+'" data-field-kind="'+field.kind+'"'+(field.kind==='number'?' step="any"':'')+' placeholder="Type your answer here">';
+        }
+      });
+      html+='</article>';
+    });
+    html+='</div></section>';
+  });
+  host.innerHTML=html||'<div style="padding:24px;text-align:center;color:var(--text-muted);">This assessment has no questions.</div>';
+  setActiveAssessmentAnswers(data.answers||{});
+}
+function activeAssessmentStore(answers,revision){
+  try{localStorage.setItem(activeAssessmentState.storageKey,JSON.stringify({answers:answers,revision:revision,savedAt:new Date().toISOString()}));}catch(e){}
+}
+function activeAssessmentRetry(){
+  const state=activeAssessmentState;if(!state||state.retryTimer)return;
+  state.retryTimer=setTimeout(function(){state.retryTimer=null;saveActiveAssessment();},state.retryDelay);
+  state.retryDelay=Math.min(state.retryDelay*2,30000);
+}
+function saveActiveAssessment(){
+  const state=activeAssessmentState;if(!state)return;
+  if(state.busy){state.pending=true;return;}
+  const answers=activeAssessmentAnswers();
+  const revision=++state.revision;
+  activeAssessmentStore(answers,revision);
+  state.busy=true;activeAssessmentSetStatus('Saving','#b45309');
+  fetch('/api/submissions/autosave/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf(),'Accept':'application/json'},body:JSON.stringify({assessment_id:state.data.assessment.id,assignment_id:state.data.assignment_id,attempt_id:state.data.attempt_id,revision:revision,answers:answers})})
+    .then(function(response){return response.json().then(function(body){return {ok:response.ok,body:body};});})
+    .then(function(result){
+      if(result.ok&&result.body.ok){
+        state.serverRevision=Math.max(state.serverRevision,Number(result.body.revision||revision));state.retryDelay=1500;
+        if(result.body.stale&&Number(result.body.revision||0)>state.revision&&!state.pending){state.revision=Number(result.body.revision);setActiveAssessmentAnswers(result.body.answers||{});activeAssessmentStore(result.body.answers||{},state.revision);}
+        else if(revision===state.revision)activeAssessmentStore(answers,revision);
+        activeAssessmentSetStatus('Saved','#15803d');
+      }else if(result.body.code==='assessment_closed'){
+        activeAssessmentSetStatus('Assessment closed. Saved answers are preserved.','#b45309');
+      }else{
+        activeAssessmentSetStatus('Unable to Save/Retrying','#b45309');activeAssessmentRetry();
+      }
+    }).catch(function(){activeAssessmentSetStatus(navigator.onLine?'Unable to Save/Retrying':'Connection Lost','#dc2626');activeAssessmentRetry();})
+    .finally(function(){state.busy=false;if(state.pending){state.pending=false;saveActiveAssessment();}});
+}
+function queueActiveAssessmentSave(){
+  const state=activeAssessmentState;if(!state)return;
+  activeAssessmentStore(activeAssessmentAnswers(),state.revision+1);
+  activeAssessmentSetStatus(navigator.onLine?'Saving':'Connection Lost',navigator.onLine?'#b45309':'#dc2626');
+  clearTimeout(state.debounceTimer);state.debounceTimer=setTimeout(saveActiveAssessment,450);
+}
+function startActiveAssessmentTimer(seconds){
+  clearInterval(activeAssessmentTimer);
+  const ends=Date.now()+Math.max(0,Number(seconds)||0)*1000;
+  const update=function(){
+    const left=Math.max(0,Math.ceil((ends-Date.now())/1000));
+    const el=document.getElementById('activeAssessmentTimer');
+    if(el)el.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
+    if(left===0){clearInterval(activeAssessmentTimer);activeAssessmentTimer=null;submitActiveAssessment(true);}
+  };
+  update();activeAssessmentTimer=setInterval(update,1000);
+}
+async function openRealAssessment(assessment, assignmentId){
+  const assessmentId=typeof assessment==='object'?assessment.assessment_id||assessment.id:assessment;
+  const assignment=assignmentId||(typeof assessment==='object'?assessment.assignment_id:null);
+  if(!assessmentId||!assignment){showToast('This assessment is not linked to your classroom. Refresh and try again.','error');return;}
+  const startUrl=STUDENT_ASSESSMENT_SUBMIT_URL.replace('/0/submit/','/'+encodeURIComponent(assessmentId)+'/submit/')+'?assignment_id='+encodeURIComponent(assignment)+'&format=json';
+  try{
+    const response=await fetch(startUrl,{credentials:'same-origin',headers:{Accept:'application/json'}});
+    const data=await response.json();
+    if(!response.ok||!data.ok){showToast(data.message||'This assessment is unavailable.','error');return;}
+    const storageKey='tass_assessment_attempt_'+data.attempt_id;
+    activeAssessmentState={data:data,fields:(data.parts||[]).flatMap(function(part){return (part.questions||[]).flatMap(function(q){return q.fields||[];});}),storageKey:storageKey,revision:Number(data.revision||0),serverRevision:Number(data.revision||0),busy:false,pending:false,retryDelay:1500,debounceTimer:null,retryTimer:null,submitting:false};
+    renderActiveAssessment(data);
+    document.getElementById('activeAssessmentError').style.display='none';
+    document.getElementById('activeAssessmentModal').classList.add('open');
+    document.getElementById('activeAssessmentModal').setAttribute('aria-hidden','false');
+    const local=JSON.parse(localStorage.getItem(storageKey)||'null');
+    if(local&&Number(local.revision||0)>activeAssessmentState.serverRevision){
+      activeAssessmentState.revision=Number(local.revision);setActiveAssessmentAnswers(local.answers||{});activeAssessmentSetStatus('Unable to Save/Retrying','#b45309');
+      if(navigator.onLine)saveActiveAssessment();
+    }else activeAssessmentSetStatus('Saved','#15803d');
+    const questionHost=document.getElementById('activeAssessmentQuestions');
+    if(!questionHost.dataset.autosaveBound){questionHost.addEventListener('input',queueActiveAssessmentSave);questionHost.addEventListener('change',queueActiveAssessmentSave);questionHost.dataset.autosaveBound='1';}
+    startActiveAssessmentTimer(data.remaining_seconds);
+  }catch(error){showToast('Could not open the assessment. Check your connection and try again.','error');}
+}
+function closeActiveAssessment(){
+  const state=activeAssessmentState;
+  if(state){clearTimeout(state.debounceTimer);clearTimeout(state.retryTimer);activeAssessmentStore(activeAssessmentAnswers(),state.revision+1);}
+  clearInterval(activeAssessmentTimer);activeAssessmentTimer=null;
+  const modal=document.getElementById('activeAssessmentModal');if(modal){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}
+  activeAssessmentState=null;
+}
+async function submitActiveAssessment(auto){
+  const state=activeAssessmentState;if(!state||state.submitting)return;
+  const errorEl=document.getElementById('activeAssessmentError');
+  if(!auto){
+    const missing=state.fields.find(function(field){if(!field.required)return false;const value=activeAssessmentAnswers()[field.name];return value===''||value==null||(Array.isArray(value)&&!value.length);});
+    if(missing){errorEl.textContent='Please answer the required questions before submitting.';errorEl.style.display='block';return;}
+  }
+  state.submitting=true;const button=document.getElementById('activeAssessmentSubmit');if(button)button.disabled=true;
+  activeAssessmentSetStatus(auto?'Time expired. Submitting saved answers…':'Submitting assessment…','#b45309');
+  const url=STUDENT_ASSESSMENT_SUBMIT_URL.replace('/0/submit/','/'+encodeURIComponent(state.data.assessment.id)+'/submit/')+'?assignment_id='+encodeURIComponent(state.data.assignment_id)+'&format=json';
+  try{
+    const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf(),'Accept':'application/json'},body:JSON.stringify({attempt_id:state.data.attempt_id,answers:activeAssessmentAnswers()})});
+    const result=await response.json();
+    if(!response.ok||!result.ok){throw new Error(result.message||'Assessment could not be submitted.');}
+    localStorage.removeItem(state.storageKey);clearInterval(activeAssessmentTimer);activeAssessmentTimer=null;
+    const item=(STUDENT_ASSESSMENTS||[]).find(function(a){return String(a.assignment_id)===String(state.data.assignment_id);});if(item)item.submitted=true;
+    activeAssessmentSetStatus('Submitted','#15803d');showToast('Assessment submitted successfully.','success');
+    setTimeout(function(){closeActiveAssessment();if(currentSubject)renderAssessments(currentSubject);renderPendingTasks();},450);
+  }catch(error){
+    state.submitting=false;if(button)button.disabled=false;
+    if(errorEl){errorEl.textContent=error.message||'Connection lost. Your answers are saved locally and can be retried.';errorEl.style.display='block';}
+    activeAssessmentSetStatus(navigator.onLine?'Unable to Submit/Retrying':'Connection Lost','#dc2626');
+    activeAssessmentStore(activeAssessmentAnswers(),state.revision+1);
+  }
+}
+window.addEventListener('online',function(){if(activeAssessmentState){activeAssessmentSetStatus('Unable to Save/Retrying','#b45309');saveActiveAssessment();}});
+window.addEventListener('offline',function(){if(activeAssessmentState)activeAssessmentSetStatus('Connection Lost','#dc2626');});
+window.addEventListener('pagehide',function(){if(activeAssessmentState)activeAssessmentStore(activeAssessmentAnswers(),activeAssessmentState.revision+1);});
+
+function openQuizTaker(title, type, assignmentId, assessmentId) {
+  const _assess = (typeof STUDENT_ASSESSMENTS !== 'undefined') ? (STUDENT_ASSESSMENTS||[]).find(x=>x&&(assignmentId?String(x.assignment_id)===String(assignmentId):assessmentId?String(x.assessment_id)===String(assessmentId):x.title===title)) : null;
+  if (_assess) {
+    const done = studentDoneSet ? studentDoneSet() : {};
+    if (done[_assess.key] || _assess.submitted) {
+      showToast('You have already submitted this assessment.', 'error');
+      return;
+    }
+    // Check scheduling
+    if (_assess.status === 'scheduled') {
+      showToast('This assessment is not yet available.', 'error');
+      return;
+    }
+    if (_assess.status === 'overdue' || _assess.status === 'closed') {
+      showToast('This assessment is closed.', 'error');
+      return;
+    }
+    if (_assess.assignment_id && _assess.assessment_id) {
+      openRealAssessment(_assess, _assess.assignment_id);
+      return;
+    }
+  }
   quizAnswers = {}; quizSubmitted = false; quizAssessmentTitle = title;
   quizAssessmentKey = title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'quiz';
-  const _assess = (typeof STUDENT_ASSESSMENTS !== 'undefined') ? (STUDENT_ASSESSMENTS||[]).find(x=>x&&x.title===title) : null;
   quizAssessmentId = _assess ? (_assess.assessment_id||_assess.id||null) : null;
   const bank = (typeof QUIZ_BANKS !== 'undefined' && (QUIZ_BANKS[quizAssessmentKey] || QUIZ_BANKS.default)) || [];
   sampleQuiz.length = 0;
   bank.forEach(q => sampleQuiz.push(q));
   const drafts = readStore(STORAGE.quizDraft, {});
-  if (drafts[quizAssessmentKey] && drafts[quizAssessmentKey].answers) quizAnswers = drafts[quizAssessmentKey].answers;
+  if (drafts[quizAssessmentKey] && drafts[quizAssessmentKey].answers) {
+    quizAnswers = drafts[quizAssessmentKey].answers;
+  }
   document.getElementById('quizModalTitle').textContent = title;
   const totalPts = sampleQuiz.reduce((a, q) => a + q.pts, 0);
   document.getElementById('quizMetaChips').innerHTML = `
@@ -1864,9 +2125,16 @@ function startQuizTimer(minutes) {
 }
 let _autosaveInFlight = false;
 function autosaveQuizProgress() {
-  if (quizSubmitted || _autosaveInFlight) return;
-  if (!quizAssessmentId) return;
+  if (quizSubmitted) return;
+  if (!quizAssessmentId && !quizAssessmentKey) return;
   try {
+    // Always save to localStorage as backup (Redis-like fallback)
+    const drafts = readStore(STORAGE.quizDraft, {});
+    if (quizAssessmentKey) {
+      drafts[quizAssessmentKey] = { answers: quizAnswers, savedAt: new Date().toISOString(), title: quizAssessmentTitle, assessment_id: quizAssessmentId };
+      writeStore(STORAGE.quizDraft, drafts);
+    }
+    if (_autosaveInFlight) return;
     _autosaveInFlight = true;
     const payload = { assessment_id: quizAssessmentId, answers: quizAnswers };
     fetch('/api/submissions/autosave/', {
@@ -1874,6 +2142,17 @@ function autosaveQuizProgress() {
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': msgCsrf() },
       body: JSON.stringify(payload)
+    }).then(function(resp){
+      if (resp.ok) {
+        // Mark as synced
+        try {
+          const drafts = readStore(STORAGE.quizDraft, {});
+          if (quizAssessmentKey && drafts[quizAssessmentKey]) {
+            drafts[quizAssessmentKey].synced = true;
+            writeStore(STORAGE.quizDraft, drafts);
+          }
+        } catch(e){}
+      }
     }).catch(function(){}).finally(function(){ _autosaveInFlight = false; });
   } catch(e) { _autosaveInFlight = false; }
 }
@@ -1928,15 +2207,7 @@ function submitQuiz() {
   try { if (typeof window.onTassPollRefresh === 'function') window.onTassPollRefresh(); } catch (e) {}
   showToast('Assessment submitted!', 'success');
 }
-function confirmQuitQuiz() {
-  document.getElementById('confirmTitle').textContent = 'Save & Exit?';
-  document.getElementById('confirmMsg').textContent = 'Your answers will be saved. You can return to finish later if still open.';
-  document.getElementById('confirmIcon').textContent = '💾';
-  document.getElementById('confirmAction').textContent = 'Save & Exit';
-  document.getElementById('confirmAction').className = 'btn btn-primary';
-  document.getElementById('confirmAction').onclick = () => { updateProgress(); clearInterval(quizTimer); proctorEnd(); closeModal('confirmModal'); closeModal('quizModal'); logStudentActivity('Saved assessment progress for ' + quizAssessmentTitle, 'visit'); showToast('Progress saved! You can return before the deadline.','success'); };
-  openModal('confirmModal');
-}
+// Save & Exit removed
 
 // ════════════════════════════════════════════════
 // ASSESSMENT PROCTORING
@@ -1994,10 +2265,26 @@ function showProctorModal(title, msg, icon) {
   openModal('proctorModal');
 }
 
+function recordProctorViolation(kind, msg){
+  if(!quizProctor) return;
+  try{
+    if(quizAssessmentId){
+      var eventType=kind==='screenshot'?'screenshot_key':(kind==='window'?'visibility_hidden':'focus_lost');
+      fetch('/assessments/'+quizAssessmentId+'/proctor/',{
+        method:'POST',
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},
+        body:JSON.stringify({event_type:eventType,metadata:{source:'student_dashboard',detail:msg}})
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+
 function proctorWarn(kind, msg) {
   if (!quizProctor) return;
   quizViolations++;
   try { logStudentActivity('Assessment warning (' + kind + '): ' + msg, 'visit'); } catch (e) {}
+  recordProctorViolation(kind, msg);
   var titles = { screenshot: 'Screenshot Detected', back: 'Going Back Is Not Allowed', window: 'Window Switch Detected' };
   var icons = { screenshot: '📸', back: '🚫', window: '👁️' };
   showProctorModal('Warning — ' + (titles[kind] || 'Violation'), msg, icons[kind] || '⚠️');
@@ -2052,10 +2339,26 @@ document.addEventListener('keydown', function (e) {
   if (!quizProctor) return;
   var k = e.key || '';
   var macShot = e.metaKey && e.shiftKey && (k === '3' || k === '4' || k === '5' || k === '6');
-  if (k === 'PrintScreen' || k === 'Snapshot' || macShot) proctorShotWarn();
+  if (k === 'PrintScreen' || k === 'Snapshot' || macShot) { e.preventDefault(); proctorShotWarn(); }
 });
 document.addEventListener('keyup', function (e) {
-  if (quizProctor && (e.key || '') === 'PrintScreen') proctorShotWarn();
+  if (quizProctor && (e.key || '') === 'PrintScreen') { proctorShotWarn(); }
+});
+document.addEventListener('visibilitychange', function () {
+  if (!quizProctor) return;
+  if (document.hidden) { __proctorHiddenPending = true; }
+  else if (__proctorHiddenPending) {
+    __proctorHiddenPending = false;
+    proctorWarn('window', 'You left the assessment (switched tab/window). This activity was recorded.');
+  }
+});
+window.addEventListener('blur', function () { if (quizProctor) __proctorBlurPending = true; });
+window.addEventListener('focus', function () {
+  if (!quizProctor) return;
+  if (__proctorBlurPending) {
+    __proctorBlurPending = false;
+    proctorWarn('window', 'You switched away from the assessment window. This activity was recorded.');
+  }
 });
 
 // ════════════════════════════════════════════════
@@ -2825,9 +3128,13 @@ function studentAssessCard(a){
   const btn = done
     ? '<button class="btn btn-success btn-sm" disabled><i class="fa-solid fa-check"></i> Submitted</button>'
       + (a.assessment_id ? ' <a class="btn btn-outline btn-sm" href="/assessments/'+a.assessment_id+'/result/"><i class="fa-solid fa-eye"></i> View Answers</a>' : '')
-    : ((a.type==='quiz'||studentHasQuizBank(a))
-        ? '<button class="btn btn-primary btn-sm" onclick="openQuizTaker(\''+a.title+'\',\'quiz\')"><i class="fa-solid fa-pen"></i> Take Quiz</button>'
-        : '<button class="btn btn-primary btn-sm" onclick="openSubmitModal(\''+a.title+'\',\'document,image\')"><i class="fa-solid fa-upload"></i> Submit Work</button>');
+    : ((a.status==='scheduled')
+        ? '<button class="btn btn-outline btn-sm" disabled><i class="fa-solid fa-clock"></i> Not Yet Open</button>'
+        : (a.status==='overdue'||a.status==='closed')
+        ? '<button class="btn btn-outline btn-sm" disabled><i class="fa-solid fa-ban"></i> Closed</button>'
+        : ((a.type==='quiz'||studentHasQuizBank(a))
+        ? '<button class="btn btn-primary btn-sm" onclick="openQuizTaker(a.title,\'quiz\','+Number(a.assignment_id||0)+','+Number(a.assessment_id||0)+')"><i class="fa-solid fa-pen"></i> Take Quiz</button>'
+        : '<button class="btn btn-primary btn-sm" onclick="openSubmitModal(a.title,\'document,image\','+Number(a.assignment_id||0)+')"><i class="fa-solid fa-upload"></i> Submit Work</button>'));
   return '<div class="assessment-card" data-assessment="'+a.key+'" style="background:var(--white);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">'
     + '<div style="min-width:0;flex:1;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">'+escHtml(a.title)+'</div>'
     + '<div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;"><i class="fa-regular fa-calendar"></i> Due '+escHtml(a.deadline)+' &nbsp;·&nbsp; '+a.pts+' pts</div>'
@@ -2864,12 +3171,12 @@ function renderMaterials(subject){
   el.innerHTML='';
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>'; return; }
   el.innerHTML=items.map(m=>
-    '<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100);">'+
+    '<div data-notification-record-type="resource" data-notification-record="'+escHtml(m.placement_id||'')+'" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100);">'+
     '<div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;background:'+m.color+'22;color:'+m.color+';flex-shrink:0;"><i class="fa-solid '+m.icon+'"></i></div>'+
     '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+escHtml(m.name)+'</div><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">'+m.size+'</div></div>'+
     '<div style="display:flex;gap:8px;flex-shrink:0;">'+
-    '<button class="btn btn-outline btn-sm" onclick="previewResource(\''+m.name+'\')"><i class="fa-solid fa-eye"></i> Preview</button>'+
-    '<button class="btn btn-outline btn-sm" onclick="downloadResource(\''+m.name+'\')"><i class="fa-solid fa-download"></i> Download</button>'+
+    '<button class="btn btn-outline btn-sm" data-resource-name="'+escHtml(m.name)+'" data-resource-placement="'+escHtml(m.placement_id||'')+'" onclick="previewResource(this.dataset.resourceName, null, this.dataset.resourcePlacement)"><i class="fa-solid fa-eye"></i> Preview</button>'+
+    '<button class="btn btn-outline btn-sm" data-resource-name="'+escHtml(m.name)+'" data-resource-placement="'+escHtml(m.placement_id||'')+'" onclick="downloadResource(this.dataset.resourceName, currentSVCId, this.dataset.resourcePlacement)"><i class="fa-solid fa-download"></i> Download</button>'+
     '</div></div>').join('');
 }
 // Scoped to the OPEN virtual classroom by id, not by subject name: the same
@@ -2901,7 +3208,7 @@ function renderClassAnnouncements(subject){
   el.innerHTML=items.map(a=>{
     const key=(a.subject||'')+'|'+(a.title||'');
     const isNew=!read.includes(key);
-    return '<div class="announce-item" id="cann-'+escHtml(a.announcement_id!=null?a.announcement_id:a.id)+'" data-ann-id="'+escHtml(a.announcement_id!=null?a.announcement_id:a.id)+'" style="border-left-color:'+(isNew?'var(--blue)':'#e2e8f0')+';">'
+    return '<div class="announce-item" id="cann-'+escHtml(a.announcement_id!=null?a.announcement_id:a.id)+'" data-ann-id="'+escHtml(a.announcement_id!=null?a.announcement_id:a.id)+'" data-notification-record-type="announcement" data-notification-record="'+escHtml(a.announcement_id!=null?a.announcement_id:a.id)+'" style="border-left-color:'+(isNew?'var(--blue)':'#e2e8f0')+';">'
       +(isNew?'<span style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:.5px;color:#fff;background:var(--blue);border-radius:20px;padding:2px 8px;margin-bottom:6px;">NEW</span>':'')
       +'<div class="title">'+escHtml(a.title)+'</div><div class="body">'+escHtml(a.body)+'</div>'
       +'<div class="meta"><span><i class="fa-regular fa-calendar"></i> '+escHtml(a.date||'')+'</span><span><i class="fa-solid fa-chalkboard-user"></i> '+escHtml(a.by||'Teacher')+'</span></div></div>';
@@ -3743,7 +4050,7 @@ function applyStudentPayload(D){
     Object.keys(target).forEach(function(k){ delete target[k]; });
     Object.keys(obj||{}).forEach(function(k){ target[k]=obj[k]; });
   }
-  fill(SUBJECTS, D.subjects || []);
+  fill(SUBJECTS, (D.subjects || (D.dashboard_json && D.dashboard_json.subjects) || []) );
   if(D.grade){ STUDENT_GRADE = parseInt(D.grade, 10); }
   else if(D.subjects && D.subjects.length && D.subjects[0].grade){ STUDENT_GRADE = parseInt(D.subjects[0].grade, 10); }
   fill(STUDENT_ASSESSMENTS, D.assessments || []);
@@ -3815,6 +4122,50 @@ window.onTassPollRefresh = function () {
   var D; try{ D=JSON.parse(el.textContent||'{}'); }catch(e){ D={}; }
   if(!D) return;
   applyStudentPayload(D);
+  var params = new URLSearchParams(window.location.search);
+  if (params.has('notification_tab')) window.__TASS_NOTIFICATION_ROUTE_HANDLED = true;
+  var classroomId = params.get('notification_classroom');
+  var notificationTab = params.get('notification_tab') || '';
+  var recordType = params.get('notification_record_type') || '';
+  var recordId = params.get('notification_record') || '';
+  var assessmentNotice = params.get('assessment_notice') || '';
+  if (notificationTab === 'announcements' && !classroomId) {
+    goToSchoolAnnouncements();
+    if (recordId) {
+      var schoolId = recordId.indexOf('school-') === 0 ? recordId.slice(7) : recordId;
+      setTimeout(function () {
+        var schoolRow = document.getElementById('sann-' + schoolId);
+        if (schoolRow) highlightAnnouncementEl(schoolRow);
+      }, 100);
+    }
+  } else if (classroomId) {
+    var subject = (SUBJECTS || []).find(function (item) { return String(item.id) === String(classroomId); });
+    if (subject) {
+      var tabMap = {materials:'materials',assessments:'assessments',announcements:'announcements',attendance:'attendance',messages:'messages'};
+      openSubjectAndTab(subject.title, tabMap[notificationTab] || 'announcements');
+      setTimeout(function () {
+        var row = null;
+        if (recordType === 'assessment') {
+          var assessment = (STUDENT_ASSESSMENTS || []).find(function (item) {
+            return String(item.assessment_id) === String(recordId) && String(item.classroom_id) === String(classroomId);
+          });
+          if (assessment) {
+            if (assessmentNotice === 'submitted') showToast('Assessment submitted successfully.','success');
+            else if (assessmentNotice === 'already_submitted') showToast('You have already submitted this assessment.','error');
+            else openRealAssessment(assessment, assessment.assignment_id);
+            return;
+          }
+        } else if (recordType === 'announcement') {
+          row = document.getElementById('cann-' + recordId);
+        } else if (recordType === 'resource') {
+          row = Array.prototype.find.call(document.querySelectorAll('[data-notification-record-type="resource"]'), function (item) {
+            return item.getAttribute('data-notification-record') === String(recordId);
+          });
+        }
+        if (row) highlightAnnouncementEl(row);
+      }, 180);
+    }
+  }
 })();
 </script>
 <script>
@@ -3849,9 +4200,7 @@ window.csrfToken = (function () {
 <script src="{% static 'js/tass_poll.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
 <script>
-/* Open linked announcements and assessments inside the student dashboard. The
-   generic server routes for these records can lead students to staff-oriented
-   pages, so resolve the exact classroom item before falling back to navigation. */
+/* Student notification links use the server-resolved destination. */
 (function () {
   var style = document.createElement('style');
   style.textContent = '@keyframes annFlash{0%{background:rgba(59,130,246,.28)}100%{background:transparent}}' +
@@ -3931,14 +4280,9 @@ window.csrfToken = (function () {
     overlay.classList.add('open');
     document.getElementById('studentNotificationDetailClose').focus();
   }
-  window.tassNotifyConfig.onOpen = function (n) {
-    if (!n) return false;
-    showNotificationDetail(n);
-    markNotificationRead(n.open_url);
-    return true;
-  };
+
 })();
 </script>
-<script src="{% static 'js/notifications.js' %}?v=2"></script>
+<script src="{% static 'js/notifications.js' %}?v=3"></script>
 </body>
 </html>

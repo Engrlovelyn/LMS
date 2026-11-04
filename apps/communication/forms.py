@@ -32,20 +32,22 @@ class SchoolAnnouncementForm(forms.ModelForm):
 class ClassAnnouncementForm(forms.ModelForm):
     class Meta:
         model = ClassAnnouncement
-        fields = ["virtual_classroom", "content", "attachment", "target_role", "status"]
+        fields = ["virtual_classroom", "title", "content", "attachment", "target_role", "status"]
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["virtual_classroom"].widget.attrs["class"] = "form-control"
+        self.fields["title"].widget.attrs["class"] = "form-control"
         self.fields["content"].widget.attrs["class"] = "form-control"
         self.fields["attachment"].widget.attrs["class"] = "form-control"
         self.fields["status"].widget.attrs["class"] = "form-control"
+        self.fields["target_role"].widget.attrs["class"] = "form-control"
         if user is not None:
             from apps.virtual_classrooms.models import VirtualClassroom
 
             queryset = VirtualClassroom.objects.all()
-            if not user.is_superuser:
+            if not user.is_superuser and not user.groups.filter(name__in=["registrar", "assistant_principal", "system_admin", "principal", "elementary_principal"]).exists():
                 queryset = queryset.filter(teacher=user)
             self.fields["virtual_classroom"].queryset = queryset
 

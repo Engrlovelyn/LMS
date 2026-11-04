@@ -1,27 +1,80 @@
 # Virtual environment
 venv/
+.venv/
+env/
+ENV/
 
-# Python cache
+# Python cache / bytecode
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
 
-# Environment variables (secrets)
+# Test / tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Environment variables and secrets
 .env
+.env.*
+*.env
+local_settings.py
+settings_local.py
+
+# Certificates / private keys
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Database (temporary for dev)
 db.sqlite3
+*.sqlite3
+*.db
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Logs and database backups
+# Logs, process files and database backups
 *.log
+*.err
+*.out
+*.pid
 media/backups/
+backups/
 
 # Local media uploads and collectstatic output
 media/
 staticfiles/
 
-# Local database dumps / backups
-backups/
+# Build artifacts and dependency folders
+build/
+dist/
+node_modules/
+*.egg-info/
+
+# IDE / editor files
+.idea/
+.vscode/
+*.swp
+*~
+
+# Temporary / ad-hoc scripts and archives
+/fix_*.py
+/do_fix*.py
+/fixit.js
+/profile_bridge_new.js
+/check.py
+/C*TASS_LMS
+*.zip
+*.bak
+*.tmp
+*.orig
+~$*

@@ -71,11 +71,13 @@ class Notification(models.Model):
     TYPE_MATERIAL = "material"
     TYPE_ASSESSMENT = "assessment"
     TYPE_ATTENDANCE = "attendance"
+    TYPE_MESSAGE = "message"
     TYPE_CHOICES = [
         (TYPE_ANNOUNCEMENT, "Class Announcement"),
         (TYPE_MATERIAL, "Learning Material"),
         (TYPE_ASSESSMENT, "Assessment"),
         (TYPE_ATTENDANCE, "Attendance"),
+        (TYPE_MESSAGE, "Message"),
     ]
 
     recipient = models.ForeignKey(
@@ -139,6 +141,7 @@ class ClassAnnouncement(models.Model):
     posted_by = models.ForeignKey(
         "accounts.User", on_delete=models.PROTECT, related_name="class_announcements"
     )
+    title = models.CharField(max_length=200, blank=True, default="")
     content = models.TextField()
     attachment = models.FileField(upload_to="announcement_attachments/", null=True, blank=True)
     target_role = models.CharField(
@@ -238,6 +241,13 @@ class SchoolEvent(models.Model):
         (STATUS_DRAFT, "Draft"),
     ]
 
+    AUDIENCE_ALL, AUDIENCE_STUDENTS, AUDIENCE_TEACHERS = "all", "students", "teachers"
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_ALL, "Everyone"),
+        (AUDIENCE_STUDENTS, "Students Only"),
+        (AUDIENCE_TEACHERS, "Teachers Only"),
+    ]
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="event")
@@ -249,6 +259,7 @@ class SchoolEvent(models.Model):
     end_time = models.TimeField(null=True, blank=True)
     location = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_PUBLISHED)
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
     academic_year = models.ForeignKey(
         "academic_structure.AcademicYear",
         on_delete=models.SET_NULL,

@@ -169,7 +169,7 @@
         <div class="stat-card"><div class="stat-icon" style="background:#fef3c7;color:#d97706;"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-val" style="color:#d97706;">{{ pending_grading_count|default:"0" }}</div><div class="stat-label">Need grading</div></div>
       </div>
       {% for ar in assessment_rows %}
-      <div class="assessment-item">
+      <div class="assessment-item" id="assessment-{{ ar.assessment.pk }}">
         {% if ar.assessment.assessment_type == 'term_exam' or ar.assessment.assessment_type == 'summative_test' %}
           <span class="assess-badge exam">Exam</span>
         {% elif ar.assessment.assessment_type == 'product_performance' %}
@@ -253,7 +253,7 @@
     <div class="card-body">
       {% if session_rows %}
         {% for sr in session_rows %}
-        <div class="session-row">
+        <div class="session-row" id="attendance-session-{{ sr.session.pk }}">
           <div><strong>{{ sr.session.session_date|date:"D, M d Y" }}</strong></div>
           <div style="display:flex;gap:12px;align-items:center;">
             <span><span class="att-pill present">{{ sr.stats.present }}</span> Present</span>
@@ -282,7 +282,7 @@
     </div>
     <div class="card-body">
       {% for a in announcements %}
-      <div class="announce-item" style="border-left-color:var(--blue);">
+      <div class="announce-item" id="announcement-{{ a.pk }}" style="border-left-color:var(--blue);">
         <div class="body">{{ a.content }}</div>
         <div class="meta"><span><i class="fa-regular fa-calendar"></i> Posted {{ a.posted_at|date:"M d, Y g:i A" }} by {{ a.posted_by.get_full_name|default:a.posted_by.email }}</span></div>
       </div>
@@ -452,5 +452,23 @@ function vcTab(name, btn){
   if(pane) pane.classList.add('active');
   if(btn) btn.classList.add('active');
 }
+document.addEventListener('DOMContentLoaded', function(){
+  var requested = new URLSearchParams(window.location.search).get('tab');
+  if (requested) {
+    var button = document.querySelector('.tab-btn[data-tab="' + requested + '"]');
+    if (button) vcTab(requested, button);
+  }
+  if (window.location.hash) {
+    window.setTimeout(function(){
+      var target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+      if (target) {
+        target.scrollIntoView({behavior:'smooth', block:'center'});
+        target.style.outline = '3px solid rgba(37, 99, 235, .72)';
+        target.style.outlineOffset = '3px';
+        window.setTimeout(function(){target.style.outline='';target.style.outlineOffset='';}, 2200);
+      }
+    }, 80);
+  }
+});
 </script>
 {% endblock %}

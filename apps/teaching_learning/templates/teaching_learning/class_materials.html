@@ -101,7 +101,7 @@
         </thead>
         <tbody>
           {% for placement in placements %}
-          <tr>
+          <tr id="resource-placement-{{ placement.pk }}">
             <td>{{ placement.topic.name }}</td>
             <td>{{ placement.resource.title }}</td>
             <td>{{ placement.resource.subject.name }}</td>
