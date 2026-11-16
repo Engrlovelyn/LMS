@@ -35,6 +35,7 @@ Use ``--flush`` to rebuild from scratch, ``--dry-run`` to preview.
 """
 
 import hashlib
+import io
 import random
 from datetime import timedelta
 from decimal import Decimal
@@ -44,6 +45,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Case, DateTimeField, Q, Value, When
 from django.utils import timezone
+from openpyxl import Workbook
 
 from apps.analytics.models import GeneratedReport, SFReportTemplate
 from apps.attendance.models import AttendanceRecord, AttendanceSession
@@ -746,16 +748,40 @@ class Command(BaseCommand):
         if author is None:
             return
 
+        template_workbook = Workbook()
+        template_sheet = template_workbook.active
+        template_sheet.title = "SF2"
+        headers = [
+            "No.",
+            "Learner's Name",
+            "Sex",
+            *range(1, 32),
+            "Present",
+            "Absent",
+            "Late",
+            "Excused",
+        ]
+        template_sheet.append(headers)
+        for _ in range(60):
+            template_sheet.append([""] * len(headers))
+        template_buffer = io.BytesIO()
+        template_workbook.save(template_buffer)
+        template_workbook.close()
+
         _tpl, was_created = SFReportTemplate.objects.get_or_create(
             name=SF_TEMPLATE_NAME,
             form_type=SFReportTemplate.FORM_SF2,
             defaults={
                 "description": "Official SF2 daily attendance form (sample).",
                 "template_file": ContentFile(
-                    b"School Form 2 (SF2) - Daily Attendance\nSample template seeded for the pilot.\n",
-                    name="sf2_daily_attendance.txt",
+                    template_buffer.getvalue(),
+                    name="sf2_daily_attendance.xlsx",
                 ),
-                "field_mappings": {"LRN": "lrn", "Name": "full_name"},
+                "field_mappings": {
+                    "header_row": 1,
+                    "first_data_row": 2,
+                    "row_limit": 61,
+                },
                 "is_active": True,
                 "uploaded_by": author,
             },

@@ -1,7 +1,6 @@
 ﻿import os
 
 from django.core.management.base import BaseCommand
-from apps.academic_structure.models import AcademicYear
 from apps.accounts.models import User, Role, RoleAssignment, EmployeeProfile, StudentProfile
 
 
@@ -40,11 +39,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        ay = AcademicYear.objects.filter(status="ACTIVE").first()
-        if not ay:
-            self.stdout.write(self.style.ERROR("No active Academic Year found. Create one first."))
-            return
-
         password = _demo_password()
         reset = options.get("reset_existing", False)
 
@@ -75,7 +69,9 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f"Exists (password untouched): {email}")
 
-            RoleAssignment.objects.get_or_create(user=user, role=role, academic_year=ay)
+            RoleAssignment.objects.get_or_create(
+                user=user, role=role, academic_year=None
+            )
 
             # The employee number is unique and the target database may already
             # hold a profile for that number under a different user (the seed has
@@ -116,7 +112,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"Exists (password untouched): {email}")
 
-        RoleAssignment.objects.get_or_create(user=user, role=role, academic_year=ay)
+        RoleAssignment.objects.get_or_create(user=user, role=role, academic_year=None)
 
         StudentProfile.objects.get_or_create(
             user=user,

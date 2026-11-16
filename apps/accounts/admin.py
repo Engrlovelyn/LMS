@@ -186,8 +186,8 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(RoleAssignment)
 class RoleAssignmentAdmin(admin.ModelAdmin):
-    list_display = ("user", "role", "academic_year", "date_assigned")
-    list_filter = ("role", "academic_year")
+    list_display = ("user", "role", "date_assigned")
+    list_filter = ("role",)
 
 
 @admin.register(EmployeeProfile)

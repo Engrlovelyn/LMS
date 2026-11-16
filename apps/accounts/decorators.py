@@ -1,11 +1,24 @@
 from functools import wraps
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group, Permission
 from django.http import HttpResponseForbidden
 
 
+def has_role(user, *roles):
+    """Check role groups and persistent RoleAssignments consistently."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if user.is_superuser:
+        return True
+    requested = set(roles)
+    if user.groups.filter(name__in=requested).exists():
+        return True
+    return user.role_assignments.filter(role__code__in=requested).exists()
+
+
 def _user_has_role(user, roles):
-    return user.is_authenticated and user.groups.filter(name__in=roles).exists()
+    return has_role(user, *roles)
 
 
 def role_required(*roles):
@@ -40,10 +53,19 @@ def has_permission(user, codename):
     if user.is_superuser:
         return True
 
-    if "." in codename:
-        return user.has_perm(codename)
-
     if user.has_perm(codename):
+        return True
+
+    role_codes = user.role_assignments.values_list("role__code", flat=True)
+    grants = Permission.objects.filter(group__name__in=role_codes)
+    if "." in codename:
+        app_label, permission_codename = codename.rsplit(".", 1)
+        if grants.filter(
+            codename=permission_codename,
+            content_type__app_label=app_label,
+        ).exists():
+            return True
+    elif grants.filter(codename=codename).exists():
         return True
 
     effective = user.get_all_permissions()  # e.g. {"assessments.view_assessment_custom", ...}

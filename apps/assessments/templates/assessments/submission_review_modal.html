@@ -1,0 +1,56 @@
+<style>
+  .sr-modal-content{font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#18283d;padding:22px 24px 26px}
+  .sr-modal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:18px;border-bottom:1px solid #e9edf3}
+  .sr-modal-kicker{color:#b45a08;font-size:10px;letter-spacing:.12em;font-weight:800;text-transform:uppercase;margin-bottom:6px}
+  .sr-modal-title{margin:0;font-size:23px;line-height:1.2;font-weight:800;color:#17263b}
+  .sr-modal-sub{margin:6px 0 0;color:#718096;font-size:13px}
+  .sr-modal-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .sr-modal-actions a{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #dce3eb;border-radius:8px;text-decoration:none;color:#334155;font-size:12px;font-weight:700;background:#fff}
+  .sr-modal-summary{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(115px,.65fr));gap:10px;padding:16px 0}
+  .sr-modal-stat{border:1px solid #e8edf3;border-radius:10px;padding:11px 13px;background:#fafbfd;min-width:0}
+  .sr-modal-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8793a3;font-weight:800;margin-bottom:5px}
+  .sr-modal-value{font-size:13px;line-height:1.45;font-weight:700;color:#26364b;overflow-wrap:anywhere}
+  .sr-modal-score{font-size:19px;color:#a4530a}
+  .sr-modal-section-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin:2px 0 11px;color:#1d2e45}
+  .sr-modal-section-title i{color:#d97706}
+  .sr-modal-response{border:1px solid #e5eaf1;border-radius:10px;overflow:hidden;margin:0 0 10px}
+  .sr-modal-question{padding:10px 13px;background:#f7f9fc;display:flex;gap:10px;align-items:flex-start}
+  .sr-modal-index{width:24px;height:24px;flex:0 0 24px;border-radius:7px;display:grid;place-items:center;background:#fff0d8;color:#a4530a;font-size:11px;font-weight:800}
+  .sr-modal-part{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#8390a1;font-weight:800;margin-bottom:3px}
+  .sr-modal-qtext{font-size:13px;line-height:1.45;font-weight:700;color:#26364b;overflow-wrap:anywhere}
+  .sr-modal-answers{display:grid;grid-template-columns:1fr 1fr}
+  .sr-modal-answer{padding:10px 13px;min-width:0}
+  .sr-modal-answer+ .sr-modal-answer{border-left:1px solid #e9edf3}
+  .sr-modal-answer-label{font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#8793a3;font-weight:800;margin-bottom:4px}
+  .sr-modal-answer-text{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+  .sr-modal-result{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 13px;border-top:1px solid #e9edf3;background:#fcfcfd;font-size:11px;font-weight:700}
+  .sr-modal-empty{padding:30px 12px;text-align:center;color:#7b8798;font-size:13px}
+  @media(max-width:700px){.sr-modal-content{padding:16px}.sr-modal-top{display:block}.sr-modal-actions{justify-content:flex-start;margin-top:12px}.sr-modal-summary{grid-template-columns:1fr 1fr}.sr-modal-stat.classroom{grid-column:1/-1}.sr-modal-answers{grid-template-columns:1fr}.sr-modal-answer+.sr-modal-answer{border-left:0;border-top:1px solid #e9edf3}}
+</style>
+<section class="sr-modal-content" aria-labelledby="sr-modal-title">
+  <header class="sr-modal-top">
+    <div><div class="sr-modal-kicker"><i class="fa-solid fa-clipboard-check"></i> Submission review</div><h2 class="sr-modal-title" id="sr-modal-title">{{ submission.student.first_name }} {{ submission.student.last_name }}</h2><p class="sr-modal-sub">{{ assessment.title }}{% if submission.student.lrn %} · LRN {{ submission.student.lrn }}{% endif %}</p></div>
+    <div class="sr-modal-actions">
+      {% if can_grade and has_subjective_parts %}<a href="{{ grade_url }}"><i class="fa-solid fa-pen-to-square"></i> Grade answers</a>{% endif %}
+      {% if file_url %}<a href="{{ file_url }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> Attachment</a>{% endif %}
+      {% if submission_link %}<a href="{{ submission_link }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Student link</a>{% endif %}
+    </div>
+  </header>
+  <div class="sr-modal-summary">
+    <div class="sr-modal-stat classroom"><div class="sr-modal-label">Virtual classroom</div><div class="sr-modal-value">{{ submission.assessment_assignment.virtual_classroom }}</div></div>
+    <div class="sr-modal-stat"><div class="sr-modal-label">Submitted</div><div class="sr-modal-value">{{ submission.submitted_at|date:"M d, Y g:i A"|default:"—" }}</div></div>
+    <div class="sr-modal-stat"><div class="sr-modal-label">Final score</div><div class="sr-modal-value sr-modal-score">{{ submission.total_score|default_if_none:"—" }}{% if submission.total_score is not None %} <small style="font-size:10px;color:#8390a1">pts</small>{% endif %}</div></div>
+    <div class="sr-modal-stat"><div class="sr-modal-label">Grading status</div><div class="sr-modal-value">{% if submission.grading_status == "grading_complete" %}Graded{% elif submission.grading_status == "partially_graded" %}Partially graded{% else %}Awaiting grading{% endif %}</div></div>
+  </div>
+  <h3 class="sr-modal-section-title"><i class="fa-solid fa-list-check"></i> Answers and results</h3>
+  {% for row in response_rows %}
+    <article class="sr-modal-response">
+      <div class="sr-modal-question"><span class="sr-modal-index">{{ forloop.counter }}</span><div><div class="sr-modal-part">Part {{ row.part_order }}</div><div class="sr-modal-qtext">{{ row.question }}</div></div></div>
+      <div class="sr-modal-answers">
+        <div class="sr-modal-answer"><div class="sr-modal-answer-label">Student answer</div><div class="sr-modal-answer-text">{{ row.answer|default:"No answer provided" }}</div></div>
+        <div class="sr-modal-answer"><div class="sr-modal-answer-label">Correct answer</div><div class="sr-modal-answer-text">{% if row.is_objective %}{{ row.correct_answer|default:"—" }}{% else %}Manually graded{% endif %}</div></div>
+      </div>
+      <div class="sr-modal-result"><span>{% if row.is_objective %}{% if row.is_correct %}Correct{% elif row.is_correct == False %}Incorrect{% else %}Not graded{% endif %}{% elif row.score is not None %}Manually graded{% else %}Needs manual grading{% endif %}</span><span>{% if row.score is not None %}{{ row.score }}{% else %}—{% endif %} / {{ row.max_score }} pts</span></div>
+    </article>
+  {% empty %}<div class="sr-modal-empty">No question responses were recorded for this submission.</div>{% endfor %}
+</section>

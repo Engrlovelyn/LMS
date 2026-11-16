@@ -6,6 +6,7 @@ app_name = "settings"
 
 urlpatterns = [
     path("index/", views.settings_index, name="index"),
+    path("school-profile/save/", views.school_profile_save, name="school_profile_save"),
     path("password-policy/", views.password_policy, name="password_policy"),
     path("attendance-threshold/", views.attendance_threshold, name="attendance_threshold"),
     path("backups/", views.backup_list, name="backups"),

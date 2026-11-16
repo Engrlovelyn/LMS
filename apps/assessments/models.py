@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -97,7 +97,13 @@ class Assessment(models.Model):
         null=True, blank=True, help_text="When the assessment becomes visible/available to students."
     )
     submission_deadline = models.DateTimeField()
+    time_limit_minutes = models.PositiveSmallIntegerField(default=60)
+    passing_score_percentage = models.PositiveSmallIntegerField(default=60)
     accepted_file_format = models.CharField(max_length=100, blank=True)
+    allow_submission_attachments = models.BooleanField(default=False)
+    allow_submission_links = models.BooleanField(default=False)
+    reveal_correct_answers = models.BooleanField(default=True)
+    share_to_repository = models.BooleanField(default=False)
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -412,6 +418,7 @@ class Submission(models.Model):
     # than only on a SubmissionResponse) so a file is still kept for
     # assessments that have no parts.
     attached_file = models.FileField(upload_to="submissions/", null=True, blank=True)
+    submission_link = models.URLField(blank=True)
 
     # (g)/(h)/(i) total_score is an aggregate that is only finalized when
     # grading_status == GRADING_COMPLETE.
@@ -559,6 +566,20 @@ class SubmissionResponse(models.Model):
         if "accepted_answers" in item:  # identification / short_answer
             accepted = {str(a).strip().lower() for a in item["accepted_answers"]}
             return str(student_answer).strip().lower() in accepted
+        if "tolerance" in item:
+            try:
+                correct = Decimal(str(item["correct_answer"]))
+                answer = Decimal(str(student_answer))
+                tolerance = Decimal(str(item["tolerance"]))
+            except (InvalidOperation, TypeError, ValueError):
+                return False
+            return (
+                answer.is_finite()
+                and correct.is_finite()
+                and tolerance.is_finite()
+                and tolerance >= 0
+                and abs(answer - correct) <= tolerance
+            )
         if "correct_answer" in item:  # multiple choice, true_false, numeric
             correct = item["correct_answer"]
             if isinstance(correct, list):

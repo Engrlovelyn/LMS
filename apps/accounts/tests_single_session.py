@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.academic_structure.models import AcademicYear
-from apps.accounts.models import LoginSession, Role, RoleAssignment, User
+from apps.accounts.models import ActivityLog, LoginSession, Role, RoleAssignment, User
 from apps.accounts import session_guard
 
 PASSWORD = "SessionPass123!"
@@ -56,6 +56,11 @@ class SingleSessionTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["ok"])
         self.assertEqual(LoginSession.objects.filter(user=user).count(), 1)
+        login_session = LoginSession.objects.get(user=user)
+        login_log = ActivityLog.objects.get(user=user, action="user_login")
+        self.assertEqual(login_log.ip_address, "127.0.0.1")
+        self.assertEqual(login_log.related_entity_type, "LoginSession")
+        self.assertEqual(login_log.related_entity_id, login_session.pk)
 
     def test_second_device_is_rejected(self):
         user = self.make_user_with_role("teacher2@test.local", "teacher")

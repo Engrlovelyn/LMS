@@ -1,0 +1,24 @@
+{% extends "assessments/teacher_page_base.html" %}
+{% block sidebar %}
+<a class="nav-item" href="{% url 'dashboards:student' %}">
+  <div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:student' %}settings/">
+  <div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:student' %}subjects/">
+  <div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:student' %}performance/">
+  <div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Performance Tracking</span>
+</a>
+<a class="nav-item active" href="{% url 'assessments:assessment_result' assessment.pk %}">
+  <div class="nav-item-icon"><i class="fa-solid fa-eye"></i></div><span class="nav-item-label">View Answers</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:student' %}activitylog/">
+  <div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:student' %}settings/">
+  <div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span>
+</a>
+{% endblock %}

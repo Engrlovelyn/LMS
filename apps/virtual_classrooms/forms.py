@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from apps.accounts.models import StudentProfile
+from apps.accounts.ordering import order_students
 from apps.academic_structure.models import AcademicYear, Section, Subject
 
 from .models import VirtualClassroom
@@ -72,6 +73,20 @@ class TeacherSelect(forms.Select):
         return option
 
 
+class StructureSelect(forms.Select):
+    """Expose grade/year metadata so dependent classroom fields can filter."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        instance = getattr(value, "instance", None)
+        if instance is not None:
+            if hasattr(instance, "grade_level"):
+                option["attrs"]["data-grade"] = str(instance.grade_level)
+            if hasattr(instance, "academic_year_id"):
+                option["attrs"]["data-year"] = str(instance.academic_year_id)
+        return option
+
+
 class VirtualClassroomForm(forms.ModelForm):
     class Meta:
         model = VirtualClassroom
@@ -97,6 +112,11 @@ class VirtualClassroomForm(forms.ModelForm):
         self.fields["academic_year"].queryset = AcademicYear.objects.filter(status="ACTIVE")
         self.fields["section"].queryset = Section.objects.filter(status="ACTIVE")
         self.fields["subject"].queryset = Subject.objects.filter(status="ACTIVE")
+        for name in ("section", "subject"):
+            field = self.fields[name]
+            widget = StructureSelect(attrs={"class": "form-control"})
+            widget.choices = field.choices
+            field.widget = widget
         # The advisor picker must offer every eligible teacher in the school,
         # not just the ones already attached to this section. Grade levels and
         # subjects are shown as context only; they never remove a teacher from
@@ -166,7 +186,7 @@ class VirtualClassroomForm(forms.ModelForm):
 
 class VirtualClassroomEnrollForm(forms.Form):
     students = forms.ModelMultipleChoiceField(
-        queryset=StudentProfile.objects.order_by("lrn"),
+        queryset=order_students(StudentProfile.objects.all()),
         widget=forms.CheckboxSelectMultiple,
         required=False,
     )
@@ -178,7 +198,7 @@ class VirtualClassroomEnrollForm(forms.Form):
 
 class AddStudentForm(forms.Form):
     student = forms.ModelChoiceField(
-        queryset=StudentProfile.objects.order_by("lrn"),
+        queryset=order_students(StudentProfile.objects.all()),
         empty_label="Select a student...",
     )
 

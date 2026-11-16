@@ -75,6 +75,35 @@
 {% block extra_js %}
 <script>
 (function(){
+  const year = document.getElementById('id_academic_year');
+  const section = document.getElementById('id_section');
+  const subject = document.getElementById('id_subject');
+  if(!year || !section || !subject) return;
+  const sectionOptions = Array.from(section.options);
+  const subjectOptions = Array.from(subject.options);
+
+  function updateStructureOptions(resetInvalid){
+    const yearId = year.value;
+    sectionOptions.forEach(function(option){
+      const visible = !option.value || !yearId || option.dataset.year === yearId;
+      option.hidden = !visible;
+      if(!visible && option.selected && resetInvalid) section.value = '';
+    });
+    const selectedSection = section.options[section.selectedIndex];
+    const grade = selectedSection && selectedSection.dataset.grade;
+    subjectOptions.forEach(function(option){
+      const visible = !option.value || ((!yearId || option.dataset.year === yearId) && (!grade || option.dataset.grade === grade));
+      option.hidden = !visible;
+      if(!visible && option.selected && resetInvalid) subject.value = '';
+    });
+  }
+
+  year.addEventListener('change', function(){ updateStructureOptions(true); });
+  section.addEventListener('change', function(){ updateStructureOptions(true); });
+  updateStructureOptions(false);
+})();
+
+(function(){
   const teacher = document.getElementById('id_teacher');
   const search = document.getElementById('teacherSearch');
   const grade = document.getElementById('teacherGradeFilter');

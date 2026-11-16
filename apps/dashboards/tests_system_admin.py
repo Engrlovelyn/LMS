@@ -225,9 +225,7 @@ class UserRolesApiTests(SystemAdminFixture):
         self.assertTrue(resp.json()["ok"])
 
         codes = set(
-            target.role_assignments.filter(academic_year=self.year).values_list(
-                "role__code", flat=True
-            )
+            target.role_assignments.values_list("role__code", flat=True)
         )
         self.assertEqual(codes, {"teacher", "registrar"})
 
@@ -243,9 +241,7 @@ class UserRolesApiTests(SystemAdminFixture):
         self._post({"user_id": target.pk, "roles": ["teacher"]})
 
         codes = set(
-            target.role_assignments.filter(academic_year=self.year).values_list(
-                "role__code", flat=True
-            )
+            target.role_assignments.values_list("role__code", flat=True)
         )
         self.assertEqual(codes, {"teacher"})
         self.assertNotIn("registrar", target.groups.values_list("name", flat=True))
@@ -262,9 +258,7 @@ class UserRolesApiTests(SystemAdminFixture):
         resp = self._post({"user_id": target.pk, "roles": ["teacher", "wizard"]})
         self.assertEqual(resp.status_code, 200)
         codes = set(
-            target.role_assignments.filter(academic_year=self.year).values_list(
-                "role__code", flat=True
-            )
+            target.role_assignments.values_list("role__code", flat=True)
         )
         self.assertEqual(codes, {"teacher"})
 

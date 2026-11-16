@@ -11,6 +11,7 @@
     <i class="fa-solid fa-plus"></i> Add Classroom
   </a>
   {% endif %}
+</div>
 <div class="card" style="margin-bottom:16px;">
   <div class="card-body">
     <form method="get" action="" class="form-row" style="align-items:flex-end;margin:0;">
@@ -18,9 +19,27 @@
         <label class="form-label" for="vcSearch">Search</label>
         <input type="search" id="vcSearch" name="q" value="{{ q }}" class="form-control" placeholder="Search subject, section, teacher, year...">
       </div>
+      <div class="form-group" style="min-width:160px;margin-bottom:0;">
+        <label class="form-label" for="vcSubjectType">Subject Type</label>
+        <select id="vcSubjectType" name="subject_type" class="form-select">
+          <option value="">All subject types</option>
+          {% for value, label in subject_types %}
+          <option value="{{ value }}" {% if subject_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="min-width:140px;margin-bottom:0;">
+        <label class="form-label" for="vcGradeLevel">Grade Level</label>
+        <select id="vcGradeLevel" name="grade_level" class="form-select">
+          <option value="">All grade levels</option>
+          {% for value, label in grade_levels %}
+          <option value="{{ value }}" {% if grade_level == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="form-group" style="margin-bottom:0;">
         <button class="btn btn-outline"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
-        {% if q %}<a class="btn btn-outline" href="{% url 'classrooms:classroom_list' %}">Clear</a>{% endif %}
+        {% if q or subject_type or grade_level %}<a class="btn btn-outline" href="{% url 'classrooms:classroom_list' %}">Clear</a>{% endif %}
       </div>
     </form>
   </div>

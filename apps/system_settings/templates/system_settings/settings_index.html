@@ -47,11 +47,6 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label" for="{{ form.timezone.id_for_label }}">Timezone</label>
-        {{ form.timezone }}
-        {% if form.timezone.help_text %}<div class="help-text">{{ form.timezone.help_text }}</div>{% endif %}
-      </div>
-      <div class="form-group">
         <label class="form-label" for="{{ form.user_registration_policy.id_for_label }}">User Registration Policy</label>
         {{ form.user_registration_policy }}
         {% if form.user_registration_policy.help_text %}<div class="help-text">{{ form.user_registration_policy.help_text }}</div>{% endif %}

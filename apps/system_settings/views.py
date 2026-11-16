@@ -4,19 +4,22 @@ import os
 from django.conf import settings
 from django.contrib import messages
 from django.core import management
-from django.http import FileResponse, HttpResponseBadRequest
+from django.http import FileResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import perm_required
 
 from .forms import (
     SystemConfigurationForm,
+    SchoolProfileForm,
     PasswordPolicyForm,
     AttendanceThresholdConfigForm,
 )
 from .models import (
     SystemConfiguration,
+    SchoolProfile,
     PasswordPolicy,
     AttendanceThresholdConfig,
     BackupRecord,
@@ -62,6 +65,23 @@ def settings_index(request):
         "config": instance,
     }
     return render(request, "system_settings/settings_index.html", context)
+
+
+@perm_required("system_settings.configure_system_settings")
+@require_POST
+def school_profile_save(request):
+    profile = SchoolProfile.get_solo()
+    form = SchoolProfileForm(request.POST, request.FILES, instance=profile)
+    if not form.is_valid():
+        return JsonResponse({"ok": False, "errors": form.errors.get_json_data()}, status=400)
+    profile = form.save(commit=False)
+    if request.POST.get("clear_logo") == "1" and not request.FILES.get("logo"):
+        if profile.logo:
+            profile.logo.delete(save=False)
+        profile.logo = ""
+    profile.updated_by = request.user
+    profile.save()
+    return JsonResponse({"ok": True, "message": "School profile saved."})
 
 
 @perm_required("system_settings.management_password_policy")

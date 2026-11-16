@@ -258,14 +258,9 @@ class AdminResetPasswordForm(forms.Form):
 class RoleAssignmentForm(forms.Form):
     user = forms.ModelChoiceField(queryset=User.objects.none(), label="User")
     role = forms.ModelChoiceField(queryset=Role.objects.none(), label="Role")
-    academic_year = forms.ModelChoiceField(
-        queryset=AcademicYear.objects.filter(status=AcademicYear.STATUS_ACTIVE),
-        label="Academic Year",
-    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from django.contrib.auth.models import Group
         apply_form_control(self.fields)
         self.fields["user"].queryset = User.objects.filter(
             status=User.Status.ACTIVE

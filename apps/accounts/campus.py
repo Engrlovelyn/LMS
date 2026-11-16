@@ -81,11 +81,11 @@ def grade_bands_for(scopes):
 
 
 def role_codes_for(user):
-    """Active-year role codes for a user, or [] for an anonymous one."""
+    """Persistent role codes for a user, or [] for an anonymous one."""
     if not user or not getattr(user, "is_authenticated", False):
         return []
     return list(
-        user.role_assignments.filter(academic_year__status="ACTIVE")
+        user.role_assignments.all()
         .values_list("role__code", flat=True)
         .distinct()
     )

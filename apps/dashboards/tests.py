@@ -1,11 +1,13 @@
 import json
+import re
+from html.parser import HTMLParser
 
 from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.accounts.models import User
+from apps.accounts.models import Role, RoleAssignment, User
 
 
 class RbacPermissionTests(TestCase):
@@ -48,6 +50,38 @@ class RbacPermissionTests(TestCase):
         self.assertTrue(has_permission(user, "accounts.view_student_record"))
         self.assertFalse(has_permission(user, "nonexistent_perm"))
 
+    def test_persistent_role_repairs_missing_group_and_retains_permissions(self):
+        from apps.accounts.decorators import has_permission
+
+        user = User.objects.create_user(
+            email="role-backed@tass.test",
+            password="test-password-123",
+        )
+        user.status = "active"
+        user.save()
+        role = Role.objects.get_or_create(code="teacher")[0]
+        RoleAssignment.objects.create(user=user, role=role)
+        role_group = Group.objects.get(name="teacher")
+        user.groups.remove(role_group)
+        self.assertTrue(has_permission(user, "assessments.create_assessment_custom"))
+        self.client.force_login(user)
+        response = self.client.get(reverse("dashboards:teacher"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(user.groups.filter(name="teacher").exists())
+        self.assertTrue(has_permission(user, "create_assessment_custom"))
+
+        user.groups.remove(role_group)
+        role_group.delete()
+        recreated = self.client.get(reverse("dashboards:teacher"))
+        self.assertEqual(recreated.status_code, 200)
+        self.assertTrue(
+            Group.objects.get(name="teacher").permissions.filter(
+                codename="create_assessment_custom",
+                content_type__app_label="assessments",
+            ).exists()
+        )
+
 
 class DashboardRenderTests(TestCase):
     """Each role dashboard must render 200 with real (possibly empty) data."""
@@ -86,11 +120,104 @@ class DashboardRenderTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "San Vicente Institute")
 
-    def test_wrong_role_blocked(self):
-        user = self._login("teacher@tass.test", "teacher")
-        resp = self.client.get(reverse("dashboards:ict"))
-        self.assertEqual(resp.status_code, 403)
+    def test_wrong_role_dashboard_url_redirects_to_the_users_dashboard(self):
+        self._login("teacher@tass.test", "teacher")
+        response = self.client.get(reverse("dashboards:ict"))
+        self.assertRedirects(response, reverse("dashboards:teacher"))
 
+        self.client.logout()
+        self._login("student@tass.test", "student")
+        response = self.client.get("/dashboards/teacher/classes/")
+        self.assertRedirects(response, reverse("dashboards:student"))
+
+
+class RegistrarNavigationTests(TestCase):
+    """Every Registrar sidebar destination must resolve back to the Registrar SPA."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("assign_role_permissions", verbosity=0)
+
+    def test_all_sidebar_destinations_load_the_registrar_dashboard(self):
+        user = User.objects.create_user(
+            email="registrar-nav@tass.test", password="pass12345x"
+        )
+        user.status = "active"
+        user.save()
+        user.groups.add(Group.objects.get_or_create(name="registrar")[0])
+        self.client.login(username=user.email, password="pass12345x")
+
+        destinations = {"dashboard": reverse("dashboards:registrar")}
+        destinations.update({
+            destination: reverse(
+                "dashboards:registrar_route",
+                kwargs={"route": destination},
+            )
+            for destination in (
+                "students", "enrollment", "promotion", "sectioning",
+                "demographics", "staffdemographics", "coverage", "classrooms",
+                "subjects", "acadyears", "attendance", "reports", "settings",
+            )
+        })
+        for destination, url in destinations.items():
+            with self.subTest(destination=destination):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'href="' + url + '"')
+                if destination != "dashboard":
+                    self.assertContains(response, 'id="view-' + destination + '"')
+
+
+class DashboardSidebarRouteParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.routes = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag != "a" or "nav-item" not in (attrs.get("class") or "").split():
+            return
+        match = re.search(r"showView\(['\"]([^'\"]+)['\"]\)", attrs.get("onclick") or "")
+        if match:
+            self.routes.append((match.group(1), attrs.get("href")))
+
+
+class PrincipalCoordinatorNavigationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("assign_role_permissions", verbosity=0)
+
+    def _check_sidebar_routes(self, role, page_name):
+        user = User.objects.create_user(
+            email=role + "-nav@tass.test", password="pass12345x"
+        )
+        user.status = "active"
+        user.save()
+        user.groups.add(Group.objects.get_or_create(name=role)[0])
+        self.client.force_login(user)
+
+        landing = self.client.get(reverse(page_name))
+        self.assertEqual(landing.status_code, 200)
+        parser = DashboardSidebarRouteParser()
+        parser.feed(landing.content.decode("utf-8"))
+        self.assertTrue(parser.routes, "the dashboard should render routed sidebar links")
+        for view_id, url in parser.routes:
+            with self.subTest(role=role, view=view_id):
+                self.assertTrue(url, "sidebar destination is missing its direct route")
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'id="view-' + view_id + '"')
+
+    def test_principal_sidebar_routes_open_each_visible_module(self):
+        self._check_sidebar_routes("principal", "dashboards:principal")
+
+    def test_quality_assurance_sidebar_uses_its_own_route_prefix(self):
+        self._check_sidebar_routes("quality_audit", "dashboards:quality_audit")
+
+    def test_assistant_principal_sidebar_routes_open_each_visible_module(self):
+        self._check_sidebar_routes(
+            "assistant_principal", "dashboards:academic_coordinator"
+        )
 
 class PrincipalQAEnrollmentTests(TestCase):
     """Quality Assurance and the Principal share one screen (principal.html),
@@ -455,6 +582,20 @@ class PrincipalCampusScopeTests(TestCase):
         self.assertIn("High School Prom", ann_titles)
         self.assertNotIn("Elementary Foundation Day", ann_titles)
 
+    def test_live_dashboard_payload_preserves_selected_academic_year(self):
+        self._login("hs-live@tass.test", "principal", self.role_hs)
+        response = self.client.get(
+            reverse("dashboards:live_dashboard_data"),
+            {"year": str(self.year.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["yearId"], self.year.pk)
+        class_titles = [c["title"] for c in payload["classes"]]
+        self.assertTrue(any("Grade 9" in title for title in class_titles), class_titles)
+        self.assertFalse(any("Grade 3" in title for title in class_titles))
+
 
 class RegistrarMonitoringPayloadTests(TestCase):
     """Attendance Overview, SF2, Attendance Summary and the At-Risk Students
@@ -724,6 +865,17 @@ class CoordinatorPanelPayloadTests(TestCase):
         self.assertEqual(att[0]["avg"], 50.0)
 
         self.assertEqual(payload["announcements"], [])
+
+    def test_virtual_classroom_search_is_present(self):
+        # The Virtual Classroom Management view needs a search box that
+        # re-renders the table as the coordinator types, matching on class
+        # name, subject and teacher.
+        self._login("assistant_principal", "gamma")
+        resp = self.client.get(reverse("dashboards:academic_coordinator"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="vcSearch"')
+        self.assertContains(resp, 'oninput="renderVCTable()"')
+        self.assertContains(resp, "No Virtual Classrooms match your search.")
 
     def test_frontend_reads_those_key_names(self):
         # The wire names here are the whole point: `attendanceRows` (not

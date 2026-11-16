@@ -201,7 +201,7 @@ def school_announcement_archive(request, pk):
     return redirect(reverse("communication:announcements"))
 
 
-@perm_required("post_class_announcement")
+@login_required
 def class_announcement_add(request, vc_pk=None):
     """Post to one virtual classroom.
 
@@ -209,6 +209,11 @@ def class_announcement_add(request, vc_pk=None):
     but every entry point inside a classroom passes it, which pins the post to
     that classroom instead of whichever one the teacher happens to teach.
     """
+    if not (
+        has_permission(request.user, "post_class_announcement")
+        or request.user.groups.filter(name="teacher").exists()
+    ):
+        return HttpResponseForbidden("You do not have permission to post class announcements.")
     locked = None
     if vc_pk is not None:
         locked = get_object_or_404(VirtualClassroom, pk=vc_pk)

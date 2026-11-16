@@ -23,6 +23,10 @@ class AssessmentForm(forms.ModelForm):
             "available_at",
             "submission_deadline",
             "accepted_file_format",
+            "allow_submission_attachments",
+            "allow_submission_links",
+            "reveal_correct_answers",
+            "share_to_repository",
             "status",
         ]
         widgets = {
@@ -40,6 +44,11 @@ class AssessmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+        self.fields["share_to_repository"].label = "Share with subject repository"
+        self.fields["share_to_repository"].help_text = (
+            "Leave unchecked to keep this assessment within its Virtual Classroom. "
+            "When checked, teachers who teach this same subject can find and reuse it."
+        )
         self.fields["subject"].queryset = Subject.objects.filter(status="ACTIVE")
         if not self.instance.pk:
             self.fields["status"].initial = Assessment.STATUS_ACTIVE

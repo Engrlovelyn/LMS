@@ -1,10 +1,30 @@
 from django import forms
 
 from .models import (
+    SchoolProfile,
     SystemConfiguration,
     PasswordPolicy,
     AttendanceThresholdConfig,
 )
+
+
+class SchoolProfileForm(forms.ModelForm):
+    class Meta:
+        model = SchoolProfile
+        fields = [
+            "school_name", "school_id", "school_type", "region", "division",
+            "district", "address_line", "barangay", "municipality_city",
+            "province", "postal_code", "telephone", "email", "website",
+            "school_head_name", "school_head_title", "logo",
+        ]
+        widgets = {"logo": forms.ClearableFileInput(attrs={"class": "form-control", "accept": "image/*"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if name != "logo":
+                field.widget.attrs["class"] = "form-control"
+
 
 
 class SystemConfigurationForm(forms.ModelForm):
@@ -13,14 +33,12 @@ class SystemConfigurationForm(forms.ModelForm):
         fields = [
             "session_timeout_minutes",
             "account_lockout_threshold",
-            "timezone",
             "maintenance_mode",
             "user_registration_policy",
         ]
         widgets = {
             "session_timeout_minutes": forms.NumberInput(attrs={"class": "form-control"}),
             "account_lockout_threshold": forms.NumberInput(attrs={"class": "form-control"}),
-            "timezone": forms.TextInput(attrs={"class": "form-control"}),
             "maintenance_mode": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "user_registration_policy": forms.Select(attrs={"class": "form-control"}),
         }
@@ -29,7 +47,6 @@ class SystemConfigurationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["session_timeout_minutes"].help_text = "Minutes of inactivity before a user session expires."
         self.fields["account_lockout_threshold"].help_text = "Number of failed logins before an account is locked."
-        self.fields["timezone"].help_text = "Default timezone applied across the system."
         self.fields["maintenance_mode"].help_text = "Enable to block normal user access during maintenance."
         self.fields["user_registration_policy"].help_text = "Who is allowed to register new accounts."
 

@@ -18,6 +18,7 @@
 </head>
 <body>
 
+{% block app_header %}
 <!-- HEADER -->
 <header>
   <div class="brand-block">
@@ -62,6 +63,7 @@
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
 </header>
+{% endblock %}
 
 <div class="layout">
   <!-- SIDEBAR -->
@@ -250,5 +252,5 @@ html body .nav-item.active { background:#ffdf00; color:#080808; }
 html body .nav-item.active .nav-item-icon, html body .nav-item.active .nav-item-label { color:#080808; }
 html body button:focus-visible, html body a:focus-visible, html body input:focus-visible,
 html body select:focus-visible, html body textarea:focus-visible { outline-color:#c3a900; }
-</style></body>
+</style><script src="{% static 'js/refresh_state.js' %}?v=1"></script></body>
 </html>

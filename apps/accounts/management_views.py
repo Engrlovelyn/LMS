@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -49,13 +49,12 @@ def _deactivate_login_access(user):
 
 
 def _ensure_role_assignment(user, role_code):
-    """Give a newly created account its base role so it can sign in after verifying."""
-    year = AcademicYear.objects.filter(status=AcademicYear.STATUS_ACTIVE).first()
+    """Give a newly created account its persistent base role."""
     role = Role.objects.filter(code=role_code).first()
-    if year is None or role is None:
+    if role is None:
         return None
     assignment, _ = RoleAssignment.objects.get_or_create(
-        user=user, role=role, academic_year=year
+        user=user, role=role, academic_year=None
     )
     return assignment
 
@@ -254,8 +253,8 @@ def account_detail(request, pk):
     profile = _account_profile(user)
     assignments = (
         RoleAssignment.objects.filter(user=user)
-        .select_related("role", "academic_year")
-        .order_by("-academic_year__start_date")
+        .select_related("role")
+        .order_by("role__code")
     )
     form = UserAccountUpdateForm(
         request.POST or None,
@@ -341,8 +340,18 @@ def account_reactivate(request, pk):
 def student_record_list(request):
     q = request.GET.get("q", "").strip()
     students = order_students(
-        StudentProfile.objects.select_related("user").prefetch_related(
-            "enrollments__section"
+        StudentProfile.objects.select_related(
+            "user", "user__employee_profile"
+        ).prefetch_related(
+            Prefetch(
+                "enrollments",
+                queryset=StudentEnrollment.objects.filter(
+                    status=StudentEnrollment.STATUS_ENROLLED
+                )
+                .select_related("section", "section__academic_year", "academic_year")
+                .order_by("-academic_year__start_date"),
+                to_attr="current_enrollments",
+            )
         )
     )
     if q:
@@ -355,10 +364,14 @@ def student_record_list(request):
         )
 
     def current_section(student):
-        enrollment = student.enrollments.filter(
-            status=StudentEnrollment.STATUS_ENROLLED,
-        ).select_related("section").first()
-        return enrollment.section if enrollment else None
+        enrollments = getattr(student, "current_enrollments", None)
+        if enrollments is None:
+            enrollments = student.enrollments.filter(
+                status=StudentEnrollment.STATUS_ENROLLED
+            ).select_related("section")
+        for enrollment in enrollments:
+            return enrollment.section
+        return None
 
     context = {
         "students": students,
@@ -784,8 +797,8 @@ def admin_reset_password_generate(request):
 @perm_required("accounts.role_based_access_control")
 def role_assignment_list(request):
     assignments = RoleAssignment.objects.select_related(
-        "user", "role", "academic_year"
-    ).order_by("-academic_year__start_date", "role__code")
+        "user", "role"
+    ).order_by("role__code", "user__email")
     context = {
         "assignments": assignments,
         "form": RoleAssignmentForm(),
@@ -802,11 +815,10 @@ def role_assignment_add(request):
     if form.is_valid():
         user = form.cleaned_data["user"]
         role = form.cleaned_data["role"]
-        academic_year = form.cleaned_data["academic_year"]
         RoleAssignment.objects.update_or_create(
             user=user,
             role=role,
-            academic_year=academic_year,
+            defaults={"academic_year": None},
         )
         ActivityLog.objects.create(
             user=request.user,
@@ -816,7 +828,7 @@ def role_assignment_add(request):
         )
         messages.success(
             request,
-            f"Assigned role '{role.get_code_display()}' to {user.email} for {academic_year}.",
+            f"Assigned role '{role.get_code_display()}' to {user.email}.",
         )
     else:
         for error in form.errors.values():

@@ -15,6 +15,7 @@ class LearningResourceForm(forms.ModelForm):
             "file",
             "available_from",
             "available_until",
+            "share_to_repository",
             "status",
         ]
 
@@ -22,6 +23,11 @@ class LearningResourceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+        self.fields["share_to_repository"].label = "Share with subject repository"
+        self.fields["share_to_repository"].help_text = (
+            "Leave unchecked to keep this resource in its Virtual Classroom only. "
+            "When checked, teachers who teach this same subject can find and reuse it."
+        )
 
 
 class TopicForm(forms.ModelForm):

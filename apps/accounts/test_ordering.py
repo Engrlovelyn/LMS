@@ -81,7 +81,7 @@ class DirectoryOrderingTests(TestCase):
         ordered = order_students(StudentProfile.objects.all())
         self.assertEqual(
             list(ordered.values_list("last_name", flat=True)),
-            ["Adams", "Zulu", "Baker", "Aaron"],
+            ["Adams", "Baker", "Zulu", "Aaron"],
         )
 
     def test_section_rosters_are_sorted_by_grade_then_surname(self):
@@ -90,7 +90,7 @@ class DirectoryOrderingTests(TestCase):
         )
         self.assertEqual(
             list(enrollments.values_list("student__last_name", flat=True)),
-            ["Adams", "Zulu", "Baker", "Aaron"],
+            ["Adams", "Baker", "Zulu", "Aaron"],
         )
 
     def test_virtual_classroom_rosters_are_sorted_by_grade_then_surname(self):
@@ -100,7 +100,7 @@ class DirectoryOrderingTests(TestCase):
         )
         self.assertEqual(
             list(enrollments.values_list("student__last_name", flat=True)),
-            ["Adams", "Zulu", "Baker", "Aaron"],
+            ["Adams", "Baker", "Zulu", "Aaron"],
         )
 
     def test_teachers_are_sorted_by_employee_surname(self):

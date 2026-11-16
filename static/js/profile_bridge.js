@@ -232,4 +232,18 @@
 
   function boot() {
     applyLocks();
-    
+    var root = modalRoot();
+    if (!root || root.__tassProfileObserver) return;
+    var observer = new MutationObserver(function () {
+      if (root.classList.contains('open')) applyLocks();
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    root.__tassProfileObserver = observer;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();

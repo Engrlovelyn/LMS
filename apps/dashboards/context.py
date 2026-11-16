@@ -9,7 +9,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, Max, Prefetch, Q, Sum
+from django.db.models.functions import TruncDate
 from django.db.utils import DatabaseError, ProgrammingError
 from django.urls import reverse
 
@@ -26,12 +27,16 @@ from apps.accounts.models import (
     EmployeeProfile,
     LoginSession,
     Role,
+    RoleAssignment,
     StudentProfile,
+    TeacherSubject,
     User,
+    teacher_subject_ids,
 )
 from apps.academic_structure.models import AcademicYear, Section, StudentEnrollment, Subject
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
 from apps.teaching_learning.models import LearningResource, LearningResourcePlacement, Topic
+from apps.teaching_learning.utils import resource_size_label
 from apps.assessments.models import (
     Assessment,
     AssessmentAssignment,
@@ -43,7 +48,7 @@ from apps.assessments.models import (
 from apps.attendance.models import AttendanceRecord, AttendanceSession
 from apps.communication.models import ClassAnnouncement, SchoolAnnouncement, SchoolEvent
 from apps.governance.models import RoleAccessReview
-from apps.system_settings.models import BackupRecord, SystemConfiguration
+from apps.system_settings.models import BackupRecord, SchoolProfile, SystemConfiguration
 from apps.analytics.models import GeneratedReport, SFReportTemplate
 
 STATUS_ACTIVE = "active"
@@ -90,7 +95,7 @@ _PERMISSION_ROWS = [
     ("Create / edit / archive sections", "academic_structure.update_section_custom"),
     ("Create / edit / archive subjects", "academic_structure.update_subject_custom"),
     ("Promote a student", "academic_structure.promote_student"),
-    ("Rollover academic year", "academic_structure.rollover_academic_year"),
+    ("Carry Over academic year", "academic_structure.rollover_academic_year"),
     ("Manage academic structure template", "academic_structure.manage_academic_structure_template"),
     ("Validate section-subject coverage", "academic_structure.validate_section_subject_coverage"),
     ("Create virtual classrooms", "virtual_classrooms.create_virtual_classroom"),
@@ -452,7 +457,7 @@ def _self_profile(user):
     student = getattr(user, "student_profile", None)
     role_label = None
     ra = (
-        user.role_assignments.filter(academic_year__status="ACTIVE")
+        user.role_assignments.all()
         .select_related("role")
         .last()
     )
@@ -492,8 +497,20 @@ def _self_profile(user):
     if person is not None and getattr(person, "avatar", None):
         avatar = avatar_url(person.avatar) or None
 
+    subject_ids = teacher_subject_ids(user)
+    subjects = (
+        list(
+            Subject.objects.filter(id__in=subject_ids)
+            .order_by("grade_level", "name")
+            .values_list("name", flat=True)
+        )
+        if subject_ids
+        else []
+    )
+
     return {
         "name": user.get_full_name() or user.email,
+        "subjects": subjects,
         "firstName": getattr(person, "first_name", "") or "",
         "lastName": getattr(person, "last_name", "") or "",
         "middleInitial": getattr(person, "middle_initial", "") or "",
@@ -635,15 +652,20 @@ def _all_staff_demo_rows():
         User.objects.filter(employee_profile__isnull=False)
         .exclude(status="archived")
         .select_related("employee_profile", "student_profile")
+        .prefetch_related(
+            Prefetch(
+                "role_assignments",
+                queryset=RoleAssignment.objects.select_related("role").order_by(
+                    "role__code"
+                ),
+                to_attr="dashboard_role_assignments",
+            )
+        )
         .order_by("employee_profile__last_name", "employee_profile__first_name")
     )
     for u in accounts:
         profile = u.employee_profile
-        assignments = list(
-            u.role_assignments.filter(academic_year__status="ACTIVE")
-            .select_related("role")
-            .order_by("role__code")
-        )
+        assignments = u.dashboard_role_assignments
         role_codes = [a.role.code for a in assignments if a.role_id]
         role_labels = [a.role.get_code_display() for a in assignments if a.role_id]
         if (
@@ -684,6 +706,17 @@ def _student_demo_rows():
     and section come from the current enrolled section (``section_display``).
     """
     rows = []
+    # Resolve each learner's current section in one query. `section_display`
+    # filtered enrollments per profile, which meant ~1,000 extra queries every
+    # time the demographics panel rendered.
+    section_by_student = {}
+    for se in (
+        StudentEnrollment.objects.filter(status=StudentEnrollment.STATUS_ENROLLED)
+        .select_related("section")
+        .order_by("student_id", "-academic_year__start_date")
+    ):
+        if se.student_id not in section_by_student and se.section_id:
+            section_by_student[se.student_id] = se.section
     profiles = order_students(
         StudentProfile.objects.select_related("user").prefetch_related(
             "enrollments__section"
@@ -692,10 +725,10 @@ def _student_demo_rows():
     for prof in profiles:
         grade = ""
         section = ""
-        sec_disp = prof.section_display
-        if sec_disp and " - " in sec_disp:
-            grade = "Grade " + sec_disp.split(" - ")[0].replace("Grade ", "")
-            section = sec_disp.split(" - ", 1)[1]
+        current_section = section_by_student.get(prof.pk)
+        if current_section is not None:
+            grade = "Grade {}".format(current_section.grade_level)
+            section = current_section.name
         row = _learner_demo_row(prof, grade_label=grade, section_name=section)
         if row:
             row["meta"] = (
@@ -750,20 +783,28 @@ def system_admin_context(user):
     locked_accounts = list(locked_accounts_queryset(limit=6))
     total_locked = User.objects.filter(status="locked").count()
     user_accounts = []
+    active_assignments = (
+        RoleAssignment.objects.all()
+        .select_related("role")
+        .order_by("role__code")
+    )
     for u in (
         User.objects.exclude(status="archived")
         .select_related("employee_profile", "student_profile")
+        .prefetch_related(
+            Prefetch(
+                "role_assignments",
+                queryset=active_assignments,
+                to_attr="active_assignments",
+            )
+        )
         .order_by("date_created")
     ):
         # A user may hold several roles at once (e.g. Teacher + Principal), so
         # every active-year assignment is collected. The old code took `.last()`
         # and therefore hid every role but one, which is why the admin UI could
         # never show or edit a second role.
-        assignments = list(
-            u.role_assignments.filter(academic_year__status="ACTIVE")
-            .select_related("role")
-            .order_by("role__code")
-        )
+        assignments = u.active_assignments
         role_codes = [a.role.code for a in assignments if a.role_id]
         role_labels = [a.role.get_code_display() for a in assignments if a.role_id]
         if hasattr(u, "student_profile") and "student" not in role_codes:
@@ -808,6 +849,12 @@ def system_admin_context(user):
         "linear-gradient(135deg,#9333ea,#a78bfa)",
         "linear-gradient(135deg,#334155,#64748b)",
     ]
+    teacher_subject_map = {}
+    for ts_user_id, ts_subject_id in TeacherSubject.objects.values_list(
+        "user_id", "subject_id"
+    ):
+        teacher_subject_map.setdefault(ts_user_id, []).append(ts_subject_id)
+
     accounts_json = []
     for idx, a in enumerate(user_accounts):
         u = a["user"]
@@ -827,6 +874,10 @@ def system_admin_context(user):
                 "gradient": account_styles[idx % len(account_styles)],
                 "status": a["status"],
                 "last": last,
+                # Explicitly assigned subjects. The Edit Account modal preselects
+                # these so an administrator can see and change what this teacher
+                # is allowed to see in the Assessment Repository.
+                "subjects": teacher_subject_map.get(u.pk, []),
                 # Staff demographics on file (EmployeeProfile) so the Edit
                 # Account modal can show and change them; missing values stay
                 # empty strings so they render as an em dash, never a guess.
@@ -845,7 +896,7 @@ def system_admin_context(user):
         su = ls.user
         sname = su.get_full_name() or su.email
         role_lbl = "User"
-        ra = su.role_assignments.filter(academic_year__status="ACTIVE").select_related("role").last()
+        ra = su.role_assignments.select_related("role").last()
         if ra and hasattr(ra, "role"):
             role_lbl = ra.role.get_code_display() or role_lbl
         sessions_json.append(
@@ -875,7 +926,7 @@ def system_admin_context(user):
         locked_json.append(row)
 
     activity_json = []
-    for al in ActivityLog.objects.select_related("user").order_by("-timestamp")[:12]:
+    for al in ActivityLog.objects.select_related("user__employee_profile").order_by("-timestamp")[:12]:
         uname = al.user.get_full_name() if al.user else "System"
         activity_json.append(
             {
@@ -907,7 +958,7 @@ def system_admin_context(user):
     for ls in live_sessions[:8]:
         su = ls.user
         sname = su.get_full_name() or su.email
-        ra = su.role_assignments.filter(academic_year__status="ACTIVE").select_related("role").last()
+        ra = su.role_assignments.select_related("role").last()
         role_lbl = ra.role.get_code_display() if ra and hasattr(ra, "role") else "Unassigned"
         if hasattr(su, "student_profile"):
             role_lbl = "Student"
@@ -921,7 +972,7 @@ def system_admin_context(user):
     # Recent sign-ins come from the audit trail, not from an invented list.
     recent_logins = []
     for al in (
-        ActivityLog.objects.select_related("user")
+        ActivityLog.objects.select_related("user__employee_profile")
         .filter(action__in=["user_login", "new_device_login", "session_revoked"])
         .order_by("-timestamp")[:10]
     ):
@@ -953,7 +1004,7 @@ def system_admin_context(user):
         "totalSessions": LoginSession.objects.count(),
         "unassigned": User.objects.exclude(status=STATUS_ARCHIVED)
         .filter(is_active=True)
-        .exclude(role_assignments__academic_year__status="ACTIVE")
+        .exclude(role_assignments__isnull=False)
         .exclude(groups__name="student")
         .distinct()
         .count(),
@@ -1059,7 +1110,7 @@ def system_admin_context(user):
             "classrooms": section_room_counts.get(s.id, 0),
             "students": section_enroll_counts.get(s.id, 0),
         }
-        for s in year_qs.select_related("adviser", "academic_year").order_by("grade_level", "name")
+        for s in year_qs.select_related("adviser__employee_profile", "academic_year").order_by("grade_level", "name")
     ]
 
     # ── Sections across all school years (view-sections year filter) ────────
@@ -1085,7 +1136,7 @@ def system_admin_context(user):
         .annotate(n=Count("id"))
     )
     sections_by_year = {}
-    for s in all_year_sections.select_related("adviser", "academic_year").order_by(
+    for s in all_year_sections.select_related("adviser__employee_profile", "academic_year").order_by(
         "academic_year__start_date", "grade_level", "name"
     ):
         yr = (s.academic_year.label if s.academic_year_id else "—")
@@ -1144,7 +1195,7 @@ def system_admin_context(user):
         .annotate(n=Count("id"))
     )
     classrooms_by_year = {}
-    for vc in all_year_rooms.select_related("subject", "section", "teacher", "academic_year").order_by(
+    for vc in all_year_rooms.select_related("subject", "section", "teacher__employee_profile", "academic_year").order_by(
         "academic_year__start_date", "subject__name"
     ):
         yr = (vc.academic_year.label if vc.academic_year_id else "—")
@@ -1249,19 +1300,27 @@ def system_admin_context(user):
             "status": vc.get_status_display() if hasattr(vc, "get_status_display") else vc.status,
             "gradingPeriod": _period(vc.get_grading_period_display() if hasattr(vc, "get_grading_period_display") else vc.grading_period),
         }
-        for vc in room_qs.select_related("subject", "section", "teacher", "academic_year").order_by("subject__name")
+        for vc in room_qs.select_related("subject", "section", "teacher__employee_profile", "academic_year").order_by("subject__name")
     ]
 
     # ── School years (view-schoolyear) ───────────────────────────────────────
     # Every AcademicYear with its structure counts, newest first. Powers the
     # year-management table plus the create/activate/archive flow.
+    # Count each related table separately. Counting all three in one annotated
+    # query joined sections x subjects x enrollments and took ~30 seconds once
+    # the school had a few thousand enrollments.
+    _sect_counts = dict(
+        Section.objects.values_list("academic_year_id").annotate(n=Count("id"))
+    )
+    _subj_counts = dict(
+        Subject.objects.values_list("academic_year_id").annotate(n=Count("id"))
+    )
+    _stu_counts = dict(
+        StudentEnrollment.objects.values_list("academic_year_id").annotate(n=Count("id"))
+    )
     school_year_rows = []
     for y in (
-        AcademicYear.objects.select_related("structure_version").annotate(
-            _sect=Count("sections", distinct=True),
-            _subj=Count("subjects", distinct=True),
-            _stu=Count("student_enrollments", distinct=True),
-        ).order_by("-start_date")
+        AcademicYear.objects.select_related("structure_version").order_by("-start_date")
     ):
         _sv = getattr(y, "structure_version", None)
         _gpt = getattr(_sv, "grading_period_type", None) if _sv else None
@@ -1271,9 +1330,9 @@ def system_admin_context(user):
             "start": y.start_date.isoformat(),
             "end": y.end_date.isoformat(),
             "status": "Active" if y.status == AcademicYear.STATUS_ACTIVE else "Archived",
-            "sections": y._sect,
-            "subjects": y._subj,
-            "enrolled": y._stu,
+            "sections": _sect_counts.get(y.id, 0),
+            "subjects": _subj_counts.get(y.id, 0),
+            "enrolled": _stu_counts.get(y.id, 0),
             "gradingPeriod": {
                 "code": _gpt,
                 "label": (_sv.get_grading_period_type_display() if _gpt else None),
@@ -1341,7 +1400,7 @@ def system_admin_context(user):
         AssessmentAssignment.objects.values_list("assessment_id").annotate(n=Count("id"))
     )
     for a in (
-        Assessment.objects.select_related("subject", "created_by")
+        Assessment.objects.select_related("subject", "created_by__employee_profile")
         .annotate(part_count=Count("parts", distinct=True))
         .order_by("-created_at")
     ):
@@ -1392,26 +1451,47 @@ def system_admin_context(user):
             status=VirtualClassroom.STATUS_ACTIVE, academic_year__label=yr
         )
         yr_rows = []
+        yr_vc_ids = yr_vcs.values("id")
         yr_enroll = dict(
-            VirtualClassroomEnrollment.objects.filter(virtual_classroom__in=yr_vcs.values("id"))
+            VirtualClassroomEnrollment.objects.filter(virtual_classroom__in=yr_vc_ids)
             .exclude(status__in=["removed", "archived", "dropped"])
             .values_list("virtual_classroom_id")
             .annotate(n=Count("id"))
         )
-        for vc in yr_vcs.select_related("section", "teacher").order_by(
+        # One query per metric instead of four per classroom: the panel used to
+        # issue ~1,000 attendance queries and took over 30 seconds to render.
+        record_stats = {
+            row["session__virtual_classroom_id"]: (row["total"], row["present"])
+            for row in AttendanceRecord.objects.filter(session__virtual_classroom__in=yr_vc_ids)
+            .values("session__virtual_classroom_id")
+            .annotate(
+                total=Count("id"),
+                present=Count("id", filter=Q(status__in=PRESENT_STATUSES)),
+            )
+        }
+        session_stats = {
+            row["virtual_classroom_id"]: (row["n"], row["last"])
+            for row in AttendanceSession.objects.filter(virtual_classroom__in=yr_vc_ids)
+            .values("virtual_classroom_id")
+            .annotate(n=Count("id"), last=Max("session_date"))
+        }
+        for vc in yr_vcs.select_related(
+            "section", "teacher__employee_profile", "subject", "academic_year"
+        ).order_by(
             "section__grade_level", "section__name", "subject__name"
         ):
-            vc_recs = AttendanceRecord.objects.filter(session__virtual_classroom=vc)
-            vc_total = vc_recs.count()
-            vc_present = vc_recs.filter(status__in=PRESENT_STATUSES).count()
-            vc_sessions = AttendanceSession.objects.filter(virtual_classroom=vc).count()
-            last_rec = vc_recs.order_by("-session__session_date").first()
+            vc_total, vc_present = record_stats.get(vc.id, (0, 0))
+            vc_sessions, last_date = session_stats.get(vc.id, (0, None))
             yr_rows.append({
                 "id": vc.id,
                 "cl": "G{}-{}".format(vc.section.grade_level, vc.section.name) if vc.section_id else "—",
                 "section": vc.section.name if vc.section_id else "",
                 "grade": vc.section.grade_level if vc.section_id else None,
-                "vc": str(vc),
+                "vc": "{} - {} ({})".format(
+                    vc.subject.name if vc.subject_id else "—",
+                    vc.section.name if vc.section_id else "—",
+                    vc.academic_year.label if vc.academic_year_id else "—",
+                ),
                 "subject": vc.subject.name if vc.subject_id else "—",
                 "teacher": (vc.teacher.get_full_name() if vc.teacher_id else "Unassigned"),
                 "students": yr_enroll.get(vc.id, 0),
@@ -1419,19 +1499,18 @@ def system_admin_context(user):
                 "present": vc_present,
                 "total": vc_total,
                 "avg": round(vc_present / vc_total * 100, 1) if vc_total else 0,
-                "last": (last_rec.session.session_date.strftime("%b %d, %Y") if last_rec and last_rec.session_id and last_rec.session.session_date else "—"),
+                "last": (last_date.strftime("%b %d, %Y") if last_date else "—"),
                 "status": "at-risk" if vc_total and (vc_present / vc_total) < 0.9 else ("no-data" if not vc_total else "normal"),
             })
 
-        yr_q = AttendanceRecord.objects.filter(session__virtual_classroom__in=yr_vcs.values("id"))
-        yr_total = yr_q.count()
-        yr_present = yr_q.filter(status__in=PRESENT_STATUSES).count()
+        yr_total = sum(total for total, _present in record_stats.values())
+        yr_present = sum(present for _total, present in record_stats.values())
         attendance_by_year[yr] = {
             "schoolAvg": round(yr_present / yr_total * 100, 1) if yr_total else None,
             "present": yr_present,
             "absent": yr_total - yr_present,
             "total": yr_total,
-            "sessions": AttendanceSession.objects.filter(virtual_classroom__in=yr_vcs.values("id")).count(),
+            "sessions": sum(n for n, _last in session_stats.values()),
             "atRisk": sum(1 for r in yr_rows if r["status"] == "at-risk"),
             "rows": yr_rows,
         }
@@ -1477,6 +1556,12 @@ def system_admin_context(user):
     dashboard_json = {
         "calendar": _calendar_payload(user),
         "profile": _self_profile(user),
+        "settings": {
+            "sessionTimeout": cfg.session_timeout_minutes,
+            "lockoutThreshold": cfg.account_lockout_threshold,
+            "registration": cfg.user_registration_policy,
+            "maintenance": cfg.maintenance_mode,
+        },
         "directory": directory,
         "students": students_json,
         "assessments": assessment_json,
@@ -1510,7 +1595,7 @@ def system_admin_context(user):
             {
                 "id": t.id,
                 "name": t.name,
-                "form": t.form_type or "—",
+                "form": t.get_form_type_display() or "—",
                 "active": bool(t.is_active),
                 "at": timezone.localtime(t.uploaded_at).strftime("%b %d, %Y") if t.uploaded_at else "—",
                 "download": reverse("analytics:sf_template_download", args=[t.id]),
@@ -1584,6 +1669,7 @@ def system_admin_context(user):
 
     return {
         "stats": stats,
+        "school_profile": SchoolProfile.get_solo(),
         "total_users": _non_archived_users().count(),
         "active_users": _non_archived_users().exclude(
             status__in=["locked", "pending_verification", "pending_password_setup"]
@@ -1749,8 +1835,16 @@ def registrar_context(user):
                 "subject": vc.subject.name if vc.subject else "",
                 "grade": "Grade {}".format(vc.section.grade_level) if vc.section else "",
                 "section": vc.section.name if vc.section else "",
-                "type": "Applied",
-                "gradingPeriod": vc.grading_period or "Quarter",
+                "type": (
+                    "Elective"
+                    if vc.subject_id
+                    and vc.subject.subject_type == getattr(Subject, "TYPE_ELECTIVE", "ELECTIVE")
+                    else "Applied"
+                ),
+                # Keep the real period (empty means year-long). The old fallback
+                # to "Quarter" made the localStorage bridge POST a different
+                # period back and duplicate every year-long classroom.
+                "gradingPeriod": vc.grading_period or "",
                 "teacher": vc.teacher.get_full_name() if vc.teacher else "—",
                 "schedule": vc.schedule or "",
                 "ay": "S.Y. {}".format((vc.academic_year.label.replace("-", "–")) if vc.academic_year else ""),
@@ -1758,6 +1852,18 @@ def registrar_context(user):
                 "status": "Active" if vc.status == STATUS_ACTIVE else "Archived",
             }
         )
+
+    # Every active teacher, for the Create/Edit Virtual Classroom pickers. The
+    # registrar previously offered only the section advisers, so a teacher who
+    # had not yet been assigned a section could not be chosen.
+    teachers_json = [
+        {"id": teacher.id, "name": teacher.get_full_name() or teacher.email}
+        for teacher in order_teachers(
+            User.objects.filter(groups__name="teacher", is_active=True).select_related(
+                "employee_profile"
+            )
+        )[:200]
+    ]
 
     acad_years_json = []
     for ay in AcademicYear.objects.order_by("-start_date"):
@@ -1914,6 +2020,7 @@ def registrar_context(user):
         "attendance": attendance_rows,
         "sections": sections_json,
         "subjects": subjects_json,
+        "teachers": teachers_json,
         "virtualClassrooms": vcs_json,
         "academicYears": acad_years_json,
         "logs": logs_json,
@@ -1952,15 +2059,14 @@ def _dt(v):
 
 
 # Compiled `AssessmentPart.question_type` -> the short code the teacher
-# frontend's assessment builder speaks. `numeric` has no builder type, so it
-# degrades to a short answer (its `accepted_answers` is still editable there).
+# frontend's assessment builder speaks.
 _BUILDER_QTYPE = {
     AssessmentPart.TYPE_MULTIPLE_CHOICE: "mc",
     AssessmentPart.TYPE_TRUE_FALSE: "tf",
     AssessmentPart.TYPE_MATCHING: "mt",
     AssessmentPart.TYPE_IDENTIFICATION: "id",
     AssessmentPart.TYPE_SHORT_ANSWER: "sa",
-    AssessmentPart.TYPE_NUMERIC: "sa",
+    AssessmentPart.TYPE_NUMERIC: "numeric",
     AssessmentPart.TYPE_ESSAY: "es",
     AssessmentPart.TYPE_POSITION_PAPER: "pp",
     AssessmentPart.TYPE_CASE_STUDY: "cs",
@@ -2040,6 +2146,9 @@ def _assessment_builder_payload(assessment):
             elif qtype == "sa":
                 answers = item.get("accepted_answers") or []
                 q["saAns"] = str(answers[0]) if answers else str(item.get("correct_answer", ""))
+            elif qtype == "numeric":
+                q["answer"] = item.get("correct_answer", "")
+                q["tolerance"] = item.get("tolerance", 0)
             elif qtype == "mt":
                 matches = item.get("correct_matches") or {}
                 if isinstance(matches, dict):
@@ -2107,9 +2216,10 @@ def _teacher_report_data(my_classes):
 
     assigns = list(
         AssessmentAssignment.objects.filter(virtual_classroom_id__in=vc_ids)
-        .select_related("assessment", "virtual_classroom")
+        .select_related("assessment", "assessment__subject", "virtual_classroom", "virtual_classroom__subject")
         .order_by("virtual_classroom__subject__name", "assessment__title")
     )
+    assign_by_id = {assignment.id: assignment for assignment in assigns}
     possible_map = {a.id: (a.assessment.total_possible_score or 0) for a in assigns}
 
     # Roster: every actively enrolled student, so a student with no attendance
@@ -2118,7 +2228,7 @@ def _teacher_report_data(my_classes):
         VirtualClassroomEnrollment.objects.filter(
             virtual_classroom_id__in=vc_ids,
             status=VirtualClassroomEnrollment.STATUS_ACTIVE,
-        ).select_related("student", "virtual_classroom")
+        ).select_related("student", "virtual_classroom", "virtual_classroom__subject")
     )
     # expected submissions per assignment, used to score "missing".
     enr_per_vc = {}
@@ -2226,23 +2336,26 @@ def _teacher_report_data(my_classes):
             used_labels[label] = 1
         label_map[a.id] = label
 
+    submissions_by_assignment = {}
     subs = Submission.objects.filter(
         assessment_assignment__virtual_classroom_id__in=vc_ids
     ).values_list(
-        "student_id", "assessment_assignment_id", "is_late", "total_score"
+        "student_id", "assessment_assignment_id", "is_late", "total_score",
+        "grading_status",
     )
-    for sid, aa_id, is_late, total_score in subs:
+    for sid, aa_id, is_late, total_score, grading_status in subs:
         row = students.get(str(sid))
         if row is None:
             # Submission from a class the teacher no longer has open, or from a
             # student who has since been unenrolled; not part of this report.
             continue
+        submissions_by_assignment[(sid, aa_id)] = (total_score, grading_status)
         if aa_id not in possible_map:
             continue
         row["sub"]["submitted"] += 1
         if is_late:
             row["sub"]["late"] += 1
-        if total_score is not None:
+        if total_score is not None and grading_status == Submission.GRADING_COMPLETE:
             possible = possible_map.get(aa_id) or 0
             if possible > 0:
                 pct = float(total_score) * 100.0 / float(possible)
@@ -2279,6 +2392,51 @@ def _teacher_report_data(my_classes):
             )
         risk["at_risk"] = bool(risk["reasons"])
 
+    matrix_rows = {}
+    for enrollment in enrollments:
+        student = enrollment.student
+        vc = enrollment.virtual_classroom
+        key = (student.pk, vc.pk)
+        matrix_rows.setdefault(key, {
+            "student_id": student.pk,
+            "student": _student_display_name(student),
+            "subject": vc.subject.name,
+            "classroom_id": vc.pk,
+            "scores": {},
+        })
+    for assignment in assigns:
+        vc = assignment.virtual_classroom
+        for enrollment in enrollments:
+            if enrollment.virtual_classroom_id != vc.pk:
+                continue
+            key = (enrollment.student_id, vc.pk)
+            matrix_rows.setdefault(key, {
+                "student_id": enrollment.student_id,
+                "student": _student_display_name(enrollment.student),
+                "subject": vc.subject.name,
+                "classroom_id": vc.pk,
+                "scores": {},
+            })
+            score_data = submissions_by_assignment.get((enrollment.student_id, assignment.pk))
+            score, grading_status = score_data if score_data else (None, None)
+            possible = possible_map.get(assignment.pk) or 0
+            if score is not None and grading_status == Submission.GRADING_COMPLETE and possible > 0:
+                score_text = format(score, "f")
+                possible_text = format(possible, "f")
+                if "." in score_text:
+                    score_text = score_text.rstrip("0").rstrip(".")
+                if "." in possible_text:
+                    possible_text = possible_text.rstrip("0").rstrip(".")
+                matrix_rows[key]["scores"][str(assignment.pk)] = "{}/{}".format(score_text, possible_text)
+    assessment_matrix = []
+    for row in sorted(matrix_rows.values(), key=lambda r: (r["student"].casefold(), r["subject"].casefold())):
+        assessment_matrix.append({
+            "student": row["student"],
+            "subject": row["subject"],
+            "classroom_id": row["classroom_id"],
+            "values": row["scores"],
+        })
+
     ordered = sorted(
         students.values(), key=lambda r: (-(r["risk"]["at_risk"]), r["name"])
     )
@@ -2310,6 +2468,7 @@ def _teacher_report_data(my_classes):
         "assessments": [
             {
                 "id": a.id,
+                "classroom_id": a.virtual_classroom_id,
                 "title": a.assessment.title or "Assessment",
                 "classroom": _vc_label(a.virtual_classroom),
                 "deadline": _dt(a.assessment.submission_deadline),
@@ -2317,6 +2476,8 @@ def _teacher_report_data(my_classes):
             }
             for a in assigns
         ],
+        "assessment_matrix_columns": [str(a.id) for a in assigns],
+        "assessment_matrix": assessment_matrix,
         # Assessment.total_possible_score is the sum of its parts' item points,
         # so an assessment with no parts (or no points on its items) has no
         # scale and cannot be turned into a percentage. The score report says
@@ -2423,7 +2584,10 @@ def _class_analytics(vcs):
 
     # ---- Scores (graded submissions) -------------------------------------
     possible_map = {a.id: a.assessment.total_possible_score for a in assigns}
-    graded = subs.filter(total_score__isnull=False, total_score__gt=0).select_related(
+    graded = subs.filter(
+        total_score__isnull=False,
+        grading_status=Submission.GRADING_COMPLETE,
+    ).select_related(
         "student", "assessment_assignment__assessment"
     )
     pct_by_student = {}
@@ -2439,7 +2603,8 @@ def _class_analytics(vcs):
             if lo <= pct <= hi:
                 score_dist[idx] += 1
                 break
-        if pct >= 60:
+        passing_pct = s.assessment_assignment.assessment.passing_score_percentage
+        if pct >= passing_pct:
             pf_counts[s.assessment_assignment_id][0] += 1
         else:
             pf_counts[s.assessment_assignment_id][1] += 1
@@ -2472,14 +2637,47 @@ def _class_analytics(vcs):
         data["spL"].append(name_by_id.get(sid, "Student"))
         data["spV"].append(round(avg, 1))
 
-    risk_rows = [x for x in student_avgs if x[1] < 60]
-    data["risk"] = len(risk_rows)
-    data["chips"] = [
-        "{} · {}%".format(name_by_id.get(sid, "Student"), round(avg))
-        for sid, avg in risk_rows[:8]
-    ]
+    attendance_by_student = {
+        row["student_id"]: (
+            row["present"], row["total"],
+            round(row["present"] * 100 / row["total"]) if row["total"] else 0,
+        )
+        for row in recs.values("student_id").order_by().annotate(
+            total=Count("id"),
+            present=Count("id", filter=Q(status__in=PRESENT_STATUSES)),
+        )
+    }
+    score_by_student = {sid: avg for sid, avg in student_avgs}
+    risk_ids = {
+        sid for sid, (_present, total, pct) in attendance_by_student.items()
+        if total and pct < ATT_RISK_ATTENDANCE_PCT
+    }
+    risk_ids.update(
+        sid for sid, avg in score_by_student.items()
+        if avg < ATT_RISK_SCORE_PCT
+    )
+    if risk_ids - set(name_by_id):
+        risk_profiles = StudentProfile.objects.filter(pk__in=risk_ids - set(name_by_id)).select_related("user")
+        for profile in risk_profiles:
+            name_by_id[profile.pk] = (
+                " ".join(filter(None, [profile.first_name, profile.last_name]))
+                or (profile.user.get_full_name() if profile.user else profile.lrn or "Student")
+            )
+    data["risk"] = len(risk_ids)
+    risk_chips = []
+    for sid in sorted(risk_ids, key=lambda pk: name_by_id.get(pk, "Student").casefold()):
+        avg = score_by_student.get(sid)
+        attendance = attendance_by_student.get(sid)
+        if avg is not None and avg < ATT_RISK_SCORE_PCT:
+            reason = "Score {}%".format(round(avg))
+        elif attendance and attendance[1]:
+            reason = "Attendance {}%".format(attendance[2])
+        else:
+            reason = "At risk"
+        risk_chips.append("{} · {}".format(name_by_id.get(sid, "Student"), reason))
+    data["chips"] = risk_chips[:8]
 
-    # ---- Download activity (resource placements per month) ----------------
+    # ---- Learning material placements per month --------------------------
     month_counts = {}
     placements = LearningResourcePlacement.objects.filter(virtual_classroom__in=qs)
     for row in placements.values("placed_at").order_by("placed_at"):
@@ -2597,9 +2795,10 @@ def _school_chart_payload(scopes=None):
         for row in AssessmentPart.objects.values("assessment_id").annotate(total=Sum("points"))
     }
     assignment_map = {
-        pk: (vc_id, assessment_id)
-        for pk, vc_id, assessment_id in AssessmentAssignment.objects.values_list(
-            "id", "virtual_classroom_id", "assessment_id"
+        pk: (vc_id, assessment_id, passing_score)
+        for pk, vc_id, assessment_id, passing_score in AssessmentAssignment.objects.values_list(
+            "id", "virtual_classroom_id", "assessment_id",
+            "assessment__passing_score_percentage",
         )
     }
 
@@ -2608,13 +2807,14 @@ def _school_chart_payload(scopes=None):
     score_by_period = {}
     pass_fail = {}
     for row in Submission.objects.filter(
-        total_score__isnull=False, total_score__gt=0
+        total_score__isnull=False,
+        grading_status=Submission.GRADING_COMPLETE,
     ).values_list("assessment_assignment_id", "total_score"):
         assignment_id, score = row
         target = assignment_map.get(assignment_id)
         if target is None:
             continue
-        vc_id, assessment_id = target
+        vc_id, assessment_id, passing_score = target
         classroom = classrooms.get(vc_id)
         denominator = possible.get(assessment_id) or 0
         if classroom is None or not denominator:
@@ -2625,7 +2825,7 @@ def _school_chart_payload(scopes=None):
         period = classroom.grading_period or WHOLE_YEAR
         score_by_period.setdefault(period, []).append(pct)
         bucket = pass_fail.setdefault((classroom, assessment_id), [0, 0])
-        bucket[0 if pct >= 60 else 1] += 1
+        bucket[0 if pct >= passing_score else 1] += 1
 
     def _averages(buckets):
         return {
@@ -2694,28 +2894,34 @@ def _school_chart_payload(scopes=None):
         period_order, [period_scores[key] for key in period_order]
     )
 
-    # Completion is submissions against the students actually enrolled, so a
-    # class nobody submitted in is absent rather than reading as 0%.
+    # Completion is submitted assignments divided by the submission
+    # opportunities for those assignments (active students x assignments).
+    # Dividing by enrollment once per classroom incorrectly allowed the rate
+    # to exceed 100% whenever a class had multiple assessments.
     enrolled = dict(
         VirtualClassroomEnrollment.objects.filter(status=STATUS_ACTIVE)
         .values_list("virtual_classroom_id")
-        .annotate(c=Count("id"))
+        .annotate(c=Count("student_id", distinct=True))
     )
     submitted = dict(
         Submission.objects.order_by()
-        .values_list("assessment_assignment__virtual_classroom_id")
+        .values_list("assessment_assignment_id")
         .annotate(c=Count("id"))
     )
+    assignments_for_completion = AssessmentAssignment.objects.filter(
+        virtual_classroom_id__in=vc_ids
+    ).select_related("virtual_classroom")
     completion = {}
-    for vc_id, count in enrolled.items():
-        classroom = classrooms.get(vc_id)
+    for assignment in assignments_for_completion:
+        classroom = classrooms.get(assignment.virtual_classroom_id)
+        count = enrolled.get(assignment.virtual_classroom_id, 0)
         if classroom is None or not count:
             continue
         completion[classroom.grading_period or WHOLE_YEAR] = completion.get(
             classroom.grading_period or WHOLE_YEAR, [0, 0]
         )
         bucket = completion[classroom.grading_period or WHOLE_YEAR]
-        bucket[0] += submitted.get(vc_id, 0)
+        bucket[0] += min(submitted.get(assignment.pk, 0), count)
         bucket[1] += count
     completion_series = _series(
         [key for key in sorted(completion, key=lambda k: (k == WHOLE_YEAR, k))],
@@ -2756,7 +2962,7 @@ def _school_chart_payload(scopes=None):
         .filter(assignments__virtual_classroom__in=vc_ids)
         .order_by()
         .values_list("assessment_type")
-        .annotate(c=Count("id"))
+        .annotate(c=Count("assignments__id", distinct=True))
     )
     type_labels = dict(Assessment.ASSESSMENT_TYPE_CHOICES)
     assessment_by_type = _series(
@@ -3157,17 +3363,16 @@ def _weekly_publishing_activity(classrooms=None):
 
 
 def _enrollment_by_grade(classrooms):
-    counts = {}
-    for vc_id, count in (
-        VirtualClassroomEnrollment.objects.filter(status=STATUS_ACTIVE)
-        .values_list("virtual_classroom_id")
-        .annotate(c=Count("id"))
-    ):
-        classroom = classrooms.get(vc_id)
-        if classroom is None:
-            continue
-        level = classroom.section.grade_level
-        counts[level] = counts.get(level, 0) + count
+    classroom_ids = list(classrooms)
+    counts = {
+        row["virtual_classroom__section__grade_level"]: row["students"]
+        for row in VirtualClassroomEnrollment.objects.filter(
+            status=STATUS_ACTIVE,
+            virtual_classroom_id__in=classroom_ids,
+            virtual_classroom__section__isnull=False,
+        ).values("virtual_classroom__section__grade_level")
+        .annotate(students=Count("student_id", distinct=True))
+    }
     levels = sorted(counts)
     return _series([f"Grade {level}" for level in levels], [counts[level] for level in levels])
 
@@ -3316,6 +3521,14 @@ def teacher_context(user):
                 "type": a.get_assessment_method_display() or a.assessment_method,
                 "openDate": _dt(a.available_at),
                 "deadline": _dt(a.submission_deadline),
+                "timeLimit": a.time_limit_minutes,
+                "passingScore": a.passing_score_percentage,
+                "allowSubmissionAttachments": a.allow_submission_attachments,
+                "acceptedFileFormat": a.accepted_file_format,
+                "allowSubmissionLinks": a.allow_submission_links,
+                "revealCorrectAnswers": a.reveal_correct_answers,
+                "shareToRepository": a.share_to_repository,
+                "isClosed": bool(a.submission_deadline and a.submission_deadline <= timezone.now()),
                 "archived": a.status == STATUS_ARCHIVED,
                 "classroomId": vc.id,
                 "subject": (a.subject.name if a.subject else (vc.subject.name if vc.subject else "")),
@@ -3330,16 +3543,45 @@ def teacher_context(user):
             }
         )
 
-    teacher_subject_ids = my_classes.values_list("subject_id", flat=True).distinct()
-    repository_assessments = (
-        Assessment.objects.filter(
-            subject_id__in=teacher_subject_ids,
+    # The repository is a school-wide archive. Keep its entries available
+    # across school years; only the classroom list stays tied to this year's
+    # teaching assignments.
+    taught_subjects = list(
+        Subject.objects.filter(pk__in=teacher_subject_ids(user)).values_list(
+            "name", "grade_level"
         )
+    )
+    taught_subject_scope = Q(pk__in=[])
+    for subject_name, grade_level in taught_subjects:
+        taught_subject_scope |= Q(
+            subject__name__iexact=subject_name,
+            subject__grade_level=grade_level,
+        )
+    repository_assessments = list(
+        Assessment.objects.filter(Q(share_to_repository=True) & taught_subject_scope)
         .select_related("subject")
         .prefetch_related("parts")
         .annotate(repository_share_count=Count("assignments", distinct=True))
         .order_by("subject__grade_level", "subject__name", "title", "pk")
     )
+    repository_subjects = {}
+    for subject in Subject.objects.filter(pk__in=teacher_subject_ids(user)):
+        repository_subjects[subject.id] = subject
+    for assessment in repository_assessments:
+        if assessment.subject_id:
+            repository_subjects[assessment.subject_id] = assessment.subject
+    assessment_repository_subjects = [
+        {
+            "id": subject.id,
+            "name": subject.name,
+            "gradeLevel": subject.grade_level,
+            "gradingPeriod": subject.grading_period,
+        }
+        for subject in sorted(
+            repository_subjects.values(),
+            key=lambda subject: (subject.grade_level, subject.name.casefold(), subject.grading_period, subject.pk),
+        )
+    ]
     assessment_repository_json = []
     for assessment in repository_assessments:
         repository_parts = list(assessment.parts.all())
@@ -3365,6 +3607,8 @@ def teacher_context(user):
             "title": assessment.title,
             "subject": assessment.subject.name if assessment.subject_id else "",
             "subjectId": assessment.subject_id,
+            "gradeLevel": assessment.subject.grade_level if assessment.subject_id else None,
+            "shareToRepository": assessment.share_to_repository,
             "type": assessment.get_assessment_method_display(),
             "items": len(repository_questions),
             "questions": repository_questions,
@@ -3561,9 +3805,63 @@ def teacher_context(user):
         and (aa.assessment.submission_deadline is None or aa.assessment.submission_deadline > now_dt)
     )
 
-    analytics = {"all": _class_analytics(list(my_classes))}
-    for item in class_items:
-        analytics[str(item["vc"].id)] = _class_analytics([item["vc"]])
+    analytics_cache = {}
+
+    def _analytics_for(classrooms):
+        classrooms = list(classrooms)
+        key = tuple(sorted(vc.pk for vc in classrooms))
+        if key not in analytics_cache:
+            analytics_cache[key] = _class_analytics(classrooms) if classrooms else _empty_analytics()
+        return analytics_cache[key]
+
+    teacher_classrooms = [item["vc"] for item in class_items]
+    analytics = {"all": _analytics_for(teacher_classrooms)}
+    periods_by_value = {}
+    years_by_value = {}
+    for vc in teacher_classrooms:
+        year = vc.academic_year.label if vc.academic_year_id else ""
+        period = (vc.grading_period or "").strip()
+        if year:
+            years_by_value[year] = year
+        if period:
+            label_parts = period.replace("_", " ").split()
+            display = " ".join(
+                ("Quarter " + token[1]) if token.upper().startswith("Q") and token[1:].isdigit()
+                else token.title()
+                for token in label_parts
+            )
+            for ordinal, number in (("1ST", "1"), ("2ND", "2"), ("3RD", "3"), ("4TH", "4")):
+                if period.upper().startswith(ordinal + "_"):
+                    display = "Quarter " + number + " " + " ".join(label_parts[1:]).title()
+                    break
+            periods_by_value[period] = display
+
+    period_groups = {}
+    year_groups = {}
+    period_year_groups = {}
+    for vc in teacher_classrooms:
+        year = vc.academic_year.label if vc.academic_year_id else ""
+        period = (vc.grading_period or "").strip()
+        if year:
+            year_groups.setdefault(year, []).append(vc)
+        if period:
+            period_groups.setdefault(period, []).append(vc)
+            if year:
+                period_year_groups.setdefault((period, year), []).append(vc)
+        vc_key = str(vc.pk)
+        analytics[vc_key] = _analytics_for([vc])
+        if period:
+            analytics[vc_key + "." + period] = analytics[vc_key]
+        if year:
+            analytics[vc_key + "|" + year] = analytics[vc_key]
+        if period and year:
+            analytics[vc_key + "." + period + "|" + year] = analytics[vc_key]
+    for period, classrooms in period_groups.items():
+        analytics["all." + period] = _analytics_for(classrooms)
+    for year, classrooms in year_groups.items():
+        analytics["all|" + year] = _analytics_for(classrooms)
+    for (period, year), classrooms in period_year_groups.items():
+        analytics["all." + period + "|" + year] = _analytics_for(classrooms)
 
     roster_json = []
     demo_rows = []
@@ -3633,6 +3931,12 @@ def teacher_context(user):
         },
         "assessments": assessments_json,
         "assessment_repository": assessment_repository_json,
+        "assessment_repository_subjects": assessment_repository_subjects,
+        "periods": [
+            {"value": value, "label": label}
+            for value, label in sorted(periods_by_value.items(), key=lambda row: row[1].casefold())
+        ],
+        "years": sorted(years_by_value, reverse=True),
         "notifications": notifications_json,
         "announcements": announcements_json,
         "school_announcements": school_announcements_json,
@@ -3809,7 +4113,7 @@ def _roster_directory(active_year_obj):
         .annotate(n=Count("id"))
     )
     sections_by_year = {}
-    for s in year_sections.select_related("adviser", "academic_year").order_by(
+    for s in year_sections.select_related("adviser__employee_profile", "academic_year").order_by(
         "academic_year__start_date", "grade_level", "name"
     ):
         label = s.academic_year.label if s.academic_year_id else "—"
@@ -3970,7 +4274,9 @@ def _repository_materials_json(limit=12, virtual_classrooms=None):
     that pass none (the System Administrator, Quality Assurance) are unaffected.
     """
     qs = LearningResourcePlacement.objects.select_related(
-        "resource", "virtual_classroom__section", "placed_by"
+        "resource",
+        "virtual_classroom__section",
+        "placed_by__employee_profile",
     )
     if virtual_classrooms is not None:
         qs = qs.filter(virtual_classroom__in=virtual_classrooms)
@@ -3979,6 +4285,13 @@ def _repository_materials_json(limit=12, virtual_classrooms=None):
         res = pl.resource
         r_type = res.resource_type if res else "document"
         m_meta = dict(res.RESOURCE_TYPE_CHOICES).get(r_type, "File") if res else "File"
+        # A material is labelled "PDF · 2.4 MB" (or "DOCX · 880 B"): the type
+        # the teacher chose plus the size of the file that is actually stored.
+        # The old label showed the filename extension, which is not a size and
+        # told the reader nothing about the download.
+        m_size = resource_size_label(res)
+        if m_size:
+            m_meta = "{} · {}".format(m_meta, m_size)
         t_meta = pl.placed_by.get_full_name() if pl.placed_by else "Faculty"
         clabel = ""
         if pl.virtual_classroom and pl.virtual_classroom.section:
@@ -3989,14 +4302,7 @@ def _repository_materials_json(limit=12, virtual_classrooms=None):
                 "type": (_RESOURCE_TYPE_ICON.get(r_type) or {}).get("cls", "doc"),
                 "icon": (_RESOURCE_TYPE_ICON.get(r_type) or {}).get("icon", "fa-solid fa-file"),
                 "name": res.title[:60] if res else "Learning Resource",
-                "meta": "{} · {}".format(
-                    m_meta,
-                    (
-                        pl.resource.file.name.split(".")[-1].upper()
-                        if pl.resource and pl.resource.file and "." in pl.resource.file.name
-                        else "Online"
-                    ),
-                ),
+                "meta": m_meta,
                 "teacher": _initials(t_meta),
                 "cls": clabel,
                 "date": timezone.localtime(pl.placed_at).strftime("%b %d")
@@ -4022,20 +4328,28 @@ def _repository_assessments_json(limit=12, virtual_classrooms=None):
         "assessment",
         "virtual_classroom__section",
         "virtual_classroom__subject",
-        "virtual_classroom__teacher",
+        "virtual_classroom__teacher__employee_profile",
     )
     if virtual_classrooms is not None:
         qs = qs.filter(virtual_classroom__in=virtual_classrooms)
+    assignments = list(qs.order_by("-assigned_at")[:limit])
+    assignment_ids = [assignment.pk for assignment in assignments]
+    submission_stats = {
+        row["assessment_assignment_id"]: row
+        for row in Submission.objects.filter(
+            assessment_assignment_id__in=assignment_ids
+        )
+        .order_by()
+        .values("assessment_assignment_id")
+        .annotate(count=Count("pk"), average=Avg("total_score"))
+    }
     rows = []
-    for aa in qs.order_by("-assigned_at")[:limit]:
+    for aa in assignments:
         a = aa.assessment
         vc = aa.virtual_classroom
-        subs = Submission.objects.filter(assessment_assignment=aa).count()
-        avg = (
-            Submission.objects.filter(assessment_assignment=aa)
-            .exclude(total_score=None)
-            .aggregate(a=Avg("total_score"))["a"]
-        )
+        stats = submission_stats.get(aa.pk, {})
+        subs = stats.get("count", 0)
+        avg = stats.get("average")
         rows.append(
             {
                 "id": a.id if a else None,
@@ -4067,8 +4381,23 @@ def _repository_assessments_json(limit=12, virtual_classrooms=None):
     return rows
 
 
-def principal_context(user):
-    active_year = _active_academic_year()
+def principal_context(user, academic_year=None):
+    """The Principal dashboard payload, optionally scoped to one school year.
+
+    ``academic_year`` is the value of the dashboard's Academic Year filter (an
+    ``AcademicYear`` pk). It re-scopes the entire payload -- classrooms,
+    sections, subjects, assessments, attendance, materials and the roster map --
+    because everything below hangs off ``vcs``/``sections``/``subjects``. When
+    it is omitted (or names a year that no longer exists) the active year is
+    used, which is the old behaviour.
+    """
+    selected_year = None
+    if academic_year not in (None, "", "all"):
+        try:
+            selected_year = AcademicYear.objects.filter(pk=int(academic_year)).first()
+        except (TypeError, ValueError):
+            selected_year = None
+    active_year = selected_year or _active_academic_year()
     current = active_year.id if active_year else None
 
     # Both campuses share this screen; the difference is the data. The scopes
@@ -4077,10 +4406,6 @@ def principal_context(user):
     # scoping only ever narrows a principal's view -- it never blanks a panel
     # for someone who was never restricted in the first place.
     scopes = campus.campus_scopes_for(user)
-    # The High School Principal oversees both campuses on the principal
-    # dashboard; the Elementary Principal remains limited to Grades 1-6.
-    if "principal" in campus.role_codes_for(user):
-        scopes = {campus.WHOLE_SCHOOL}
     campus_code = campus.WHOLE_SCHOOL if campus.WHOLE_SCHOOL in scopes else campus.campus_scope_for(user)
     campus_label = campus.CAMPUS_LABELS.get(campus_code, campus.CAMPUS_LABELS[campus.WHOLE_SCHOOL])
 
@@ -4165,39 +4490,133 @@ def principal_context(user):
         .select_related("employee_profile")
         .distinct()
     )
+    teachers = list(teachers_qs)
+    teacher_ids = [teacher.pk for teacher in teachers]
+    teacher_vcs = VirtualClassroom.objects.filter(
+        teacher_id__in=teacher_ids, status=STATUS_ACTIVE
+    )
+    if current:
+        teacher_vcs = teacher_vcs.filter(academic_year_id=current)
+    teacher_vcs = campus.virtual_classrooms_for_campus(teacher_vcs, scopes)
+
+    # The activity bars and frequency badge used to issue eight queries for
+    # every teacher (a weekly count plus one count per day). Fetch the same
+    # seven-day window in one grouped query so this school-wide report remains
+    # responsive when the staff roster grows.
+    activity_now = timezone.now()
+    activity_since = activity_now - timedelta(days=7)
+    activity_start_date = timezone.localdate(activity_since)
+    activity_by_teacher = defaultdict(lambda: {"weekly": 0, "daily": {}})
+    for activity_row in (
+        ActivityLog.objects.filter(
+            user_id__in=teacher_ids,
+            timestamp__date__gte=activity_start_date,
+        )
+        .annotate(activity_day=TruncDate("timestamp"))
+        .values("user_id", "activity_day")
+        .annotate(
+            daily_count=Count("pk"),
+            weekly_count=Count("pk", filter=Q(timestamp__gte=activity_since)),
+        )
+    ):
+        counts = activity_by_teacher[activity_row["user_id"]]
+        counts["daily"][activity_row["activity_day"]] = activity_row["daily_count"]
+        counts["weekly"] += activity_row["weekly_count"]
+
+    teacher_class_counts = dict(
+        teacher_vcs.order_by().values_list("teacher_id").annotate(n=Count("pk"))
+    )
+    teacher_student_counts = dict(
+        VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom__in=teacher_vcs,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        )
+        .order_by()
+        .values_list("virtual_classroom__teacher_id")
+        .annotate(n=Count("student_id", distinct=True))
+    )
+    teacher_upload_counts = dict(
+        LearningResourcePlacement.objects.filter(placed_by_id__in=teacher_ids)
+        .order_by()
+        .values_list("placed_by_id")
+        .annotate(n=Count("pk"))
+    )
+    teacher_announcement_counts = dict(
+        ClassAnnouncement.objects.filter(virtual_classroom__in=teacher_vcs)
+        .order_by()
+        .values_list("virtual_classroom__teacher_id")
+        .annotate(n=Count("pk"))
+    )
+    teacher_subjects = {}
+    for teacher_id, subject_name in (
+        teacher_vcs.order_by("teacher_id", "pk")
+        .values_list("teacher_id", "subject__name")
+    ):
+        teacher_subjects.setdefault(teacher_id, subject_name or "")
+    teacher_assignments = list(
+        AssessmentAssignment.objects.filter(virtual_classroom__in=teacher_vcs)
+        .select_related("assessment", "virtual_classroom__section")
+        .prefetch_related("assessment__parts")
+        .order_by("-assigned_at")
+    )
+    assignments_by_teacher = defaultdict(list)
+    for assignment in teacher_assignments:
+        assignments_by_teacher[assignment.virtual_classroom.teacher_id].append(
+            assignment
+        )
+    teacher_scores = dict(
+        Submission.objects.filter(
+            assessment_assignment_id__in=[assignment.pk for assignment in teacher_assignments],
+            total_score__isnull=False,
+        )
+        .order_by()
+        .values_list("assessment_assignment_id")
+        .annotate(avg_score=Avg("total_score"))
+    )
+    teacher_attendance = defaultdict(list)
+    for row in (
+        AttendanceRecord.objects.filter(session__virtual_classroom__in=teacher_vcs)
+        .values(
+            "session__virtual_classroom__teacher_id",
+            "student_id",
+            "student__first_name",
+            "student__last_name",
+        )
+        .annotate(
+            total=Count("pk"),
+            present=Count("pk", filter=Q(status=AttendanceRecord.PRESENT_ON_TIME)),
+            absent=Count(
+                "pk",
+                filter=Q(
+                    status__in=(
+                        AttendanceRecord.ABSENT_EXCUSED,
+                        AttendanceRecord.ABSENT_UNEXCUSED,
+                    )
+                ),
+            ),
+            late=Count("pk", filter=Q(status=AttendanceRecord.PRESENT_LATE)),
+            attended=Count("pk", filter=Q(status__in=PRESENT_STATUSES)),
+        )
+        .order_by(
+            "session__virtual_classroom__teacher_id",
+            "student__last_name",
+            "student__first_name",
+        )
+    ):
+        teacher_attendance[row["session__virtual_classroom__teacher_id"]].append(row)
+
     teachers_json = []
-    for idx, t in enumerate(teachers_qs):
-        # Already campus-filtered by way of `visible_teacher_ids`, but the
-        # per-teacher classroom count still needs narrowing so a high-school
-        # teacher teaching one elementary class is not credited with both.
-        t_vcs = VirtualClassroom.objects.filter(teacher=t, status=STATUS_ACTIVE)
-        if current:
-            t_vcs = t_vcs.filter(academic_year_id=current)
-        t_vcs = campus.virtual_classrooms_for_campus(t_vcs, scopes)
-        t_classes = t_vcs.count()
-        t_students = (
-            VirtualClassroomEnrollment.objects.filter(
-                virtual_classroom__in=t_vcs, status=VirtualClassroomEnrollment.STATUS_ACTIVE
-            ).values("student_id").distinct().count()
-        )
-        t_uploads = LearningResourcePlacement.objects.filter(placed_by=t).count()
-        t_assessments = AssessmentAssignment.objects.filter(
-            virtual_classroom__in=t_vcs
-        ).select_related("assessment", "virtual_classroom__section").order_by("-assigned_at")
-        t_assess = t_assessments.count()
-        t_scores = dict(
-            Submission.objects.filter(
-                assessment_assignment__in=t_assessments,
-                total_score__isnull=False,
-            )
-            .values_list("assessment_assignment_id")
-            .annotate(avg_score=Avg("total_score"))
-        )
+    for idx, t in enumerate(teachers):
+        t_classes = teacher_class_counts.get(t.pk, 0)
+        t_students = teacher_student_counts.get(t.pk, 0)
+        t_uploads = teacher_upload_counts.get(t.pk, 0)
+        t_assessments = assignments_by_teacher.get(t.pk, [])
+        t_assess = len(t_assessments)
         t_performance = {"labels": [], "values": []}
         for assignment in t_assessments:
             assessment = assignment.assessment
             possible = float(assessment.total_possible_score or 0) if assessment else 0
-            average = t_scores.get(assignment.id)
+            average = teacher_scores.get(assignment.id)
             if possible <= 0 or average is None:
                 continue
             label = assessment.title or "Assessment"
@@ -4207,21 +4626,9 @@ def principal_context(user):
             t_performance["values"].append(round(float(average) * 100 / possible, 1))
             if len(t_performance["labels"]) >= 8:
                 break
-        t_ann = ClassAnnouncement.objects.filter(virtual_classroom__in=t_vcs).count()
+        t_ann = teacher_announcement_counts.get(t.pk, 0)
         t_attendance = []
-        attendance_summary = (
-            AttendanceRecord.objects.filter(session__virtual_classroom__in=t_vcs)
-            .values("student_id", "student__first_name", "student__last_name")
-            .annotate(
-                total=Count("id"),
-                present=Count("id", filter=Q(status=AttendanceRecord.PRESENT_ON_TIME)),
-                absent=Count("id", filter=Q(status__in=(AttendanceRecord.ABSENT_EXCUSED, AttendanceRecord.ABSENT_UNEXCUSED))),
-                late=Count("id", filter=Q(status=AttendanceRecord.PRESENT_LATE)),
-                attended=Count("id", filter=Q(status__in=PRESENT_STATUSES)),
-            )
-            .order_by("student__last_name", "student__first_name")
-        )
-        for row in attendance_summary:
+        for row in teacher_attendance.get(t.pk, []):
             total = row["total"]
             t_attendance.append(
                 {
@@ -4235,19 +4642,14 @@ def principal_context(user):
             )
         name = t.get_full_name() or t.email
         initials = "".join([p[0].upper() for p in name.replace(".", " ").split() if p][:2]) or (t.email[0:2].upper() if t.email else "?")
-        subj = (
-            t_vcs.select_related("subject").first().subject.name
-            if t_vcs.select_related("subject").first() and t_vcs.select_related("subject").first().subject
-            else ""
-        )
-        weekly = ActivityLog.objects.filter(user=t, timestamp__gte=timezone.now() - timedelta(days=7)).count()
+        subj = teacher_subjects.get(t.pk, "")
+        activity_counts = activity_by_teacher[t.pk]
+        weekly = activity_counts["weekly"]
         freq = "high" if t_classes >= 4 or weekly >= 3 else ("mid" if t_classes >= 2 or weekly else "low")
         bars = []
         for d in range(7):
-            day = timezone.now() - timedelta(days=d)
-            ct = ActivityLog.objects.filter(
-                user=t, timestamp__date=timezone.localdate(day)
-            ).count()
+            day = activity_now - timedelta(days=d)
+            ct = activity_counts["daily"].get(timezone.localdate(day), 0)
             bars.append(3 if ct >= 3 else ct)
         bars.reverse()
         profile = getattr(t, "employee_profile", None)
@@ -4280,15 +4682,25 @@ def principal_context(user):
     # panel exactly.
     staff_demo_rows = _all_staff_demo_rows()
 
+    class_rows = list(
+        vcs.select_related("subject", "section", "teacher__employee_profile")
+        .order_by("subject__name")[:40]
+    )
+    class_row_ids = [vc.pk for vc in class_rows]
+    class_student_counts = dict(
+        VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom_id__in=class_row_ids,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).order_by().values_list("virtual_classroom_id").annotate(n=Count("pk"))
+    )
+    class_assessment_counts = dict(
+        AssessmentAssignment.objects.filter(virtual_classroom_id__in=class_row_ids)
+        .order_by().values_list("virtual_classroom_id").annotate(n=Count("pk"))
+    )
     classes_json = []
-    for idx, vc in enumerate(
-        vcs.select_related("subject", "section", "teacher").order_by("subject__name")[:40]
-    ):
-        vc_students = (
-            vc.enrollments.filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE)
-            .values("student_id").distinct().count()
-        )
-        vc_assess = AssessmentAssignment.objects.filter(virtual_classroom=vc).count()
+    for idx, vc in enumerate(class_rows):
+        vc_students = class_student_counts.get(vc.pk, 0)
+        vc_assess = class_assessment_counts.get(vc.pk, 0)
         grade_lbl = ("Grade {}".format(vc.subject.grade_level)) if vc.subject and vc.subject.grade_level else ""
         tname = vc.teacher.get_full_name() if vc.teacher else "SVI Faculty"
         classes_json.append(
@@ -4306,20 +4718,43 @@ def principal_context(user):
     materials_json = _repository_materials_json(virtual_classrooms=vcs)
     assessments_json = _repository_assessments_json(virtual_classrooms=vcs)
 
+    attendance_class_rows = list(
+        vcs.select_related("section", "teacher__employee_profile")
+        .order_by("section__grade_level")[:12]
+    )
+    attendance_class_ids = [vc.pk for vc in attendance_class_rows]
+    class_attendance = {
+        row["session__virtual_classroom_id"]: row
+        for row in AttendanceRecord.objects.filter(
+            session__virtual_classroom_id__in=attendance_class_ids
+        )
+        .order_by()
+        .values("session__virtual_classroom_id")
+        .annotate(
+            total=Count("pk"),
+            present=Count("pk", filter=Q(status__in=PRESENT_STATUSES)),
+            last_date=Max("session__session_date"),
+        )
+    }
+    attendance_student_counts = dict(
+        VirtualClassroomEnrollment.objects.filter(
+            virtual_classroom_id__in=attendance_class_ids,
+            status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+        ).order_by().values_list("virtual_classroom_id").annotate(n=Count("pk"))
+    )
     attendance_rows_json = []
-    for vc in vcs.select_related("section", "teacher").order_by("section__grade_level")[:12]:
-        vc_sess = AttendanceSession.objects.filter(virtual_classroom=vc)
-        vc_recs = AttendanceRecord.objects.filter(session__virtual_classroom=vc)
-        vc_total = vc_recs.count()
-        vc_present = vc_recs.filter(status__in=PRESENT_STATUSES).count()
-        last_rec = vc_recs.order_by("-session__session_date").first()
+    for vc in attendance_class_rows:
+        class_stats = class_attendance.get(vc.pk, {})
+        vc_total = class_stats.get("total", 0)
+        vc_present = class_stats.get("present", 0)
+        last_date = class_stats.get("last_date")
         attendance_rows_json.append(
             {
                 "cls": "G{}-{}".format(vc.section.grade_level, vc.section.name) if vc.section else "—",
                 "teacher": "".join([p[0].upper() for p in (vc.teacher.get_full_name() if vc.teacher else "Faculty").replace(".", " ").split() if p][:2]),
-                "students": vc.enrollments.filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE).count(),
+                "students": attendance_student_counts.get(vc.pk, 0),
                 "avg": round(vc_present / vc_total * 100, 1) if vc_total else 0,
-                "last": last_rec.session.session_date.strftime("%b %d") if last_rec and last_rec.session and hasattr(last_rec.session, "session_date") else "—",
+                "last": last_date.strftime("%b %d") if last_date else "—",
                 "status": "at-risk" if vc_total and (vc_present / vc_total) < 0.9 else "normal",
             }
         )
@@ -4404,7 +4839,7 @@ def principal_context(user):
         )
 
     enroll_sections_rows = []
-    for sec in sections.select_related("adviser").order_by("grade_level", "name"):
+    for sec in sections.select_related("adviser__employee_profile").order_by("grade_level", "name"):
         adviser = (
             _qa_display_name(sec.adviser.employee_profile)
             if sec.adviser_id
@@ -4441,6 +4876,24 @@ def principal_context(user):
         "profile": _self_profile(user),
         "calendar": _calendar_payload(user),
         "yearLabel": ("S.Y. {}".format(active_year.label)) if active_year else "",
+        # The Academic Year filter's real options. The select used to be four
+        # hardcoded "S.Y. 20xx-20xx" strings that matched no row, and applying
+        # it only relabelled the page while the numbers stayed on the active
+        # year. These are the years actually stored, and choosing one re-scopes
+        # the payload the filter is standing in front of.
+        "yearId": active_year.id if active_year else None,
+        "yearOptions": [
+            {
+                "id": year.id,
+                "label": "S.Y. {}".format(year.label),
+                "status": (
+                    "Active"
+                    if year.status == AcademicYear.STATUS_ACTIVE
+                    else "Archived"
+                ),
+            }
+            for year in AcademicYear.objects.order_by("-start_date")
+        ],
         # Which campus this principal governs. The front end shows it in the
         # header; it is also what makes it obvious that the same screen is
         # showing different rows for each principal rather than being two
@@ -4558,7 +5011,23 @@ def assistant_principal_context(user):
 
     # ── Real-data payload for the new front-end dashboard ─────────────────
     palette = ["#1e5faf", "#16a34a", "#e11d48", "#f59e0b", "#7c3aed", "#0891b2", "#14b8a6"]
-    vc_list = vcs.select_related("subject", "section", "teacher", "academic_year").order_by("subject__name")[:60]
+    vc_list = vcs.select_related(
+        "subject", "section", "teacher__employee_profile", "academic_year"
+    ).order_by("subject__name")[:60]
+    vc_student_counts = dict(
+        enrolled.order_by()
+        .values_list("virtual_classroom_id")
+        .annotate(n=Count("student_id", distinct=True))
+    )
+    section_student_counts = dict(
+        enrolled.filter(virtual_classroom__section__in=sections)
+        .order_by()
+        .values_list("virtual_classroom__section_id")
+        .annotate(n=Count("student_id", distinct=True))
+    )
+    subject_class_counts = dict(
+        vcs.order_by().values_list("subject_id").annotate(n=Count("pk"))
+    )
 
     vcs_json = []
     for vc in vc_list:
@@ -4585,23 +5054,23 @@ def assistant_principal_context(user):
                 "teacher": vc.teacher.get_full_name() if vc.teacher else "SVI Faculty",
                 "schedule": vc.schedule or "",
                 "type": "elective" if is_elective else "core",
-                "students": vc.enrollments.filter(status=VirtualClassroomEnrollment.STATUS_ACTIVE).count(),
+                "students": vc_student_counts.get(vc.pk, 0),
                 "status": "active" if vc.status == STATUS_ACTIVE else "archived",
                 "track": "N/A",
             }
         )
 
     sections_json = []
-    for sec in sections.select_related("academic_year").order_by("grade_level")[:60]:
+    for sec in sections.select_related(
+        "academic_year", "adviser__employee_profile"
+    ).order_by("grade_level")[:60]:
         adviser_name = sec.adviser.get_full_name() if sec.adviser else "—"
         sections_json.append(
             {
                 "name": sec.name,
                 "grade": "Grade {}".format(sec.grade_level),
                 "adviser": adviser_name,
-                "students": VirtualClassroomEnrollment.objects.filter(
-                    virtual_classroom__section=sec, status=VirtualClassroomEnrollment.STATUS_ACTIVE
-                ).values("student_id").distinct().count(),
+                "students": section_student_counts.get(sec.pk, 0),
                 "status": "active" if sec.status == Section.STATUS_ACTIVE else "archived",
             }
         )
@@ -4611,7 +5080,7 @@ def assistant_principal_context(user):
             "name": subj.name,
             "grade": "Grade {}".format(subj.grade_level) if subj.grade_level else "",
             "type": "Elective" if subj.subject_type == getattr(Subject, "TYPE_ELECTIVE", "elective") else "Core",
-            "vcs": VirtualClassroom.objects.filter(subject=subj, status=STATUS_ACTIVE).count(),
+            "vcs": subject_class_counts.get(subj.pk, 0),
             "status": "active" if subj.status == Subject.STATUS_ACTIVE else "archived",
         }
         for subj in subjects.select_related("academic_year").order_by("grade_level", "name")[:60]
@@ -4622,28 +5091,38 @@ def assistant_principal_context(user):
     # "Assigned Teacher" dropdown was empty, so the real assigned teacher could
     # never be shown or changed. This list backs both dropdowns.
     teachers_json = []
-    for teacher in (
+    teacher_qs = (
         _non_archived_users()
         .filter(groups__name="teacher")
         .select_related("employee_profile")
         .all()
-    ):
-        teacher_subject = (
-            VirtualClassroom.objects.filter(teacher=teacher, status=STATUS_ACTIVE)
-            .select_related("subject")
-            .values_list("subject__name", flat=True)
-            .first()
+    )
+    teacher_subjects = {}
+    for teacher_id, subject_name in (
+        VirtualClassroom.objects.filter(
+            teacher_id__in=teacher_qs.values_list("pk", flat=True),
+            status=STATUS_ACTIVE,
         )
+        .order_by("teacher_id", "subject__name", "pk")
+        .values_list("teacher_id", "subject__name")
+    ):
+        teacher_subjects.setdefault(teacher_id, subject_name or "")
+    for teacher in teacher_qs:
         teachers_json.append(
             {
                 "id": teacher.id,
                 "name": teacher.get_full_name() or teacher.email,
-                "subject": teacher_subject or "",
+                "subject": teacher_subjects.get(teacher.pk, ""),
             }
         )
 
     enrolled_json = []
-    for enr in enrolled.select_related("student", "virtual_classroom__subject", "virtual_classroom__section").order_by("-enrolled_at")[:10]:
+    for enr in enrolled.select_related(
+        "student",
+        "virtual_classroom__subject",
+        "virtual_classroom__section",
+        "virtual_classroom__teacher__employee_profile",
+    ).order_by("-enrolled_at")[:10]:
         prof = enr.student
         enrolled_json.append(
             {
@@ -4686,8 +5165,27 @@ def assistant_principal_context(user):
     # Every academic year with its grading system and active section/subject
     # counts. Backs the Coordinator's read-only "Academic Years" table and the
     # school-year pickers; without it those rendered a hardcoded sample year.
+    academic_years = list(AcademicYear.objects.order_by("-start_date"))
+    year_section_counts = dict(
+        Section.objects.filter(
+            academic_year_id__in=[year.pk for year in academic_years],
+            status=Section.STATUS_ACTIVE,
+        )
+        .order_by()
+        .values_list("academic_year_id")
+        .annotate(n=Count("pk"))
+    )
+    year_subject_counts = dict(
+        Subject.objects.filter(
+            academic_year_id__in=[year.pk for year in academic_years],
+            status=Subject.STATUS_ACTIVE,
+        )
+        .order_by()
+        .values_list("academic_year_id")
+        .annotate(n=Count("pk"))
+    )
     academic_years_json = []
-    for year in AcademicYear.objects.order_by("-start_date"):
+    for year in academic_years:
         version = getattr(year, "structure_version", None)
         grading = (
             version.get_grading_period_type_display()
@@ -4698,13 +5196,11 @@ def assistant_principal_context(user):
             {
                 "value": "S.Y. {}".format(year.label),
                 "label": "S.Y. {}".format(year.label.replace("-", "–")),
+                "startDate": year.start_date.isoformat(),
+                "endDate": year.end_date.isoformat(),
                 "grading": grading,
-                "sections": Section.objects.filter(
-                    academic_year=year, status=Section.STATUS_ACTIVE
-                ).count(),
-                "subjects": Subject.objects.filter(
-                    academic_year=year, status=Subject.STATUS_ACTIVE
-                ).count(),
+                "sections": year_section_counts.get(year.pk, 0),
+                "subjects": year_subject_counts.get(year.pk, 0),
                 "status": "Active" if year.status == "ACTIVE" else "Archived",
             }
         )
@@ -4928,6 +5424,7 @@ def student_context(user):
                 "teacher": teacher_name,
                 "sub": "{} – {}".format(grade_label.replace("Grade ", ""), vc.section.name if vc.section else "Class"),
                 "color": vc.theme_color or palette[idx % len(palette)],
+                "background": (vc.background_image.url if vc.background_image else ""),
                 "grade": grade or 0,
                 "year": "S.Y. {}".format(vc.academic_year.label if vc.academic_year else ""),
             }
@@ -4939,16 +5436,25 @@ def student_context(user):
         "assessment", "assessment__subject", "virtual_classroom", "virtual_classroom__section", "virtual_classroom__subject"
     ).order_by("assessment__submission_deadline")
 
+    assignment_rows = list(assignments_all)
+    student_submissions = {
+        sub.assessment_assignment_id: sub
+        for sub in Submission.objects.filter(
+            assessment_assignment__in=assignment_rows,
+            student=profile,
+        )
+    }
     assessments_json = []
     from apps.dashboards.student_live import ASSESSMENT_COLOURS
 
-    for aa in assignments_all:
+    for aa in assignment_rows:
         a = aa.assessment
         vc = aa.virtual_classroom
         subj = a.subject or vc.subject
         grade_lbl = ("Grade " + str(getattr(subj, "grade_level", ""))).strip()
         subject_lbl = _subj_label(subj)
-        submitted = Submission.objects.filter(assessment_assignment=aa, student=profile).exists()
+        submission = student_submissions.get(aa.pk)
+        submitted = submission is not None
         dl = a.submission_deadline
         if submitted:
             status = "closed"
@@ -4960,6 +5466,26 @@ def student_context(user):
             status = "closed"
         else:
             status = "open"
+        completion_score = None
+        completion_percent = None
+        completion_passed = None
+        completion_status = status if not submitted else "submitted"
+        if submission:
+            if submission.grading_status == Submission.GRADING_COMPLETE:
+                possible = int(a.total_possible_score or 0)
+                if submission.total_score is not None and possible > 0:
+                    completion_score = float(submission.total_score)
+                    completion_percent = round(completion_score * 100 / possible)
+                    completion_passed = completion_percent >= int(a.passing_score_percentage or 0)
+                    completion_status = "graded"
+                elif possible <= 0:
+                    completion_status = "graded_unscored"
+                else:
+                    completion_status = "submitted"
+            elif submission.grading_status == Submission.GRADING_PARTIAL:
+                completion_status = "partially_graded"
+            else:
+                completion_status = "submitted"
         assessments_json.append(
             {
                 "key": "assess-{}".format(aa.id),
@@ -4979,6 +5505,13 @@ def student_context(user):
                 "available_at": _dt(a.available_at),
                 "status": status,
                 "submitted": submitted,
+                "completion_status": completion_status,
+                "completion_score": completion_score,
+                "completion_possible": int(a.total_possible_score or 0),
+                "completion_percent": completion_percent,
+                "completion_passed": completion_passed,
+                "completion_late": bool(submission and submission.is_late),
+                "completion_submitted_at": _dt(submission.submitted_at) if submission else None,
                 "color": ASSESSMENT_COLOURS.get(status, "#1e5faf"),
                 "period": vc.grading_period or "Quarter 1",
                 "instr": a.instructions or "",

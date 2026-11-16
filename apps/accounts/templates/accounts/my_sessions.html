@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Active Sessions{% endblock %}
+{% block title %}Device Logs{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1 class="page-title">Active Sessions</h1>
-    <p class="page-sub">Devices and browsers currently signed in to your account.</p>
+    <h1 class="page-title">Device Logs</h1>
+    <p class="page-sub">Review devices and browsers currently signed in to your account.</p>
   </div>
   <a class="btn btn-outline" href="{% url 'accounts:change_password' %}">
     <i class="fa-solid fa-key"></i> Change Password
@@ -13,7 +13,7 @@
 
 <div class="card">
   <div class="card-header">
-    <div class="card-title"><i class="fa-solid fa-desktop"></i> Recent Sessions</div>
+    <div class="card-title"><i class="fa-solid fa-desktop"></i> Recent Device Activity</div>
   </div>
   <div class="card-body">
     {% if sessions %}

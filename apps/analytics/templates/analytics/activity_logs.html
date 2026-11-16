@@ -48,6 +48,7 @@
           <th>Timestamp</th>
           <th>User</th>
           <th>Action</th>
+          <th>Login IP / Network Origin</th>
           <th>Related Entity</th>
         </tr>
       </thead>
@@ -57,6 +58,7 @@
           <td>{{ log.timestamp|date:"M d, Y H:i" }}</td>
           <td>{{ log.user.email }}</td>
           <td>{{ log.action }}</td>
+          <td>{{ log.ip_address|default:"—" }}</td>
           <td>
             {% if log.related_entity_type %}
             {{ log.related_entity_type }} #{{ log.related_entity_id|default:"—" }}
@@ -66,6 +68,9 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="card-body">
+    <p class="help-text">Login IP addresses indicate network origin and may not identify a user's precise physical location.</p>
   </div>
   {% else %}
   <div class="card-body">

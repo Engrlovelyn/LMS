@@ -6,7 +6,7 @@ from apps.assessments.services import run_assessment_notifications
 
 class Command(BaseCommand):
     help = (
-        "Run all rule-(j) assessment notification producers (availability, deadline "
+        "Run assessment notification producers (opening soon, availability, deadline "
         "upcoming/nearing, and missed) for active assessments."
     )
 
@@ -29,6 +29,8 @@ class Command(BaseCommand):
                 "Notifications processed: "
                 f"availability {summary['availability']['created']} created / "
                 f"{summary['availability']['already']} existing; "
+                f"opening soon {summary['opening_soon']['created']} created / "
+                f"{summary['opening_soon']['already']} existing; "
                 f"deadline {summary['deadline']['created']} created / "
                 f"{summary['deadline']['already']} existing; "
                 f"missed {summary['missed']['created']} created / "

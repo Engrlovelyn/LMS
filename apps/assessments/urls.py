@@ -7,6 +7,7 @@ app_name = "assessments"
 urlpatterns = [
     path("list/", views.assessment_list, name="assessment_list"),
     path("add/", views.assessment_add, name="assessment_add"),
+    path("<int:pk>/export/", views.assessment_export, name="assessment_export"),
     path("<int:pk>/", views.assessment_detail, name="assessment_detail"),
     path("<int:pk>/result/", views.assessment_result, name="assessment_result"),
     path("<int:pk>/update/", views.assessment_update, name="assessment_update"),
@@ -39,6 +40,11 @@ urlpatterns = [
         "<int:pk>/submissions/",
         views.submissions_monitor,
         name="submissions_monitor",
+    ),
+    path(
+        "<int:pk>/submissions/<int:submission_pk>/view/",
+        views.submission_review,
+        name="submission_review",
     ),
     path(
         "<int:pk>/notifications/trigger/",

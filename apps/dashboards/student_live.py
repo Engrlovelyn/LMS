@@ -17,6 +17,8 @@ import re
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.teaching_learning.utils import resource_size_label
+
 RESOURCE_ICONS = {
     "pdf": "fa-solid fa-file-pdf",
     "presentation": "fa-solid fa-file-powerpoint",
@@ -80,13 +82,6 @@ def _subj_label(subject):
     return "{} {}".format(name, grade) if grade else name
 
 
-def _ext(resource):
-    if not resource or not resource.file:
-        return ""
-    name = resource.file.name
-    return name.rsplit(".", 1)[-1].upper() if "." in name else ""
-
-
 def materials_for(vc):
     """Learning materials placed in this classroom, newest first."""
     from apps.teaching_learning.models import LearningResourcePlacement
@@ -113,7 +108,8 @@ def materials_for(vc):
                 "icon": RESOURCE_ICONS.get(rtype, "fa-solid fa-file"),
                 "color": "#1e5faf",
                 "topic": (pl.topic.name if pl.topic_id and pl.topic else ""),
-                "size": _ext(res) or ("Link" if rtype == "link" else "File"),
+                "size": resource_size_label(res)
+                or ("Link" if rtype == "link" else ""),
                 "by": (pl.placed_by.get_full_name() if pl.placed_by_id else "Faculty"),
                 "date": _fmt_d(pl.placed_at),
                 "download_url": (

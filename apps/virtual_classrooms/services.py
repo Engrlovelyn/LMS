@@ -4,10 +4,11 @@
 """
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.utils import timezone
 
-from apps.academic_structure.models import StudentEnrollment, Subject
+from apps.academic_structure.models import Section, StudentEnrollment, Subject
 
 from .models import VirtualClassroom, VirtualClassroomEnrollment
 
@@ -123,6 +124,216 @@ def sync_section_vc_enrollments(student, year, remove_other_sections=True):
                 for vc_id in new_ids
             ]
         )
+
+
+_GRADING_ORDINALS = {
+    "1": "1ST",
+    "1st": "1ST",
+    "first": "1ST",
+    "2": "2ND",
+    "2nd": "2ND",
+    "second": "2ND",
+    "3": "3RD",
+    "3rd": "3RD",
+    "third": "3RD",
+    "4": "4TH",
+    "4th": "4TH",
+    "fourth": "4TH",
+}
+_GRADING_TYPES = {
+    "quarter": "QUARTER",
+    "quarterly": "QUARTER",
+    "semester": "SEMESTER",
+    "semestral": "SEMESTER",
+    "trimester": "TRIMESTER",
+}
+# A grading *format* (the school year's structure) is not a grading *period*.
+# The dashboards' older selects only know the format ("Quarter", "Trimester"),
+# and sending that back as a period used to create a second classroom beside
+# the existing year-long one. Those generic words therefore mean "no specific
+# period" and normalise to an empty string.
+_GENERIC_GRADING = {
+    "quarter",
+    "quarterly",
+    "semester",
+    "semestral",
+    "trimester",
+    "whole academic year",
+    "whole year",
+    "year long",
+    "year-long",
+    "n/a",
+    "na",
+    "none",
+}
+
+
+def normalize_grading_period(value):
+    """Return a canonical grading-period code for ``value``.
+
+    Accepts every shape the dashboards and imports send -- ``1ST_TRIMESTER``,
+    ``1st Trimester``, ``Trimester 1``, ``First Trimester`` -- and collapses
+    the generic format names (``Quarter``/``Semester``/``Trimester``) to an
+    empty period. That keeps the ``unique_vc_per_subject_section_year_period``
+    constraint meaningful and stops the registrar's localStorage bridge from
+    duplicating every year-long classroom on each save.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    key = " ".join(text.lower().replace("_", " ").replace("-", " ").split())
+    if key in _GENERIC_GRADING:
+        return ""
+    ordinal = None
+    period_type = None
+    for token in key.split():
+        ordinal = _GRADING_ORDINALS.get(token, ordinal)
+        period_type = _GRADING_TYPES.get(token, period_type)
+    if ordinal and period_type:
+        return "{}_{}".format(ordinal, period_type)
+    return text
+
+
+def _coerce_grade(value):
+    """Return a numeric grade from ``7``, ``"7"`` or ``"Grade 7"``."""
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        digits = "".join(ch for ch in str(value) if ch.isdigit())
+        return int(digits) if digits else None
+
+
+def resolve_section(academic_year, section_id=None, name="", grade=None):
+    """Find a Section in ``academic_year`` by id, then by name (+grade)."""
+    qs = Section.objects.filter(academic_year=academic_year)
+    if section_id not in (None, ""):
+        try:
+            section = qs.filter(pk=int(section_id)).first()
+        except (TypeError, ValueError):
+            section = None
+        if section is not None:
+            return section
+    name = str(name or "").strip()
+    if not name:
+        return None
+    qs = qs.filter(name=name)
+    grade = _coerce_grade(grade)
+    if grade is not None:
+        qs = qs.filter(grade_level=grade)
+    return qs.order_by("-grade_level").first()
+
+
+def resolve_subject(academic_year, subject_id=None, name="", grade=None):
+    """Find a Subject in ``academic_year`` by id, then by name (+grade)."""
+    qs = Subject.objects.filter(academic_year=academic_year)
+    if subject_id not in (None, ""):
+        try:
+            subject = qs.filter(pk=int(subject_id)).first()
+        except (TypeError, ValueError):
+            subject = None
+        if subject is not None:
+            return subject
+    name = str(name or "").strip()
+    if not name:
+        return None
+    qs = qs.filter(name=name)
+    grade = _coerce_grade(grade)
+    if grade is not None:
+        qs = qs.filter(grade_level=grade)
+    return qs.order_by("-grade_level").first()
+
+
+def create_virtual_classroom(
+    *,
+    academic_year,
+    section,
+    subject,
+    teacher=None,
+    grading_period="",
+    schedule="",
+    theme_color=None,
+    auto_enroll=True,
+):
+    """Validate and persist one Virtual Classroom.
+
+    Returns ``(classroom, created)``. Raises ``ValidationError`` when a
+    required field is missing or the section/subject/teacher do not fit. The
+    create is idempotent on (subject, section, year, period): posting the same
+    classroom twice updates it instead of failing on the unique constraint or
+    creating a duplicate.
+    """
+    if academic_year is None:
+        raise ValidationError("Select an academic year.")
+    if section is None:
+        raise ValidationError("Select a section for the virtual classroom.")
+    if subject is None:
+        raise ValidationError("Select a subject for the virtual classroom.")
+    if section.academic_year_id != academic_year.pk:
+        raise ValidationError("The section does not belong to the selected academic year.")
+    if subject.academic_year_id != academic_year.pk:
+        raise ValidationError("The subject does not belong to the selected academic year.")
+    if section.grade_level != subject.grade_level:
+        raise ValidationError(
+            "The subject's grade level must match the section's grade level."
+        )
+
+    period = normalize_grading_period(grading_period)
+    existing = VirtualClassroom.objects.filter(
+        subject=subject,
+        section=section,
+        academic_year=academic_year,
+        grading_period=period,
+    ).first()
+
+    if teacher is not None:
+        clash = teacher_conflict_in_section(
+            section, teacher, exclude_classroom=existing
+        )
+        if clash is not None:
+            raise ValidationError(
+                "{} already teaches {} in {}. Pick a different teacher so each "
+                "classroom has its own.".format(
+                    teacher.get_full_name() or teacher.email,
+                    clash.subject,
+                    section,
+                )
+            )
+    elif existing is not None and existing.teacher_id:
+        # Re-posting an existing classroom without a teacher must not reassign
+        # it; keep whoever is already teaching it.
+        teacher = existing.teacher
+    else:
+        teacher = pick_section_teacher(
+            section,
+            preferred=getattr(section, "adviser", None),
+            exclude_classroom=existing,
+        )
+
+    created = existing is None
+    if created:
+        classroom = VirtualClassroom.objects.create(
+            subject=subject,
+            section=section,
+            academic_year=academic_year,
+            grading_period=period,
+            teacher=teacher,
+            schedule=str(schedule or "").strip(),
+            theme_color=theme_color or "#4F46E5",
+        )
+    else:
+        classroom = existing
+        if teacher is not None:
+            classroom.teacher = teacher
+        if theme_color:
+            classroom.theme_color = theme_color
+        if schedule:
+            classroom.schedule = str(schedule).strip()
+        classroom.save()
+
+    populate_classroom_defaults(classroom, auto_enroll=auto_enroll)
+    return classroom, created
 
 
 def populate_classroom_defaults(classroom, auto_enroll=True):

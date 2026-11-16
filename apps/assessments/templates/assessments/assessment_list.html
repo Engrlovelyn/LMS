@@ -17,7 +17,7 @@
       <i class="fa-solid fa-chart-line"></i> Performance
     </a>
     {% endif %}
-    {% if perms.assessments.create_assessment_custom %}
+    {% if can_create_assessment %}
     <a class="btn btn-primary" href="{% url 'assessments:assessment_add' %}">
       <i class="fa-solid fa-plus"></i> Add Assessment
     </a>

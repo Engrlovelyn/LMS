@@ -17,7 +17,6 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_http_methods
 
-from apps.academic_structure.models import AcademicYear
 from apps.system_settings.models import PasswordPolicy, SystemConfiguration
 from .account_admin import lock_user_account
 from .models import (
@@ -182,14 +181,14 @@ def login_view(request):
     authenticated_user.save(update_fields=["failed_login_attempts", "password_changed_at"])
     role_assignments = list(
         RoleAssignment.objects
-        .filter(user=authenticated_user, academic_year__status=AcademicYear.STATUS_ACTIVE)
+        .filter(user=authenticated_user)
         .select_related("role")
     )
 
     if not role_assignments:
         return JsonResponse({
             "ok": False,
-            "message": "This account has no active role assignment for the current academic year. Contact your Registrar or System Administrator.",
+            "message": "This account has no role assignment. Contact your System Administrator.",
         }, status=403)
 
     # Deterministic role selection when a user holds multiple roles:
@@ -311,13 +310,15 @@ def login_view(request):
                 action="new_device_login",
                 related_entity_type="LoginSession",
                 related_entity_id=login_session.pk,
+                ip_address=login_session.ip_address,
             )
 
     ActivityLog.objects.create(
         user=authenticated_user,
         action="user_login",
-        related_entity_type="User",
-        related_entity_id=authenticated_user.pk,
+        related_entity_type="LoginSession",
+        related_entity_id=login_session.pk,
+        ip_address=login_session.ip_address,
     )
 
     redirect_url = reverse(ROLE_DASHBOARD_URLS[role_assignment.role.code])

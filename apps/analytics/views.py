@@ -1,13 +1,27 @@
 import csv
 import io
 import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from datetime import datetime
 from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Q
-from django.http import FileResponse, HttpResponseForbidden, JsonResponse
+from django.http import (
+    FileResponse,
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_protect
@@ -32,6 +46,8 @@ from apps.virtual_classrooms.models import (
 
 from .forms import SFReportForm, SFReportTemplateForm
 from .models import GeneratedReport, SFReportTemplate
+from .sf2 import SF2TemplateError, build_sf2_workbook, validate_sf2_template_file
+from .class_record import build_class_record_workbook, validate_class_record_template_file
 
 
 def perm_required_any(*codenames):
@@ -89,6 +105,70 @@ def _classrooms_for_user(user):
             enrollments__status=VirtualClassroomEnrollment.STATUS_ACTIVE,
         ).distinct()
     return VirtualClassroom.objects.none()
+
+
+def _sf2_workbook_preview_pdf(workbook_bytes):
+    """Convert a generated SF2 workbook to PDF so preview matches its real form."""
+    configured = getattr(settings, "OFFICE_CONVERTER_BINARY", "")
+    converter = configured if configured and os.path.isfile(configured) else (
+        shutil.which(configured) if configured else None
+    )
+    converter = converter or shutil.which("soffice") or shutil.which("libreoffice")
+    excel_converter = bool(
+        converter and os.path.basename(converter).lower() in {"excel.exe", "excel"}
+    )
+    if not converter and sys.platform == "win32":
+        program_dirs = filter(
+            None,
+            (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")),
+        )
+        for program_dir in program_dirs:
+            candidate = os.path.join(program_dir, "Microsoft Office", "root", "Office16", "EXCEL.EXE")
+            if os.path.isfile(candidate):
+                converter = candidate
+                excel_converter = True
+                break
+    if not converter:
+        return None
+
+    with tempfile.TemporaryDirectory(prefix="tass-sf2-preview-") as work_dir:
+        source_path = os.path.join(work_dir, "sf2.xlsx")
+        output_path = os.path.join(work_dir, "sf2.pdf")
+        with open(source_path, "wb") as source:
+            source.write(workbook_bytes)
+        try:
+            if excel_converter:
+                powershell = shutil.which("powershell.exe") or shutil.which("powershell")
+                if not powershell:
+                    return None
+                script_path = os.path.join(os.path.dirname(__file__), "excel_to_pdf.ps1")
+                completed = subprocess.run(
+                    [powershell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script_path, source_path, output_path],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=45,
+                    check=False,
+                )
+            else:
+                profile_path = os.path.join(work_dir, "lo-profile")
+                completed = subprocess.run(
+                    [converter, "--headless", "--nologo", "--nodefault", "--nolockcheck", "-env:UserInstallation=" + profile_path.replace("\\", "/"), "--convert-to", "pdf", "--outdir", work_dir, source_path],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=45,
+                    check=False,
+                )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if completed.returncode != 0 or not os.path.isfile(output_path):
+            return None
+        with open(output_path, "rb") as converted:
+            pdf_bytes = converted.read(50 * 1024 * 1024 + 1)
+    if len(pdf_bytes) > 50 * 1024 * 1024 or not pdf_bytes.startswith(b"%PDF-"):
+        return None
+    return pdf_bytes
 
 
 @perm_required("analytics.view_school_wide_analytics")
@@ -281,6 +361,12 @@ def attendance_trends(request):
         stats.get("total", 0),
     )
 
+    if request.GET.get("format") == "json":
+        return JsonResponse({
+            "stats": stats,
+            "attendance_rate": attendance_rate,
+        })
+
     context = {
         "years": years,
         "selected_year": year_filter,
@@ -322,6 +408,7 @@ def _submission_data(user, assessment_pk=None, status_filter=None):
         Submission.objects.select_related(
             "assessment_assignment__assessment",
             "assessment_assignment__virtual_classroom__section",
+            "assessment_assignment__virtual_classroom__section__academic_year",
             "assessment_assignment__virtual_classroom__subject",
             "student",
         )
@@ -439,29 +526,43 @@ def sf_report_home(request):
         structure_version = active_year.structure_version
 
     form = SFReportForm(request.POST or None)
+    template_form = SFReportTemplateForm()
     if request.method == "POST":
         if "generate" in request.POST and form.is_valid():
             report_type = form.cleaned_data["report_type"]
             academic_year = form.cleaned_data["academic_year"]
-            generated = _generate_sf_report(request.user, report_type, academic_year)
-            messages.success(
-                request,
-                f"{generated.get_report_type_display()} generated successfully.",
-            )
-            return redirect("analytics:sf_report_home")
+            try:
+                generated = _generate_sf_report(
+                    request.user,
+                    report_type,
+                    academic_year,
+                    month=form.cleaned_data["report_month"],
+                )
+            except SF2TemplateError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(
+                    request,
+                    f"{generated.get_report_type_display()} generated successfully.",
+                )
+                return redirect("analytics:sf_report_home")
         if "upload_template" in request.POST:
             template_form = SFReportTemplateForm(request.POST, request.FILES)
             if template_form.is_valid():
                 template = template_form.save(commit=False)
                 template.uploaded_by = request.user
+                template.is_active = True
+                SFReportTemplate.objects.filter(
+                    form_type=template.form_type, is_active=True
+                ).update(is_active=False)
                 template.save()
                 activity_log = ActivityLog(
                     user=request.user,
-                    action=f"Uploaded SF template: {template.name}",
+                    action=f"Uploaded official report template: {template.name}",
                     related_entity_type="analytics.SFReportTemplate",
                 )
                 activity_log.save()
-                messages.success(request, f"SF template '{template.name}' uploaded successfully.")
+                messages.success(request, f"Official report template '{template.name}' uploaded successfully.")
                 return redirect("analytics:sf_report_home")
     else:
         template_form = SFReportTemplateForm()
@@ -484,7 +585,36 @@ def sf_report_home(request):
     return render(request, "analytics/sf_report_home.html", context)
 
 
-def _generate_sf_report(user, report_type, academic_year):
+def _generate_sf_report(user, report_type, academic_year, month=None, section_ids=None):
+    template = None
+    content = None
+    filename = None
+    parameters = {"academic_year": academic_year.label}
+    if report_type == GeneratedReport.TYPE_SF2:
+        if not month:
+            raise SF2TemplateError("Choose a month before generating the SF2 report.")
+        template = (
+            SFReportTemplate.objects.filter(
+                form_type=SFReportTemplate.FORM_SF2, is_active=True
+            )
+            .order_by("-uploaded_at", "-pk")
+            .first()
+        )
+        if template is None:
+            raise SF2TemplateError(
+                "Upload an active Excel SF2 template before generating SF2 reports."
+            )
+        workbook = build_sf2_workbook(
+            template, academic_year, month, section_ids=section_ids
+        )
+        content = workbook.getvalue()
+        extension = ".xlsm" if template.template_file.name.lower().endswith(".xlsm") else ".xlsx"
+        filename = (
+            f"sf2_{month:%Y-%m}_{academic_year.label}{extension}"
+        ).replace("/", "-")
+        scope = f"SF2 Daily Attendance - {month:%B %Y} - {academic_year.label}"
+        parameters.update({"month": month.strftime("%Y-%m"), "template_id": template.pk})
+
     students = (
         VirtualClassroomEnrollment.objects.select_related(
             "student", "virtual_classroom__section"
@@ -498,8 +628,9 @@ def _generate_sf_report(user, report_type, academic_year):
             "virtual_classroom__section__name",
             "student__last_name",
         )
-    )
-    students = students.distinct("student")
+    ) if report_type != GeneratedReport.TYPE_SF2 else ()
+    if report_type != GeneratedReport.TYPE_SF2:
+        students = students.distinct("student")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -522,36 +653,6 @@ def _generate_sf_report(user, report_type, academic_year):
                 ]
             )
         scope = f"SF1 Learner Roster - {academic_year.label}"
-    elif report_type == GeneratedReport.TYPE_SF2:
-        writer.writerow(["School Form 2 (SF2) - Daily Attendance"])
-        writer.writerow(["Academic Year:", academic_year.label])
-        writer.writerow([])
-        writer.writerow(["Student", "LRN", "Section", "Present", "Late", "Excused", "Unexcused", "Total"])
-        for e in students:
-            s = e.student
-            stats = AttendanceRecord.objects.filter(
-                student=s,
-                session__virtual_classroom__academic_year=academic_year,
-            ).aggregate(
-                present=Count("id", filter=Q(status=AttendanceRecord.PRESENT_ON_TIME)),
-                late=Count("id", filter=Q(status=AttendanceRecord.PRESENT_LATE)),
-                excused=Count("id", filter=Q(status=AttendanceRecord.ABSENT_EXCUSED)),
-                unexcused=Count("id", filter=Q(status=AttendanceRecord.ABSENT_UNEXCUSED)),
-            )
-            total = sum(v or 0 for v in stats.values())
-            writer.writerow(
-                [
-                    f"{s.last_name}, {s.first_name}",
-                    s.lrn,
-                    e.virtual_classroom.section.name,
-                    stats["present"],
-                    stats["late"],
-                    stats["excused"],
-                    stats["unexcused"],
-                    total,
-                ]
-            )
-        scope = f"SF2 Daily Attendance - {academic_year.label}"
     elif report_type == GeneratedReport.TYPE_SF3:
         writer.writerow(["School Form 3 (SF3) - Summary of Attendance"])
         writer.writerow(["Academic Year:", academic_year.label])
@@ -584,17 +685,22 @@ def _generate_sf_report(user, report_type, academic_year):
         scope = f"SF3 Summary of Attendance - {academic_year.label}"
 
 
-    content = buffer.getvalue()
-    filename = f"{report_type}_{academic_year.label}.csv".replace("/", "-")
+    if report_type != GeneratedReport.TYPE_SF2:
+        content = buffer.getvalue()
+        filename = f"{report_type}_{academic_year.label}.csv".replace("/", "-")
 
     report = GeneratedReport(
         report_type=report_type,
         academic_year=academic_year,
         scope_description=scope,
-        parameters={"academic_year": academic_year.label},
+        parameters=parameters,
         generated_by=user,
     )
-    report.file.save(filename, ContentFile(content.encode("utf-8")), save=True)
+    report.file.save(
+        filename,
+        ContentFile(content if isinstance(content, bytes) else content.encode("utf-8")),
+        save=True,
+    )
 
     activity_log = ActivityLog(
         user=user,
@@ -604,6 +710,133 @@ def _generate_sf_report(user, report_type, academic_year):
     activity_log.save()
 
     return report
+
+
+@login_required
+def sf2_generate(request):
+    """Generate the current official SF2 workbook for one teacher classroom."""
+    classroom_id = request.GET.get("classroom_id", "").strip()
+    month_value = request.GET.get("month", "").strip()
+    save_only = request.GET.get("save_only") == "1"
+    try:
+        month = datetime.strptime(month_value, "%Y-%m").date().replace(day=1)
+    except ValueError:
+        if save_only:
+            return JsonResponse({"ok": False, "error": "Choose a valid report month."}, status=400)
+        return HttpResponseBadRequest("Choose a valid report month.")
+    classroom = get_object_or_404(
+        _classrooms_for_user(request.user).filter(
+            status=VirtualClassroom.STATUS_ACTIVE
+        ),
+        pk=classroom_id,
+    )
+    if request.GET.get("preview") == "1":
+        template = (
+            SFReportTemplate.objects.filter(
+                form_type=SFReportTemplate.FORM_SF2, is_active=True
+            )
+            .order_by("-uploaded_at", "-pk")
+            .first()
+        )
+        if template is None:
+            return HttpResponseBadRequest(
+                "Upload an active Excel SF2 template before generating SF2 reports."
+            )
+        try:
+            generated = build_sf2_workbook(
+                template,
+                classroom.academic_year,
+                month,
+                section_ids=[classroom.section_id],
+            )
+            pdf_preview = _sf2_workbook_preview_pdf(generated.getvalue())
+        except SF2TemplateError as exc:
+            return HttpResponseBadRequest(str(exc))
+        if pdf_preview is None:
+            return HttpResponse(
+                "The actual SF2 preview needs Microsoft Excel or LibreOffice available on the server. You can still download the filled Excel form.",
+                status=503,
+                content_type="text/plain; charset=utf-8",
+            )
+        response = HttpResponse(pdf_preview, content_type="application/pdf")
+        response["Content-Disposition"] = 'inline; filename="sf2-preview.pdf"'
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+    try:
+        report = _generate_sf_report(
+            request.user,
+            GeneratedReport.TYPE_SF2,
+            classroom.academic_year,
+            month=month,
+            section_ids=[classroom.section_id],
+        )
+    except SF2TemplateError as exc:
+        if save_only:
+            return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+        return HttpResponseBadRequest(str(exc))
+    if save_only:
+        return JsonResponse({
+            "ok": True,
+            "report_id": report.pk,
+            "filename": report.file.name.rsplit("/", 1)[-1],
+        })
+    return FileResponse(
+        report.file.open("rb"),
+        as_attachment=True,
+        filename=report.file.name.rsplit("/", 1)[-1],
+    )
+
+
+@login_required
+def assessment_completion_generate(request):
+    """Download the current official class record filled for one classroom."""
+    if not (
+        request.user.is_superuser
+        or request.user.groups.filter(name__in=("teacher", "principal", "elementary_principal", "quality_audit", "system_admin")).exists()
+    ):
+        return HttpResponseForbidden("You do not have permission to download a class record.")
+    classroom_id = request.GET.get("classroom_id", "").strip()
+    if not classroom_id.isdigit():
+        return HttpResponseBadRequest("Choose a classroom before downloading the class record.")
+    classroom = get_object_or_404(
+        _classrooms_for_user(request.user).select_related(
+            "academic_year", "subject", "section", "teacher"
+        ),
+        pk=int(classroom_id),
+    )
+    template = SFReportTemplate.objects.filter(
+        form_type=SFReportTemplate.FORM_CLASS_RECORD, is_active=True
+    ).order_by("-uploaded_at", "-pk").first()
+    if template is None:
+        return HttpResponseBadRequest(
+            "The administrator has not uploaded an official DepEd class record template yet."
+        )
+    try:
+        workbook = build_class_record_workbook(template, classroom)
+    except ValidationError as exc:
+        return HttpResponseBadRequest(" ".join(exc.messages))
+    extension = ".xlsm" if template.template_file.name.lower().endswith(".xlsm") else ".xlsx"
+    filename = "class_record_{}_{}_{}{}".format(
+        classroom.subject.name,
+        classroom.section.name if classroom.section_id else "class",
+        classroom.academic_year.label if classroom.academic_year_id else "school_year",
+        extension,
+    )
+    filename = filename.replace("/", "-").replace("\\", "-")
+    response = FileResponse(
+        workbook,
+        as_attachment=True,
+        filename=filename,
+        content_type=(
+            "application/vnd.ms-excel.sheet.macroEnabled.12"
+            if extension == ".xlsm"
+            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+    )
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required
@@ -661,6 +894,7 @@ def sf_template_upload(request):
     form_type = (data.get("form_type") or SFReportTemplate.FORM_SF2).strip()
     description = (data.get("description") or "").strip()
     template_file = request.FILES.get("template_file")
+    mappings_raw = data.get("field_mappings") or "{}"
 
     if not name:
         return JsonResponse({"ok": False, "error": "Template name is required."}, status=400)
@@ -670,19 +904,44 @@ def sf_template_upload(request):
     valid_forms = {code for code, _label in SFReportTemplate.FORM_TYPE_CHOICES}
     if form_type not in valid_forms:
         return JsonResponse({"ok": False, "error": "Unknown SF form type."}, status=400)
+    try:
+        field_mappings = json.loads(mappings_raw)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Field mappings must be valid JSON."}, status=400)
+    if not isinstance(field_mappings, dict):
+        return JsonResponse({"ok": False, "error": "Field mappings must be a JSON object."}, status=400)
 
+    if form_type == SFReportTemplate.FORM_SF2:
+        try:
+            validate_sf2_template_file(template_file, field_mappings)
+        except ValidationError as exc:
+            return JsonResponse(
+                {"ok": False, "error": " ".join(exc.messages)}, status=400
+            )
+    elif form_type == SFReportTemplate.FORM_CLASS_RECORD:
+        try:
+            validate_class_record_template_file(template_file, field_mappings)
+        except ValidationError as exc:
+            return JsonResponse(
+                {"ok": False, "error": " ".join(exc.messages)}, status=400
+            )
+
+    SFReportTemplate.objects.filter(form_type=form_type, is_active=True).update(
+        is_active=False
+    )
     template = SFReportTemplate.objects.create(
         name=name,
         form_type=form_type,
         description=description,
         template_file=template_file,
+        field_mappings=field_mappings,
         is_active=True,
         uploaded_by=request.user,
     )
     try:
         ActivityLog.objects.create(
             user=request.user,
-            action=f"Uploaded SF template: {name}",
+            action=f"Uploaded official report template: {name}",
             related_entity_type="analytics.SFReportTemplate",
             related_entity_id=template.pk,
         )
@@ -697,7 +956,7 @@ def sf_template_upload(request):
             "form": template.form_type,
             "active": True,
             "at": template.uploaded_at.strftime("%b %d, %Y") if template.uploaded_at else "",
-            "message": f"SF template '{template.name}' uploaded. Teachers will use it automatically.",
+            "message": f"Official template '{template.name}' uploaded. Teachers will use it automatically.",
         }
     )
 
@@ -710,12 +969,12 @@ def sf_template_delete(request, pk):
     template.delete()
     activity_log = ActivityLog(
         user=request.user,
-        action=f"Deleted SF template: {name}",
+        action=f"Deleted official report template: {name}",
         related_entity_type="analytics.SFReportTemplate",
         related_entity_id=pk,
     )
     activity_log.save()
-    messages.success(request, f"SF template '{name}' deleted.")
+    messages.success(request, f"Official report template '{name}' deleted.")
     return redirect("analytics:sf_report_home")
 
 

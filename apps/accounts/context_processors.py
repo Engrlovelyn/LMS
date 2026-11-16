@@ -41,10 +41,11 @@ ROLE_DASHBOARD_URLS = {
 
 
 def get_user_role(user):
-    """Return the role code derived from Django group memberships."""
+    """Return the role code derived from persistent roles and groups."""
     if not user.is_authenticated:
         return None
     keys = set(user.groups.values_list("name", flat=True))
+    keys.update(user.role_assignments.values_list("role__code", flat=True))
     for code in ROLE_ORDER:
         if code in keys:
             return code
@@ -65,6 +66,11 @@ def context_get_user_role(request):
         "user_initials": _initials(request.user),
         "user_avatar_url": _avatar_url(request.user),
         "unread_notification_count": _unread_notification_count(request.user),
+        "menu_permission_codenames": (
+            sorted(request.user.get_all_permissions())
+            if request.user.is_authenticated
+            else []
+        ),
     }
 
 

@@ -87,7 +87,13 @@ class StudentProfileEndpointTests(TestCase):
 class StudentProfileAvatarTests(TestCase):
     def setUp(self):
         self.media_root = tempfile.mkdtemp()
-        self.override = override_settings(MEDIA_ROOT=self.media_root)
+        self.override = override_settings(
+            MEDIA_ROOT=self.media_root,
+            STORAGES={
+                "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+                "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+            },
+        )
         self.override.enable()
 
         self.user = User.objects.create_user(

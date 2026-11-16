@@ -17,6 +17,7 @@
      which aborts the rest of that block and blanks the view. -->
 <script src="{% static 'js/empty_state.js' %}"></script>
 <script src="{% static 'js/demographics.js' %}"></script>
+<script src="{% static 'js/document_preview.bundle.js' %}"></script>
 <style>
 :root {
   --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
@@ -812,6 +813,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="window.location.href='/accounts/sessions/'"><i class="fa-solid fa-laptop" style="width:16px"></i> Device Logs</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -1416,6 +1418,36 @@ html,body{ width:100%; overflow-x:hidden; }
         </div>
       </div>
       <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+          <div><div class="card-title"><i class="fa-solid fa-school" style="color:var(--ict);margin-right:8px;"></i>School Profile</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Official school identity used to automatically fill matching details in SF2 reports.</div></div>
+          <button class="btn btn-ict btn-sm" type="button" onclick="saveSchoolProfile()"><i class="fa-solid fa-save"></i> Save School Profile</button>
+        </div>
+        <div class="card-body">
+          <form id="schoolProfileForm" enctype="multipart/form-data" onsubmit="event.preventDefault();saveSchoolProfile();">
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label" for="schoolProfileName">Official School Name</label><input class="form-control" id="schoolProfileName" name="school_name" maxlength="200" value="{{ school_profile.school_name|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileId">DepEd School ID</label><input class="form-control" id="schoolProfileId" name="school_id" maxlength="30" value="{{ school_profile.school_id|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileType">School Type / Classification</label><input class="form-control" id="schoolProfileType" name="school_type" maxlength="80" placeholder="e.g. Private Basic Education" value="{{ school_profile.school_type|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileRegion">Region</label><input class="form-control" id="schoolProfileRegion" name="region" maxlength="120" value="{{ school_profile.region|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileDivision">Schools Division</label><input class="form-control" id="schoolProfileDivision" name="division" maxlength="160" value="{{ school_profile.division|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileDistrict">District</label><input class="form-control" id="schoolProfileDistrict" name="district" maxlength="160" value="{{ school_profile.district|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileAddress">Street / Address</label><input class="form-control" id="schoolProfileAddress" name="address_line" maxlength="255" value="{{ school_profile.address_line|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileBarangay">Barangay</label><input class="form-control" id="schoolProfileBarangay" name="barangay" maxlength="120" value="{{ school_profile.barangay|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileCity">Municipality / City</label><input class="form-control" id="schoolProfileCity" name="municipality_city" maxlength="120" value="{{ school_profile.municipality_city|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileProvince">Province</label><input class="form-control" id="schoolProfileProvince" name="province" maxlength="120" value="{{ school_profile.province|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfilePostal">Postal Code</label><input class="form-control" id="schoolProfilePostal" name="postal_code" maxlength="20" value="{{ school_profile.postal_code|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfilePhone">Telephone</label><input class="form-control" id="schoolProfilePhone" name="telephone" maxlength="50" value="{{ school_profile.telephone|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileEmail">Official Email</label><input class="form-control" id="schoolProfileEmail" name="email" type="email" value="{{ school_profile.email|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileWebsite">Website</label><input class="form-control" id="schoolProfileWebsite" name="website" type="url" placeholder="https://" value="{{ school_profile.website|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileHead">School Head Name</label><input class="form-control" id="schoolProfileHead" name="school_head_name" maxlength="160" value="{{ school_profile.school_head_name|default:'' }}"></div>
+              <div class="form-group"><label class="form-label" for="schoolProfileHeadTitle">School Head Title</label><input class="form-control" id="schoolProfileHeadTitle" name="school_head_title" maxlength="100" value="{{ school_profile.school_head_title|default:'School Head' }}"></div>
+            </div>
+            <div class="form-group" style="margin-top:12px;max-width:560px;"><label class="form-label" for="schoolProfileLogo">School Logo</label><input class="form-control" id="schoolProfileLogo" name="logo" type="file" accept="image/*">{% if school_profile.logo %}<div style="display:flex;align-items:center;gap:12px;margin-top:10px;"><img src="{{ school_profile.logo.url }}" alt="Current school logo" style="max-width:100px;max-height:70px;object-fit:contain;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:5px;"><label style="font-size:12px;"><input type="checkbox" name="clear_logo" value="1"> Remove current logo</label></div>{% endif %}</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:16px;"><button class="btn btn-ict" type="submit"><i class="fa-solid fa-save"></i> Save School Profile</button></div>
+          </form>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;">
         <div class="card-header"><div class="card-title">General & Security Settings</div></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
           <div class="form-grid">
@@ -1423,8 +1455,7 @@ html,body{ width:100%; overflow-x:hidden; }
             <div class="form-group"><label class="form-label">Account Lockout Threshold *</label><input id="lockoutThreshold" class="form-control" type="number" min="1" max="20" step="1" value="3" data-required data-num data-min="1" data-max="20"></div>
           </div>
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">System Time Zone *</label><select id="systemTimezone" class="form-select"><option>Asia/Manila (UTC+8)</option></select></div>
-            <div class="form-group"><label class="form-label">User Registration Policy *</label><select id="registrationPolicy" class="form-select"><option>Admin Approval Required</option><option>Closed — Admin Created Only</option><option>Open Registration</option></select></div>
+            <div class="form-group"><label class="form-label">User Registration Policy *</label><select id="registrationPolicy" class="form-select"><option value="invite_only">Admin Approval Required</option><option value="invite_only">Closed — Admin Created Only</option><option value="open">Open Registration</option></select></div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--gray-100);border-radius:9px;"><div><div style="font-size:13.5px;font-weight:600;">Maintenance Mode</div><div style="font-size:12px;color:var(--text-muted);">Temporarily disable access for all non-admin users.</div></div><label class="toggle"><input id="maintenanceMode" type="checkbox"><span class="toggle-slider"></span></label></div>
           <div style="display:flex;justify-content:flex-end;"><button class="btn btn-ict" onclick="saveSystemSettings()"><i class="fa-solid fa-save"></i> Save Configuration</button></div>
@@ -1474,7 +1505,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div><div class="page-title">School Year &amp; Academic Structure</div><div class="page-sub" id="schoolyearSub">Create the active school year and the sections and subjects that form it</div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-ict" onclick="openCreateSchoolYear()"><i class="fa-solid fa-plus"></i> New School Year</button>
-          <button class="btn btn-outline" onclick="openRolloverModal()" title="Copy a previous year's sections, subjects and virtual classrooms into the active school year"><i class="fa-solid fa-copy"></i> Rollover / Carry Over</button>
+          <button class="btn btn-outline" onclick="openRolloverModal()" title="Copy a previous year's sections, subjects and virtual classrooms into the active school year"><i class="fa-solid fa-copy"></i> Carry Over</button>
           <button class="btn btn-outline" onclick="openAddSection()"><i class="fa-solid fa-layer-group"></i> Add Section</button>
           <button class="btn btn-outline" onclick="openAddSubject()"><i class="fa-solid fa-book"></i> Add Subject</button>
         </div>
@@ -1612,7 +1643,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div><div class="page-title">Resource Repository</div><div class="page-sub">Every learning resource shared into the repository, across all subjects and grade levels</div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <input id="repoSearchPage" class="form-control" type="search" placeholder="Search resources..." style="width:220px;" oninput="renderResourceLibrary()">
-          <select id="repoSubjectPage" class="form-control" style="width:160px;" onchange="renderResourceLibrary()"><option value="">All Subjects</option></select>
+          <select id="repoGradePage" class="form-control" style="width:140px;" onchange="renderResourceLibrary()"><option value="">All Grades</option><option value="1">Grade 1</option><option value="2">Grade 2</option><option value="3">Grade 3</option><option value="4">Grade 4</option><option value="5">Grade 5</option><option value="6">Grade 6</option><option value="7">Grade 7</option><option value="8">Grade 8</option><option value="9">Grade 9</option><option value="10">Grade 10</option><option value="11">Grade 11</option><option value="12">Grade 12</option></select>
           <button class="btn btn-outline" onclick="downloadResourceLibraryReport()"><i class="fa-solid fa-download"></i> Export CSV</button>
           <button class="btn btn-ict" onclick="loadResourceLibrary(true)"><i class="fa-solid fa-rotate"></i> Refresh</button>
         </div>
@@ -1626,7 +1657,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div><div class="page-title">Assessment Repository</div><div class="page-sub">Every assessment stored on the platform, grouped by subject</div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <input id="assessRepoSearchPage" class="form-control" type="search" placeholder="Search assessments..." style="width:220px;" oninput="renderAssessmentLibrary()">
-          <select id="assessRepoSubjectPage" class="form-control" style="width:160px;" onchange="renderAssessmentLibrary()"><option value="">All Subjects</option></select>
+          <select id="assessRepoGradePage" class="form-control" style="width:140px;" onchange="renderAssessmentLibrary()"><option value="">All Grades</option><option value="1">Grade 1</option><option value="2">Grade 2</option><option value="3">Grade 3</option><option value="4">Grade 4</option><option value="5">Grade 5</option><option value="6">Grade 6</option><option value="7">Grade 7</option><option value="8">Grade 8</option><option value="9">Grade 9</option><option value="10">Grade 10</option><option value="11">Grade 11</option><option value="12">Grade 12</option></select>
           <select id="assessRepoTypePage" class="form-control" style="width:170px;" onchange="renderAssessmentLibrary()">
             <option value="">All Types</option><option>Quiz</option><option>Seatwork</option><option>Assignment</option><option>Examination</option><option>Project</option>
           </select>
@@ -1679,7 +1710,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="stats-grid" id="reportStats"></div>
 
       <div class="card" style="margin-top:18px;">
-        <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-signature" style="color:var(--ict);margin-right:8px;"></i>Form Templates</div><button class="btn btn-ict" onclick="openTemplateUploadModal()" title="Upload an SF template (e.g. SF2). Teachers automatically use the newest active one."><i class="fa-solid fa-upload"></i> Upload Template</button></div>
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-signature" style="color:var(--ict);margin-right:8px;"></i>Form Templates</div><button class="btn btn-ict" onclick="openTemplateUploadModal()" title="Upload an official SF or DepEd class record template. Teachers automatically use the newest active one."><i class="fa-solid fa-upload"></i> Upload Template</button></div>
         <div class="card-body" style="padding:0;overflow-x:auto;">
           <table class="perm-table">
             <thead><tr><th>Template Name</th><th>Form</th><th>Active</th><th>Uploaded</th><th></th></tr></thead>
@@ -1728,7 +1759,12 @@ html,body{ width:100%; overflow-x:hidden; }
     </div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label" id="addContactLabel">Contact Number *</label><input id="addContact" class="form-control" type="tel" inputmode="numeric" placeholder="e.g. 09171234567" required data-required data-phone></div>
-      <div class="form-group" id="addRoleGroup"><label class="form-label">Role Assignment *</label><select id="addRole" class="form-select" required data-required><option value="">Select role</option><option>Registrar</option><option>Teacher</option><option>High School Principal</option><option>Elementary Principal</option><option>Assistant Principal</option><option>Quality Assurance</option></select></div>
+      <div class="form-group" id="addRoleGroup"><label class="form-label">Role Assignment *</label><select id="addRole" class="form-select" required data-required onchange="syncTeacherSubjectPickers()"><option value="">Select role</option><option>Registrar</option><option>Teacher</option><option>High School Principal</option><option>Elementary Principal</option><option>Assistant Principal</option><option>Quality Assurance</option></select></div>
+    </div>
+    <div class="form-group" id="addSubjectsGroup" style="display:none;">
+      <label class="form-label">Subjects Taught</label>
+      <div id="addSubjectsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;max-height:170px;overflow:auto;border:1px solid var(--card-border,#d8e2ee);border-radius:10px;padding:10px;"></div>
+      <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;line-height:1.5;">Optional. A teacher only sees assessments for these subjects (plus the subjects of their Virtual Classrooms). Co-teachers of the same subject share the repository.</div>
     </div>
     <div id="addStudentFields" style="display:none;">
       <div class="form-grid">
@@ -1769,7 +1805,12 @@ html,body{ width:100%; overflow-x:hidden; }
     </div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Contact Number *</label><input class="form-control" id="editContact" type="tel" inputmode="numeric" placeholder="e.g. 09171234567" data-required data-phone></div>
-      <div class="form-group"><label class="form-label">Role Assignment *</label><select id="editRole" class="form-select"><option>Registrar</option><option>Teacher</option><option>High School Principal</option><option>Elementary Principal</option><option>Assistant Principal</option><option>Academic Coordinator</option><option>Quality Assurance</option><option>System Administrator</option></select></div>
+      <div class="form-group"><label class="form-label">Role Assignment *</label><select id="editRole" class="form-select" onchange="syncTeacherSubjectPickers()"><option>Registrar</option><option>Teacher</option><option>High School Principal</option><option>Elementary Principal</option><option>Assistant Principal</option><option>Academic Coordinator</option><option>Quality Assurance</option><option>System Administrator</option></select></div>
+    </div>
+    <div class="form-group" id="editSubjectsGroup" style="display:none;">
+      <label class="form-label">Subjects Taught</label>
+      <div id="editSubjectsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;max-height:170px;overflow:auto;border:1px solid var(--card-border,#d8e2ee);border-radius:10px;padding:10px;"></div>
+      <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;line-height:1.5;">A teacher only sees assessments for these subjects in the repository. Co-teachers of the same subject see the same assessments.</div>
     </div>
     <div class="form-group"><label class="form-label">Employee Status</label><select id="editStatus" class="form-select"><option>Active</option><option>Pending Verification</option><option>Pending Password Setup</option><option>Locked</option><option>Archived</option></select></div>
     <div class="form-grid">
@@ -2108,7 +2149,7 @@ html,body{ width:100%; overflow-x:hidden; }
 <!-- UPLOAD SF TEMPLATE MODAL -->
 <div class="modal-overlay" id="templateUploadModal">
   <div class="modal-box">
-    <div class="modal-title"><i class="fa-solid fa-file-signature" style="color:var(--ict);margin-right:8px;"></i> Upload SF Report Template</div>
+    <div class="modal-title"><i class="fa-solid fa-file-signature" style="color:var(--ict);margin-right:8px;"></i> Upload Official Report Template</div>
     <div class="modal-sub">Uploaded templates become the active official form and are picked up automatically by teachers.</div>
     <div class="form-group"><label class="form-label">Template Name *</label><input id="tplName" class="form-control" placeholder="e.g. SF2 Daily Attendance 2026-2027"></div>
     <div class="form-group"><label class="form-label">Form Type *</label><select id="tplFormType" class="form-select">
@@ -2119,10 +2160,12 @@ html,body{ width:100%; overflow-x:hidden; }
       <option value="sf5">School Form 5 (SF5) - Report on Promotion</option>
       <option value="sf9">School Form 9 (SF9) - Learner Progress Report Card</option>
       <option value="sf10">School Form 10 (SF10) - Learner's Permanent Academic Record</option>
+      <option value="class_record">DepEd Class Record - Assessment Completion</option>
     </select></div>
     <div class="form-group"><label class="form-label">Description</label><input id="tplDescription" class="form-control" placeholder="Optional note about this template"></div>
-    <div class="form-group"><label class="form-label">Template File *</label><input id="tplFile" class="form-control" type="file" accept=".pdf,.xlsx,.xls,.docx,.doc,.csv"></div>
-    <div style="padding:12px;border-radius:10px;background:var(--accent);font-size:12px;color:var(--gray-600);line-height:1.6;"><i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>Teachers see and download the newest active SF2 template from their own dashboard, so the current form reaches every class automatically.</div>
+    <div class="form-group"><label class="form-label">Template File *</label><input id="tplFile" class="form-control" type="file" accept=".xlsx,.xlsm"></div>
+    <div class="form-group"><label class="form-label">Template Field Mappings (JSON)</label><textarea id="tplMappings" class="form-control" rows="5" placeholder='{"sheet_name":"Term 1","gender_rows":{"M":{"first_data_row":14,"row_limit":47},"F":{"first_data_row":50,"row_limit":83}},"name_column":"B","assessment_columns":["C","D","E"],"cells":{"school_year":"J2","grade_level":"C5","section":"C6","teacher":"F5","subject":"J5","term":"A1"}}'>{}</textarea><div class="help-text">For a class record, map learner name rows (first_data_row and row_limit, or separate gender_rows), name_column, assessment_columns in assignment order, and optional metadata cells. You can map assessment_columns by title instead. For SF2, use its SF2 mappings.</div></div>
+    <div style="padding:12px;border-radius:10px;background:var(--accent);font-size:12px;color:var(--gray-600);line-height:1.6;"><i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>Upload an Excel workbook (.xlsx or .xlsm). Each upload replaces the active template for that report type. Class record downloads use the uploaded DepEd layout and fill roster, assessment scores, and mapped classroom details.</div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('templateUploadModal')">Cancel</button>
       <button class="btn btn-ict" id="tplSubmitBtn" onclick="submitTemplateUpload()"><i class="fa-solid fa-upload"></i> Upload Template</button>
@@ -2442,9 +2485,22 @@ function renderPendingBanner(){
   if(!p.length){ el.innerHTML='<i class="fa-solid fa-circle-check" style="font-size:28px;margin-bottom:10px;display:block;color:#16a34a;"></i>All accounts verified. No pending users.'; }
   else {
     el.innerHTML='<div style="display:flex;flex-direction:column;gap:8px;">'+p.map(u=>
-      '<div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #fde047;border-radius:9px;padding:10px 14px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:32px;height:32px;border-radius:50%;background:'+u.gradient+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;">'+u.initials+'</div><div><div style="font-weight:600;font-size:13px;color:var(--navy);">'+esc(u.name)+'</div><div style="font-size:11px;color:var(--gray-400);">'+u.role+' · '+u.email+'</div></div></div><span class="pill" style="background:#fef9c3;color:#a16207;">'+u.status+'</span></div>'
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid #fde047;border-radius:9px;padding:10px 14px;"><div style="display:flex;align-items:center;gap:10px;min-width:0;"><div style="width:32px;height:32px;border-radius:50%;background:'+u.gradient+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;">'+esc(u.initials)+'</div><div><div style="font-weight:600;font-size:13px;color:var(--navy);">'+esc(u.name)+'</div><div style="font-size:11px;color:var(--gray-400);">'+esc(u.role)+' · '+esc(u.email)+'</div></div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0;"><span class="pill" style="background:#fef9c3;color:#a16207;">'+esc(u.status)+'</span>'+(u.id!=null?'<button class="btn btn-danger-outline btn-sm" onclick="removePendingAccount('+Number(u.id)+')" title="Permanently remove this pending account"><i class="fa-solid fa-trash"></i> Remove</button>':'')+'</div></div>'
     ).join('')+'</div>';
   }
+}
+function removePendingAccount(id){
+  const account=getAccounts().find(function(u){return Number(u.id)===Number(id);});
+  if(!account||!window.confirm('Permanently remove the pending account for '+account.email+'? This cannot be undone.'))return;
+  saPostJson('/api/account-actions/',{action:'delete_pending',user_id:Number(id)})
+    .then(function(){
+      const remaining=getAccounts().filter(function(u){return Number(u.id)!==Number(id);});
+      window.__saAccounts=remaining;
+      saveAccounts(remaining);
+      renderAccounts();
+      showToast('Pending account removed.','success');
+    })
+    .catch(function(err){showToast((err&&err.message)||'Could not remove the pending account.','error');});
 }
 function renderAccounts(){
   const tb=document.getElementById('accountsBody'); if(!tb) return;
@@ -2698,6 +2754,8 @@ function saveUserRoles(u, codes){
 function openAddUserModal(){
   var t=document.getElementById('addAccountType'); if(t) t.value='employee';
   setAccountType('employee');
+  renderSubjectPicker('addSubjectsList', []);
+  syncTeacherSubjectPickers();
   openModal('addUserModal');
 }
 // One modal, two account kinds. "Employee" keeps the original fields; "Student"
@@ -2751,6 +2809,7 @@ function setAccountType(type){
 
   if(studentFields) studentFields.style.display = student ? '' : 'none';
   if(submitBtn) submitBtn.innerHTML = '<i class="fa-solid '+(student?'fa-user-graduate':'fa-user-plus')+'"></i> '+(student?'Create Student Account':'Create Employee Account');
+  syncTeacherSubjectPickers();
 }
 function resetAddUserForm(){
   ['addSurname','addFirstName','addMiddleInitial','addEmail','addEmployeeId','addContact',
@@ -2758,6 +2817,8 @@ function resetAddUserForm(){
     var el=document.getElementById(id); if(el) el.value='';
   });
   ['addSex','addRole','addSuffix'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  renderSubjectPicker('addSubjectsList', []);
+  syncTeacherSubjectPickers();
   setEmployeeFieldErrors(null);
 }
 function submitCreateAccount(){
@@ -2820,6 +2881,7 @@ function submitCreateEmployee(){
   const contact=document.getElementById('addContact').value.trim();
   const name=(first+' '+(mi?mi+'. ':'')+surname+(suffix?' '+suffix:'')).trim();
   const initials=((first[0]||'')+(surname[0]||'')).toUpperCase();
+  const subjectIds=role==='Teacher'?selectedSubjectIds('addSubjectsList'):[];
 
   const btn=document.querySelector('#addUserModal .modal-footer .btn-ict');
   const originalLabel=btn?btn.innerHTML:null;
@@ -2841,7 +2903,9 @@ function submitCreateEmployee(){
     // Staff demographics: stored on EmployeeProfile and read back by the
     // Staff Demographics panel. Both optional.
     sex:document.getElementById('addSex').value,
-    birthdate:document.getElementById('addBirthdate').value
+    birthdate:document.getElementById('addBirthdate').value,
+    // Subjects this teacher may see in the Assessment Repository.
+    subjects:subjectIds
   }).then(function(d){
     if(btn){ btn.disabled=false; btn.innerHTML=originalLabel; }
     if(d.email_sent===false){
@@ -2852,7 +2916,7 @@ function submitCreateEmployee(){
       showToast('Account created in the database. Activation email with temporary password & verification link sent to '+email,'success');
       addLog('create','fa-user-plus','Employee account created and activation email sent to '+email,'System Administrator');
     }
-    const acct={id:d.user_id,name:name,emp:(d.employee_number||emp),email:email,role:role,initials:initials,gradient:'linear-gradient(135deg,'+ACCT_INITIALS[Math.floor(Math.random()*ACCT_INITIALS.length)]+',#fcd34d)',status:'Pending Verification',last:(d.email_sent===false?'Email failed — share password manually':'Awaiting verification link')};
+    const acct={id:d.user_id,name:name,emp:(d.employee_number||emp),email:email,role:role,subjects:subjectIds,initials:initials,gradient:'linear-gradient(135deg,'+ACCT_INITIALS[Math.floor(Math.random()*ACCT_INITIALS.length)]+',#fcd34d)',status:'Pending Verification',last:(d.email_sent===false?'Email failed — share password manually':'Awaiting verification link')};
     const all=getAccounts(); all.unshift(acct); saveAccounts(all);
     resetAddUserForm();
     closeModal('addUserModal');
@@ -2958,6 +3022,8 @@ function openEditUserModal(name){
   document.getElementById('editStatus').value=u.status||'Active';
   document.getElementById('editSex').value=u.sex||'';
   document.getElementById('editBirthdate').value=u.birthdate||'';
+  renderSubjectPicker('editSubjectsList', u.subjects||[]);
+  syncTeacherSubjectPickers();
   const locked=(u.status==='Locked');
   const unlockBtn=document.getElementById('editUnlockBtn');
   const lockedNote=document.getElementById('editLockedNote');
@@ -2986,6 +3052,8 @@ function confirmUpdateEmployee(){
       u.status=document.getElementById('editStatus').value;
       u.sex=document.getElementById('editSex').value;
       u.birthdate=document.getElementById('editBirthdate').value;
+      const subjectIds=u.role==='Teacher'?selectedSubjectIds('editSubjectsList'):[];
+      u.subjects=subjectIds;
       saveAccounts(all);
       // Persist demographics straight to EmployeeProfile so the Staff
       // Demographics panel reflects the change immediately, not only after a
@@ -3003,6 +3071,17 @@ function confirmUpdateEmployee(){
           // alarming the administrator over.
           if (err && err.payload && err.payload.message && /no employee profile/i.test(String(err.payload.message))) return;
           showToast((err && err.message) || 'Could not save demographics.','error');
+        });
+      } catch (e) {}
+      // Persist the teacher's subject scope. This is what the Assessment
+      // Repository reads, so unchecking a subject removes it immediately.
+      try {
+        saPostJson('/api/accounts/subjects/', {
+          user_id: (u.id != null ? u.id : null),
+          email: u.email,
+          subject_ids: subjectIds
+        }).catch(function (err) {
+          showToast((err && err.message) || 'Could not save the teacher subjects.','error');
         });
       } catch (e) {}
       // Reflect the new sex/birthdate in the demographics panel immediately.
@@ -3191,19 +3270,44 @@ function refreshLockedAccounts(){
     })
     .then(function(){ if(window.__saSecDrillKind) reloadSecDrill(); });
 }
+function saveSchoolProfile(){
+  var form=document.getElementById('schoolProfileForm');
+  if(!form)return;
+  var button=form.querySelector('button[type="submit"]');
+  var data=new FormData(form);
+  if(button)button.disabled=true;
+  fetch("{% url 'settings:school_profile_save' %}",{
+    method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':getCsrfToken(),'Accept':'application/json'},body:data
+  }).then(function(response){
+    return response.json().catch(function(){return {};}).then(function(payload){
+      if(!response.ok||!payload.ok){
+        var errors=payload.errors||{};
+        var first=Object.keys(errors)[0];
+        var message=first&&errors[first]&&errors[first][0]?errors[first][0].message:'The school profile could not be saved.';
+        throw new Error(message);
+      }
+      return payload;
+    });
+  }).then(function(payload){showToast(payload.message||'School profile saved.','success');})
+    .catch(function(error){showToast(error.message||'The school profile could not be saved.','error');})
+    .finally(function(){if(button)button.disabled=false;});
+}
 function saveSystemSettings(){
   if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('sessionTimeout').closest('.card')))return;
   const _st=Number(document.getElementById('sessionTimeout').value), _lt=Number(document.getElementById('lockoutThreshold').value);if(!(_st>=1&&_st<=120)){showToast('Session timeout must be between 1 and 120 minutes.','error');document.getElementById('sessionTimeout').focus();return;}if(!(_lt>=1&&_lt<=20)){showToast('Lockout threshold must be between 1 and 20 attempts.','error');document.getElementById('lockoutThreshold').focus();return;}
-  try{
-    localStorage.setItem('tass_sa_settings', JSON.stringify({
-      sessionTimeout:document.getElementById('sessionTimeout').value,
-      lockoutThreshold:document.getElementById('lockoutThreshold').value,
-      timezone:document.getElementById('systemTimezone').value,
-      registration:document.getElementById('registrationPolicy').value,
-      maintenance:document.getElementById('maintenanceMode').checked
-    }));
-  }catch(e){}
-  showToast('Settings Successfully Updated','success');addLog('edit','fa-gear','System configuration updated','System Administrator');
+  const settings={
+    sessionTimeout:_st,
+    lockoutThreshold:_lt,
+    registration:document.getElementById('registrationPolicy').value,
+    maintenance:document.getElementById('maintenanceMode').checked
+  };
+  saPostJson('/api/system-settings/',settings).then(function(){
+    try{localStorage.setItem('tass_sa_settings',JSON.stringify(settings));}catch(e){}
+    showToast('Settings successfully updated.','success');
+    addLog('edit','fa-gear','System configuration updated','System Administrator');
+  }).catch(function(err){
+    showToast((err&&err.message)||'Could not save system settings.','error');
+  });
 }
 function savePasswordPolicy(){
   if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('minPasswordLength').closest('.card')))return;
@@ -3247,12 +3351,11 @@ function saveSecuritySettings(){
   if(!(exp>=0&&exp<=365)){ showToast('Password expiry must be between 0 and 365 days.','error'); return; }
   if(!(ml>=6&&ml<=64)){ showToast('Minimum password length must be between 6 and 64.','error'); return; }
 
-  // Merge into the shared settings objects instead of replacing them, so the
-  // session-timeout and timezone fields on the Settings view survive.
+  // Merge into the shared settings object so the session timeout survives.
   let s; try{ s=JSON.parse(localStorage.getItem('tass_sa_settings')||'{}'); }catch(e){ s={}; }
   s.lockoutThreshold = autoLock&&autoLock.checked ? (s.lockoutThreshold||3) : 0;
   s.autoLock = !!(autoLock&&autoLock.checked);
-  s.registration = (setup&&setup.checked) ? 'password_setup' : (s.registration||'admin_approval');
+  s.registration = (setup&&setup.checked) ? 'password_setup' : (s.registration||'invite_only');
   s.passwordExpiration = exp;
   try{ localStorage.setItem('tass_sa_settings', JSON.stringify(s)); }catch(e){}
 
@@ -3267,12 +3370,11 @@ function saveSecuritySettings(){
 
 function loadPersistedSettings(){
   try{
-    const s=JSON.parse(localStorage.getItem('tass_sa_settings')||'null');
+    const s=window.__saSettings||JSON.parse(localStorage.getItem('tass_sa_settings')||'null');
     if(s){
       if(document.getElementById('sessionTimeout'))document.getElementById('sessionTimeout').value=s.sessionTimeout;
       if(document.getElementById('lockoutThreshold'))document.getElementById('lockoutThreshold').value=s.lockoutThreshold;
-      if(document.getElementById('systemTimezone'))document.getElementById('systemTimezone').value=s.timezone;
-      if(document.getElementById('registrationPolicy'))document.getElementById('registrationPolicy').value=s.registration;
+      if(document.getElementById('registrationPolicy'))document.getElementById('registrationPolicy').value=s.registration==='open'?'open':'invite_only';
       if(document.getElementById('maintenanceMode'))document.getElementById('maintenanceMode').checked=!!s.maintenance;
     }
     const p=JSON.parse(localStorage.getItem('tass_sa_password_policy')||'null');
@@ -3504,6 +3606,47 @@ function renderSystemHealth(){
 // All three lists come from the same `directory` payload, so a record shows the
 // same numbers here as they appear in each module.
 function dirData(){ return window.__saDirectory || { sections: [], subjects: [], classrooms: [] }; }
+// Subject pickers on the Create/Edit Employee modals. They read the same
+// directory payload as the Subjects page, so only subjects in the active school
+// year can be assigned to a teacher.
+function saSubjectOptions(){
+  var d=dirData();
+  var all=(d.subjectsByYear && d.subjectsByYear[d.year]) || d.subjects || [];
+  return all.filter(function(s){ return s && s.id!=null; });
+}
+function renderSubjectPicker(listId, selected){
+  var box=document.getElementById(listId);
+  if(!box) return;
+  var chosen={};
+  (selected||[]).forEach(function(id){ chosen[String(id)]=true; });
+  var subjects=saSubjectOptions();
+  if(!subjects.length){
+    box.innerHTML='<div style="font-size:12px;color:var(--gray-400);">No subjects exist in the active school year yet.</div>';
+    return;
+  }
+  box.innerHTML=subjects.map(function(s){
+    var id=String(s.id);
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--navy);cursor:pointer;padding:4px 6px;border-radius:6px;">'+
+      '<input type="checkbox" value="'+esc(id)+'"'+(chosen[id]?' checked':'')+'> '+
+      '<span>'+esc(s.name||'')+(s.gradeLevel?(' &middot; Grade '+esc(s.gradeLevel)):'')+'</span></label>';
+  }).join('');
+}
+function selectedSubjectIds(listId){
+  var box=document.getElementById(listId);
+  if(!box) return [];
+  return [].slice.call(box.querySelectorAll('input[type=checkbox]:checked')).map(function(i){
+    return parseInt(i.value,10);
+  }).filter(function(n){ return !isNaN(n); });
+}
+function syncTeacherSubjectPickers(){
+  var isStudent=((document.getElementById('addAccountType')||{}).value||'employee')==='student';
+  var addRole=(document.getElementById('addRole')||{}).value||'';
+  var addGroup=document.getElementById('addSubjectsGroup');
+  if(addGroup) addGroup.style.display=(!isStudent && addRole==='Teacher')?'':'none';
+  var editRole=(document.getElementById('editRole')||{}).value||'';
+  var editGroup=document.getElementById('editSubjectsGroup');
+  if(editGroup) editGroup.style.display=(editRole==='Teacher')?'':'none';
+}
 
 // Populate a School Year <select> once and return the currently selected year.
 function dirYearSelect(selId, years, preferred){
@@ -3637,7 +3780,15 @@ function renderSubjects(){
 function renderClassrooms(){
   var d = dirData();
   var selYear = dirYearSelect('classroomsYear', d.academicYears, d.year);
-  var all = ((d.classroomsByYear || {})[selYear]) || [];
+  var all = (((d.classroomsByYear || {})[selYear]) || []).slice().sort(function (a, b) {
+    var subjectOrder = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+    if (subjectOrder) return subjectOrder;
+    var gradeOrder = (Number(a.gradeLevel) || 0) - (Number(b.gradeLevel) || 0);
+    if (gradeOrder) return gradeOrder;
+    var sectionOrder = String(a.section || '').localeCompare(String(b.section || ''), undefined, { sensitivity: 'base' });
+    if (sectionOrder) return sectionOrder;
+    return String(a.teacher || '').localeCompare(String(b.teacher || ''), undefined, { sensitivity: 'base' });
+  });
   var box = document.getElementById('classroomsRows');
   var q = document.getElementById('classroomsSearch');
   var rows = dirFilter(all, q && q.value, ['name', 'section', 'teacher', 'status']);
@@ -4088,9 +4239,11 @@ function renderResourceLibrary(){
   if(!grid) return;
   var q=(document.getElementById('repoSearchPage')||{}).value||'';
   q=q.toLowerCase();
+  var grade=(document.getElementById('repoGradePage')||{}).value||'';
   var subject=(document.getElementById('repoSubjectPage')||{}).value||'';
   var items=saResourceSource().filter(function(r){
-    return (!subject||r.subject===subject)&&
+    return (!grade||parseInt(String(r.grade_level||r.gradeLevel||'').replace(/\D+/g,''),10)===parseInt(grade,10))&&
+      (!subject||r.subject===subject)&&
       (!q||(String(r.title)+' '+String(r.topic)+' '+String(r.subject)+' '+String(r.meta)).toLowerCase().indexOf(q)!==-1);
   });
   if(!items.length){ grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No resources in the repository yet.</div>'; return; }
@@ -4108,6 +4261,49 @@ function renderResourceLibrary(){
         '</div></div>';
     }).join('');
 }
+/* System Administrator repository uses the same subject-folder flow as the
+   Teacher repository, while keeping its view-only actions. */
+let saResourceRepositorySubject='';
+function saResourceSubjects(){
+  var seen={};
+  saResourceSource().forEach(function(r){
+    if(r.subject_id==null)return;
+    var key=String(r.subject_id);
+    if(!seen[key])seen[key]={id:r.subject_id,name:r.subject||'',grade_level:r.grade_level||r.gradeLevel||null};
+  });
+  return Object.keys(seen).map(function(k){return seen[k];}).sort(function(a,b){
+    return (Number(a.grade_level)||0)-(Number(b.grade_level)||0)||String(a.name).localeCompare(String(b.name),undefined,{numeric:true,sensitivity:'base'});
+  });
+}
+function saResourceSubjectLabel(subject,all){
+  return subject.name+(all.filter(function(row){return row.name===subject.name;}).length>1?' · Grade '+subject.grade_level:'');
+}
+function renderResourceLibrary(){
+  var grid=document.getElementById('resourceLibraryGrid');if(!grid)return;
+  var q=String((document.getElementById('repoSearchPage')||{}).value||'').toLowerCase();
+  var grade=(document.getElementById('repoGradePage')||{}).value||'';
+  var items=saResourceSource().filter(function(r){
+    return (!grade||Number(r.grade_level||r.gradeLevel)===Number(grade))&&
+      (!q||(String(r.title)+' '+String(r.topic)+' '+String(r.subject)+' '+String(r.meta)).toLowerCase().indexOf(q)!==-1);
+  });
+  var subjects=saResourceSubjects();
+  if(!saResourceRepositorySubject){
+    var folders=subjects.filter(function(s){return (!grade||Number(s.grade_level)===Number(grade))&&(!q||String(s.name).toLowerCase().indexOf(q)!==-1||items.some(function(r){return String(r.subject_id)===String(s.id);}));});
+    if(!folders.length){grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No subject folders found.</div>';return;}
+    grid.innerHTML='<div class="resource-folder-grid">'+folders.map(function(s){var n=items.filter(function(r){return String(r.subject_id)===String(s.id);}).length;var label=saResourceSubjectLabel(s,subjects);return '<button type="button" class="resource-folder" data-subject="'+esc(s.id)+'" onclick="openSAResourceSubject(this.dataset.subject)" aria-label="Open '+esc(label)+' folder, '+n+' materials"><span class="resource-folder-icon"><i class="fa-solid fa-folder-open"></i></span><span class="resource-folder-copy"><span class="resource-folder-name">'+esc(label)+'</span><span class="resource-folder-count">'+n+' material'+(n===1?'':'s')+'</span></span><i class="fa-solid fa-chevron-right resource-folder-arrow" aria-hidden="true"></i></button>';}).join('')+'</div>';
+    return;
+  }
+  var selected=subjects.find(function(s){return String(s.id)===String(saResourceRepositorySubject);});
+  if(!selected){saResourceRepositorySubject='';renderResourceLibrary();return;}
+  var selectedItems=items.filter(function(r){return String(r.subject_id)===String(selected.id);});
+  var heading=saResourceSubjectLabel(selected,subjects);
+  var top='<div class="resource-library-heading"><button class="btn btn-outline btn-sm" onclick="closeSAResourceSubject()"><i class="fa-solid fa-arrow-left"></i> All subjects</button><h3>'+esc(heading)+'</h3><span style="font-size:12px;color:var(--text-muted)">'+selectedItems.length+' material'+(selectedItems.length===1?'':'s')+'</span></div>';
+  if(!selectedItems.length){grid.innerHTML=top+'<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted);">No learning materials found.</div>';return;}
+  grid.innerHTML=top+selectedItems.map(function(r){return '<div class="repository-item"><div class="repo-main"><i class="'+esc(r.icon||'fa-solid fa-file')+'" style="font-size:22px;color:'+esc(r.color||'#fbbf24')+'"></i><div class="repo-body"><strong>'+esc(r.title)+'</strong><div style="font-size:11px;color:var(--text-muted)">'+esc(r.subject||'')+' · '+esc(r.topic||'General Resources')+' · '+esc(r.meta||'')+'</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">Shared by '+esc(r.uploaded_by||'a teacher')+' · '+esc(r.created_at||'')+'</div></div></div><div class="repo-actions"><button class="btn btn-outline btn-sm" onclick="saViewResource('+r.id+')"><i class="fa-solid fa-eye"></i> View</button>'+(r.url?'<a class="btn btn-outline btn-sm" href="'+esc(r.url)+'" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download</a>':'')+'</div></div>';}).join('');
+}
+function openSAResourceSubject(id){saResourceRepositorySubject=String(id||'');renderResourceLibrary();}
+function closeSAResourceSubject(){saResourceRepositorySubject='';renderResourceLibrary();}
+
 /* Read-only resource detail. This used to be "Copy to Class", a modal that
    POSTed placements into one or more virtual classrooms. Oversight roles review
    what teachers published; they do not republish it, so the destination picker
@@ -4119,6 +4315,7 @@ function saViewResource(id){
   var html='<div class="modal-overlay open" id="saResourceViewModal" onclick="if(event.target===this)document.getElementById(\'saResourceViewModal\').remove()"><div class="modal-box">'+
     '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>Learning Material Details</div>'+
     '<div class="modal-sub">Read-only preview of a resource shared to the school repository.</div>'+
+    '<div id="saResourcePreviewBody" style="margin:8px 0 14px;min-height:60px;"><div style="padding:18px;text-align:center;color:var(--text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading preview…</div></div>'+
     '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin:14px 0 6px;">'+
     '<i class="'+(r.icon||'fa-solid fa-file')+'" style="font-size:20px;color:'+(r.color||'#fbbf24')+'"></i>'+
     '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">'+esc(r.title)+'</div>'+
@@ -4135,6 +4332,24 @@ function saViewResource(id){
     '<button class="btn btn-ict" onclick="document.getElementById(\'saResourceViewModal\').remove()">Close</button>'+
     '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
+  saLoadResourcePreview(r);
+}
+function saLoadResourcePreview(r){
+  var box=document.getElementById('saResourcePreviewBody'); if(!box)return;
+  fetch('/teaching/resources/'+encodeURIComponent(r.id)+'/preview/',{credentials:'same-origin',headers:{Accept:'application/json'}})
+    .then(function(response){if(!response.ok)throw new Error('Preview is unavailable.');return response.json();})
+    .then(function(data){
+      var url=data.preview_file_url||'',ext=String(data.extension||'').toLowerCase();
+      if(data.office_pdf_url&&(ext==='docx'||ext==='pptx')) box.innerHTML='<iframe title="Document preview" src="'+esc(data.office_pdf_url)+'" style="width:100%;height:50vh;border:1px solid var(--card-border);border-radius:12px;background:#fff"></iframe>';
+      else if(ext==='docx'&&url&&typeof window.tassRenderDocumentPreview==='function'){
+        box.innerHTML='<div style="max-height:50vh;overflow:auto;padding:16px;background:#e8edf4;border:1px solid var(--card-border);border-radius:12px">Loading full document preview…</div>';
+        window.tassRenderDocumentPreview(url,box.firstElementChild,'50vh').catch(function(error){box.textContent=(error&&error.message)||'The full document preview could not be rendered.';});
+      }
+      else if(data.html&&(ext==='docx'||ext==='pptx')) box.innerHTML='<iframe sandbox="" title="Formatted document preview" srcdoc="'+esc(data.html)+'" style="width:100%;height:50vh;border:1px solid var(--card-border);border-radius:12px;background:#e8edf4"></iframe>';
+      else if(ext==='pdf'&&url) box.innerHTML='<iframe title="PDF preview" src="'+esc(url)+'" style="width:100%;height:50vh;border:1px solid var(--card-border);border-radius:12px;background:#fff"></iframe>';
+      else if(data.text) box.innerHTML='<pre style="max-height:50vh;overflow:auto;white-space:pre-wrap;padding:16px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px">'+esc(data.text)+'</pre>';
+      else box.innerHTML='<div style="padding:16px;color:var(--text-muted)">Preview is unavailable for this file type. Use Download to open the original file.</div>';
+    }).catch(function(error){box.textContent=error.message||'Could not load preview.';});
 }
 function downloadResourceLibraryReport(){
   var rows=[['Resource','Subject','Topic','Type'],].concat(saResourceSource().map(function(r){ return [r.title,r.subject,r.topic,r.meta]; }));
@@ -4159,10 +4374,12 @@ function renderAssessmentLibrary(){
     if(subs.indexOf(cur)>=0) sel.value=cur;
   }
   var q=((document.getElementById('assessRepoSearchPage')||{}).value||'').toLowerCase();
+  var grade=(document.getElementById('assessRepoGradePage')||{}).value||'';
   var subject=(document.getElementById('assessRepoSubjectPage')||{}).value||'';
   var type=(document.getElementById('assessRepoTypePage')||{}).value||'';
   var items=all.filter(function(a){
-    return (!subject||a.subject===subject)&&
+    return (!grade||parseInt(String(a.grade||a.gradeLevel||'').replace(/\D+/g,''),10)===parseInt(grade,10))&&
+      (!subject||a.subject===subject)&&
       (!type||a.method===type)&&
       (!q||(String(a.title)+' '+String(a.method)+' '+String(a.subject)+' '+String(a.by)).toLowerCase().indexOf(q)!==-1);
   });
@@ -4178,6 +4395,40 @@ function renderAssessmentLibrary(){
       '<button class="btn btn-outline btn-sm" onclick="saViewAssessment('+i+')"><i class="fa-solid fa-eye"></i> View</button></div></div>';
   }).join('');
 }
+/* Assessment Repository mirrors the Teacher subject folders but stays
+   read-only for the System Administrator dashboard. */
+let saAssessmentRepositorySubject='';
+function saAssessmentSubjectKey(a){return String(a.subjectId||((a.grade||a.gradeLevel||'')+'|'+(a.subject||'')));}
+function saAssessmentSubjects(rows){
+  var seen={};
+  rows.forEach(function(a){if(!a.subject)return;var key=saAssessmentSubjectKey(a);if(!seen[key])seen[key]={id:key,name:a.subject,gradeLevel:a.grade||a.gradeLevel||null};});
+  return Object.keys(seen).map(function(k){return seen[k];}).sort(function(a,b){return (Number(a.gradeLevel)||0)-(Number(b.gradeLevel)||0)||String(a.name).localeCompare(String(b.name),undefined,{numeric:true,sensitivity:'base'});});
+}
+function renderAssessmentLibrary(){
+  var grid=document.getElementById('assessmentLibraryGrid');if(!grid)return;
+  var all=assessmentData();
+  var q=String((document.getElementById('assessRepoSearchPage')||{}).value||'').toLowerCase();
+  var grade=(document.getElementById('assessRepoGradePage')||{}).value||'';
+  var type=(document.getElementById('assessRepoTypePage')||{}).value||'';
+  var subjects=saAssessmentSubjects(all);
+  var items=all.filter(function(a){return (!grade||Number(a.grade||a.gradeLevel)===Number(grade))&&(!type||(a.method||a.type)===type)&&(!q||(String(a.title)+' '+String(a.method||a.type)+' '+String(a.subject)+' '+String(a.by)).toLowerCase().indexOf(q)!==-1);});
+  if(!saAssessmentRepositorySubject){
+    var folders=subjects.filter(function(s){return (!grade||Number(s.gradeLevel)===Number(grade))&&(!q||String(s.name).toLowerCase().indexOf(q)!==-1||items.some(function(a){return saAssessmentSubjectKey(a)===String(s.id);}));});
+    if(!folders.length){grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No subject folders found.</div>';return;}
+    grid.innerHTML='<div class="resource-folder-grid">'+folders.map(function(s){var n=items.filter(function(a){return saAssessmentSubjectKey(a)===String(s.id);}).length;var label=s.name+(subjects.filter(function(x){return x.name===s.name;}).length>1?' · Grade '+s.gradeLevel:'');return '<button type="button" class="resource-folder" data-subject="'+esc(s.id)+'" onclick="openSAAssessmentSubject(this.dataset.subject)" aria-label="Open '+esc(label)+' folder, '+n+' assessments"><span class="resource-folder-icon"><i class="fa-solid fa-folder-open"></i></span><span class="resource-folder-copy"><span class="resource-folder-name">'+esc(label)+'</span><span class="resource-folder-count">'+n+' assessment'+(n===1?'':'s')+'</span></span><i class="fa-solid fa-chevron-right resource-folder-arrow" aria-hidden="true"></i></button>';}).join('')+'</div>';
+    return;
+  }
+  var selected=subjects.find(function(s){return String(s.id)===String(saAssessmentRepositorySubject);});
+  if(!selected){saAssessmentRepositorySubject='';renderAssessmentLibrary();return;}
+  var chosen=items.filter(function(a){return saAssessmentSubjectKey(a)===String(selected.id);});
+  var label=selected.name+(subjects.filter(function(s){return s.name===selected.name;}).length>1?' · Grade '+selected.gradeLevel:'');
+  var top='<div class="resource-library-heading"><button class="btn btn-outline btn-sm" onclick="closeSAAssessmentSubject()"><i class="fa-solid fa-arrow-left"></i> All subjects</button><h3><i class="fa-solid fa-folder-open" style="color:var(--blue);margin-right:6px"></i>'+esc(label)+'</h3><span style="font-size:12px;color:var(--text-muted)">'+chosen.length+' assessment'+(chosen.length===1?'':'s')+'</span></div>';
+  if(!chosen.length){grid.innerHTML=top+'<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted);">No assessments in this subject yet.</div>';return;}
+  grid.innerHTML=top+chosen.map(function(a){var idx=all.indexOf(a);var method=a.method||a.type||'Assessment';return '<div class="repository-item"><div class="repo-main"><i class="fa-solid '+(SA_ASSESS_TYPE_ICONS[method]||'fa-clipboard-list')+'" style="font-size:22px;color:'+saAssessTypeColor(method)+'"></i><div class="repo-body"><strong>'+esc(a.title)+'</strong><div style="font-size:11px;color:var(--text-muted)">'+esc(a.subject)+' · '+esc(method)+' · '+String(a.parts==null?0:a.parts)+' part(s)</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-share-nodes"></i> Used in '+String(a.classes||0)+' classroom(s) · by '+esc(a.by||'System')+' · '+esc(a.updated||'')+'</div></div></div><div class="repo-actions"><button class="btn btn-outline btn-sm" onclick="saViewAssessment('+idx+')"><i class="fa-solid fa-eye"></i> View</button></div></div>';}).join('');
+}
+function openSAAssessmentSubject(id){saAssessmentRepositorySubject=String(id||'');renderAssessmentLibrary();}
+function closeSAAssessmentSubject(){saAssessmentRepositorySubject='';renderAssessmentLibrary();}
+
 /* Read-only assessment detail, matching saViewResource. */
 function saViewAssessment(i){
   var all=assessmentData();
@@ -4291,7 +4542,7 @@ function renderSchoolYears(){
       ?'<span style="font-size:11px;color:var(--gray-400);">Current year</span>'
       :'<button class="btn btn-outline btn-sm" onclick="activateSchoolYear('+y.id+')" title="Make this the active school year"><i class="fa-solid fa-play"></i> Activate</button> <button class="btn btn-outline btn-sm" onclick="archiveSchoolYear('+y.id+')" title="Archive this school year"><i class="fa-solid fa-box-archive"></i> Archive</button>';
     if(years.length>1){
-      actions+=' <button class="btn btn-outline btn-sm" onclick="openRolloverModal('+y.id+')" title="Copy this year\'s sections, subjects and virtual classrooms into the active school year"><i class="fa-solid fa-copy"></i> Rollover</button>';
+      actions+=' <button class="btn btn-outline btn-sm" onclick="openRolloverModal('+y.id+')" title="Copy this year\'s sections, subjects and virtual classrooms into the active school year"><i class="fa-solid fa-copy"></i> Carry Over</button>';
     }
     return '<tr>'+
       '<td><strong style="white-space:nowrap;">'+esc(y.label)+'</strong></td>'+
@@ -4571,7 +4822,7 @@ function loadVCSubjects(){
     return;
   }
   subSel.innerHTML='<option value="">— Select subject —</option>'+subs.map(function(s){
-    return '<option value="'+esc(s.name)+'" data-grade="'+(s.grade||'')+'" data-type="'+esc(s.type||'APPLIED')+'">'+esc(s.name)+'</option>';
+    return '<option value="'+esc(s.name)+'" data-id="'+esc(s.id==null?'':s.id)+'" data-grade="'+(s.grade||'')+'" data-type="'+esc(s.type||'APPLIED')+'">'+esc(s.name)+'</option>';
   }).join('');
 }
 function onVCGradeChange(){
@@ -4624,12 +4875,12 @@ function openCreateVCModal(){
   var grSel=document.getElementById('vcGrade');
   if(grSel){
     grSel.innerHTML='';
-    for(var g=7;g<=12;g++) grSel.innerHTML+='<option value="'+g+'">Grade '+g+'</option>';
+    for(var g=1;g<=12;g++) grSel.innerHTML+='<option value="'+g+'">Grade '+g+'</option>';
   }
   var teaSel=document.getElementById('vcTeacher');
   if(teaSel){
     teaSel.innerHTML='<option value="">— Select teacher —</option>'+(o.teachers||[]).map(function(t){
-      return '<option value="'+esc(t.name)+'">'+esc(t.name)+'</option>';
+      return '<option value="'+esc(t.name)+'" data-id="'+esc(t.id==null?'':t.id)+'">'+esc(t.name)+'</option>';
     }).join('');
   }
   var tipeSel=document.getElementById('vcSubjectType');
@@ -4658,23 +4909,29 @@ function createVirtualClassroom(){
   var tipe=document.getElementById('vcSubjectType').value;
   var period=(tipe==='Elective')?((document.getElementById('vcPeriod').value||'').trim()):'';
   if(tipe==='Elective'&&!period){ showToast('Elective classrooms need a grading period.','error'); return; }
-  var teacher=(document.getElementById('vcTeacher').value||'').trim();
+  var teacherSel=document.getElementById('vcTeacher');
+  var teacher=(teacherSel?teacherSel.value:'').trim();
+  var teacherId=(teacherSel&&teacherSel.selectedIndex>=0)?(teacherSel.options[teacherSel.selectedIndex].getAttribute('data-id')||''):'';
   var color='#f59e0b';
-  saPostJson('/api/academic-structure/',{
-    sections:[], subjects:[],
-    vcs:[{ subject:sub.value, section:sec.value, section_id:(secOpt&&secOpt.dataset.id)||'', grade:grad, teacher:teacher, gradingPeriod:period, color:color }]
+  var ayEl=document.getElementById('vcAY');
+  var ay=ayEl?ayEl.value:'';
+  saPostJson('/api/virtual-classroom/create/',{
+    academic_year:ay,
+    subject:sub.value,
+    subject_id:(subOpt&&subOpt.dataset.id)||'',
+    section:sec.value,
+    section_id:(secOpt&&secOpt.dataset.id)||'',
+    grade:grad,
+    teacher:teacher,
+    teacher_id:teacherId,
+    grading_period:period,
+    color:color
   }).then(function(d){
-    // The endpoint reports how many rows it actually created. It used to be
-    // ignored, so a request that silently created nothing still showed
-    // "Virtual Classroom created!" and the classroom was simply absent.
-    var made=(d&&d.vcs)||0;
-    if(!made){
-      var why=((d&&d.vcs_errors)||[])[0]||'The classroom was not created.';
-      showToast(why,'error');
-      return;
-    }
+    // A create that fails validation now returns a 4xx with a message, which
+    // saPostJson surfaces as a rejected promise. Only a real classroom is
+    // ever reported as success.
     closeModal('createVCModal');
-    showToast('Virtual Classroom created! Topics and section enrollments were synced.','success');
+    showToast((d&&d.message)||'Virtual Classroom created! Topics and section enrollments were synced.','success');
     setTimeout(function(){ location.reload(); }, 700);
   }).catch(function(err){
     showToast(err.message||'Could not create the Virtual Classroom.','error');
@@ -5059,7 +5316,7 @@ function renderReports(){
   }
   var tr = document.getElementById('templateRows');
   if (tr) {
-    if (!tpl.length) { TASS.empty.table(tr, 5, { message: 'No form templates uploaded.', hint: 'Upload an SF template to reuse its field mapping.' }); }
+    if (!tpl.length) { TASS.empty.table(tr, 5, { message: 'No form templates uploaded.', hint: 'Upload an official SF or DepEd class record template.' }); }
     else tr.innerHTML = tpl.map(function (t) {
       var dl = t.download
         ? '<button class="btn btn-outline btn-sm" onclick="window.location.href=\'' + esc(t.download) + '\'"><i class="fa-solid fa-download"></i> Download</button>'
@@ -5084,12 +5341,18 @@ function submitTemplateUpload(){
   var btn=document.getElementById('tplSubmitBtn');
   if(!name){ showToast('Template name is required.','error'); return; }
   if(!file){ showToast('Choose a template file to upload.','error'); return; }
+  var formType=document.getElementById('tplFormType').value;
+  if((formType==='sf2'||formType==='class_record')&&!/\.(xlsx|xlsm)$/i.test(file.name)){showToast('These templates must be .xlsx or .xlsm Excel workbooks.','error');return;}
+  var mappings=document.getElementById('tplMappings').value.trim()||'{}';
+  try { if(!mappings||typeof JSON.parse(mappings)!=='object'||Array.isArray(JSON.parse(mappings)))throw new Error(''); }
+  catch(_e){showToast('Field mappings must be a JSON object.','error');return;}
   if(btn && btn.disabled) return;
   if(btn){ btn.disabled=true; }
   var fd=new FormData();
   fd.append('name', name);
-  fd.append('form_type', document.getElementById('tplFormType').value);
+  fd.append('form_type', formType);
   fd.append('description', document.getElementById('tplDescription').value.trim());
+  fd.append('field_mappings', mappings);
   fd.append('template_file', file);
   fetch('/analytics/sf/templates/upload/', {
     method:'POST', credentials:'same-origin',
@@ -5103,6 +5366,7 @@ function submitTemplateUpload(){
       document.getElementById('tplName').value='';
       document.getElementById('tplDescription').value='';
       document.getElementById('tplFile').value='';
+      document.getElementById('tplMappings').value='{}';
       // Newest active template is what teachers consume, so reload the real
       // payload to keep this page and the teacher dashboard in lockstep.
       window.location.reload();
@@ -6000,6 +6264,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
 <script>
 window.applySystemAdminPayload = function(D) {
   if(!window.__TASS_REAL__ || !D) return;
+  if(D.settings) window.__saSettings=D.settings;
 
   // Age/Sex panels: staff (EmployeeProfile.sex/birthdate) and learners
   // (StudentProfile). Each view passes its own rows when it opens, so the two
@@ -6227,6 +6492,15 @@ window.csrfToken = (function () {
 /* System Admin — School Operations (resource / assessment repositories) */
 .vo-tag{ font-size: 10px; background: #fef3c7; color: #f59e0b; border-radius: 20px; padding: 3px 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
 .sa-repo-item{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:13px 14px;border:1px solid var(--card-border);border-radius:11px;margin-bottom:9px;background:var(--card-bg);}
+.resource-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.resource-folder{display:flex;align-items:center;gap:14px;min-height:92px;padding:16px;border:1px solid var(--card-border);border-radius:14px;background:var(--card-bg);color:var(--text-primary);text-align:left;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s;width:100%}
+.resource-folder:hover{transform:translateY(-2px);border-color:var(--blue);box-shadow:var(--shadow-sm)}
+.resource-folder-icon{width:54px;height:48px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px;background:linear-gradient(145deg,#dbeafe,#bfdbfe);color:#2563eb;font-size:25px}
+.resource-folder-copy{min-width:0;flex:1}.resource-folder-name{display:block;font-size:14px;font-weight:750;overflow-wrap:anywhere}.resource-folder-count{display:block;margin-top:4px;font-size:11px;color:var(--text-muted)}
+.resource-folder-arrow{color:var(--text-muted);font-size:12px}
+.resource-library-heading{display:flex;align-items:center;gap:12px;margin:2px 0 16px;flex-wrap:wrap}.resource-library-heading h3{margin:0;font-size:17px;color:var(--navy)}
+.repository-item{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--card-border);border-radius:9px;margin-bottom:8px}
+.repository-item .repo-main{display:flex;gap:12px;align-items:center;flex:1;min-width:200px}.repository-item .repo-body{flex:1;min-width:0}.repository-item .repo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
 .sa-repo-main{display:flex;gap:12px;align-items:center;flex:1;min-width:220px}
 .sa-repo-body{flex:1;min-width:0}
 .sa-repo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
@@ -6237,5 +6511,8 @@ window.csrfToken = (function () {
 .repo-detail-row .rd-val{flex:1;min-width:0;color:var(--navy);font-weight:600;word-break:break-word}
 </style>
 <script src="{% static 'js/notifications.js' %}?v=3"></script>
+{{ menu_permission_codenames|json_script:"menu-permission-codenames" }}
+<script src="{% static 'js/menu_permissions.js' %}" defer></script>
+<script src="{% static 'js/refresh_state.js' %}?v=1"></script>
 </body>
 </html>

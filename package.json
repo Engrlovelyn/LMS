@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "build:document-preview": "esbuild frontend/document_preview.js --bundle --minify --legal-comments=inline --outfile=static/js/document_preview.bundle.js"
+  },
+  "dependencies": {
+    "docx-preview": "0.4.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.5"
+  }
+}

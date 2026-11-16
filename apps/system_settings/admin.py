@@ -1,10 +1,19 @@
 from django.contrib import admin
 from .models import (
     SystemConfiguration,
+    SchoolProfile,
     PasswordPolicy,
     AttendanceThresholdConfig,
     BackupRecord,
 )
+
+
+@admin.register(SchoolProfile)
+class SchoolProfileAdmin(admin.ModelAdmin):
+    list_display = ("school_name", "school_id", "division", "district", "updated_at")
+
+    def has_add_permission(self, request):
+        return not SchoolProfile.objects.exists()
 
 
 @admin.register(SystemConfiguration)

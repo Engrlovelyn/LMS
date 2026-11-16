@@ -659,6 +659,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="window.location.href='/accounts/sessions/'"><i class="fa-solid fa-laptop" style="width:16px"></i> Device Logs</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -1627,7 +1628,14 @@ function renderPerformance(){
   document.getElementById('pfSubjectTable').innerHTML=rows.map(r=>'<tr><td style="font-weight:600;">'+r.name+'</td><td style="text-align:center;">'+r.cnt+'</td><td style="text-align:center;font-weight:700;">'+round(r.avg)+'</td><td style="text-align:center;">'+pill(r.avg>=75?'Passing':(r.avg>=60?'Needs Attention':'At Risk'))+'</td></tr>').join('')||EMPTY_TABLE;
 
   const sorted=AGG.students.slice().sort((a,b)=>b.avg-a.avg);
-  document.getElementById('pfTopTable').innerHTML=sorted.slice(0,5).map((s,i)=>'<tr><td><span class="rank-badge" style="width:26px;height:26px;font-size:11px;background:'+(i===0?'#fbbf24':(i===1?'#cbd5e1':(i===2?'#e9a97a':'var(--gray-100)')))+';color:#fff;">'+(i+1)+'</span></td><td style="font-weight:600;">'+s.name+'</td><td>'+s.grade+' · '+s.section+'</td><td style="text-align:center;font-weight:700;">'+round(s.avg)+'</td><td style="text-align:center;">'+pill(s.avg>=90?'Excellent':'Passing')+'</td></tr>').join('');
+  let previousAverage=null, studentRank=0;
+  document.getElementById('pfTopTable').innerHTML=sorted.slice(0,5).map((s,i)=>{
+    const shownAverage=round(s.avg);
+    if(previousAverage===null||shownAverage!==previousAverage)studentRank=i+1;
+    previousAverage=shownAverage;
+    const medal=studentRank===1?'#fbbf24':(studentRank===2?'#cbd5e1':(studentRank===3?'#e9a97a':'var(--gray-100)'));
+    return '<tr><td><span class="rank-badge" style="width:26px;height:26px;font-size:11px;background:'+medal+';color:#fff;">'+studentRank+'</span></td><td style="font-weight:600;">'+s.name+'</td><td>'+s.grade+' · '+s.section+'</td><td style="text-align:center;font-weight:700;">'+round(s.avg)+'</td><td style="text-align:center;">'+pill(s.avg>=90?'Excellent':'Passing')+'</td></tr>';
+  }).join('');
 
   const risk=AGG.students.filter(s=>s.avg<75);
   document.getElementById('pfAtRisk').innerHTML=risk.length
@@ -2521,5 +2529,8 @@ window.csrfToken = (function () {
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
 <script src="{% static 'js/notifications.js' %}?v=3"></script>
+{{ menu_permission_codenames|json_script:"menu-permission-codenames" }}
+<script src="{% static 'js/menu_permissions.js' %}" defer></script>
+<script src="{% static 'js/refresh_state.js' %}?v=1"></script>
 </body>
 </html>

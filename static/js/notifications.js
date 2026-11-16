@@ -20,7 +20,8 @@
     material: { icon: "fa-book-open", bg: "#e8f0fb", color: "#1e5faf" },
     assessment: { icon: "fa-file-pen", bg: "#ede9fe", color: "#7c3aed" },
     attendance: { icon: "fa-calendar-xmark", bg: "#fee2e2", color: "#dc2626" },
-    message: { icon: "fa-comment-dots", bg: "#dcfce7", color: "#15803d" }
+    message: { icon: "fa-comment-dots", bg: "#dcfce7", color: "#15803d" },
+    classroom: { icon: "fa-chalkboard-user", bg: "#e8f0fb", color: "#1e5faf" }
   };
 
   function cfg() {

@@ -21,6 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 sys.path.append(str(BASE_DIR / "apps"))
 
+# Optional LibreOffice or Microsoft Word executable used to render Office
+# previews as PDFs. On Windows, installed Word is auto-detected if unset.
+OFFICE_CONVERTER_BINARY = os.getenv("OFFICE_CONVERTER_BINARY", "")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -98,6 +102,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+'apps.accounts.role_sync.RoleGroupSyncMiddleware',
 'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.accounts.middleware.NoCacheMiddleware',
@@ -311,4 +316,3 @@ EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 EMAIL_LOGO_URL = os.getenv("EMAIL_LOGO_URL", "")
 SCHOOL_NAME = os.getenv("SCHOOL_NAME", "San Vicente Institute")
 SCHOOL_CONTACT_EMAIL = os.getenv("SCHOOL_CONTACT_EMAIL", "info@whitestrings.io")
-

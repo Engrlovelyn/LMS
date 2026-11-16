@@ -89,7 +89,7 @@ def _teacher_dashboard_target(n, user):
 
         tab = "assessment"
         record_type = "assessment"
-        if n.source_type in ("assessment_assignment", "assessment_reminder"):
+        if n.source_type in ("assessment_assignment", "assessment_reminder", "assessment_schedule", "assessment_opening_soon"):
             assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
             if not assignment:
                 return ""
@@ -129,6 +129,8 @@ def _teacher_dashboard_target(n, user):
     elif n.notification_type == Notification.TYPE_MESSAGE:
         tab = "messages"
         record_type = "message"
+    elif n.notification_type == Notification.TYPE_CLASSROOM and n.source_type == "classroom_assignment":
+        tab = "dashboard"
 
     if classroom_id:
         from apps.virtual_classrooms.models import VirtualClassroom
@@ -162,7 +164,7 @@ def _student_dashboard_target(n, user):
 
         tab = "assessments"
         record_type = "assessment"
-        if n.source_type in ("assessment_assignment", "assessment_reminder"):
+        if n.source_type in ("assessment_assignment", "assessment_reminder", "assessment_schedule", "assessment_opening_soon"):
             assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
             if not assignment:
                 return ""
@@ -251,10 +253,10 @@ def notification_target(n, user=None):
     other_target = _other_dashboard_target(n, user)
     if other_target:
         return other_target
-    if n.notification_type == Notification.TYPE_ASSESSMENT and n.source_type in ("assessment", "assessment_assignment") and n.source_id:
+    if n.notification_type == Notification.TYPE_ASSESSMENT and n.source_type in ("assessment", "assessment_assignment", "assessment_schedule", "assessment_opening_soon") and n.source_id:
         from apps.assessments.models import Assessment, AssessmentAssignment
 
-        if n.source_type == "assessment_assignment":
+        if n.source_type in ("assessment_assignment", "assessment_schedule", "assessment_opening_soon"):
             assignment = AssessmentAssignment.objects.filter(pk=n.source_id).first()
             assessment_id = assignment.assessment_id if assignment else None
             classroom_id = assignment.virtual_classroom_id if assignment else None
@@ -525,11 +527,9 @@ def notify_resource_placement(placement):
 def notify_assessment_assignment(assignment):
     """Bell notification for an assessment assigned to a classroom.
 
-    Skipped while the assessment is still in the future: a scheduled assessment
-    gets its bell row from ``notify_assessment_available`` when its
-    ``available_at`` passes, so the student is told when they can actually
-    start, not before. If it is already available the row is created now and the
-    later availability sweep is a no-op thanks to the unique key.
+    Students are told about the assignment as soon as it is made, even when it
+    is scheduled for later. The availability producer uses a separate source
+    key so the student receives a second notice when they can start.
     """
     from apps.assessments.models import Assessment, AssessmentAssignment
 
@@ -539,23 +539,32 @@ def notify_assessment_assignment(assignment):
     if assessment is None or assessment.status != Assessment.STATUS_ACTIVE:
         return 0
     now = timezone.now()
-    if assessment.available_at and assessment.available_at > now:
-        return 0
     vc = assignment.virtual_classroom
     recipients = active_student_user_ids(vc)
     if not recipients:
         return 0
     deadline = assessment.submission_deadline
     message = assessment.title or "New assessment"
+    title = "New Assessment"
+    if assessment.available_at and assessment.available_at > now:
+        title = "Assessment Scheduled"
+        message = "{} Â· available {}".format(
+            message,
+            timezone.localtime(assessment.available_at).strftime("%b %d, %Y %I:%M %p"),
+        )
     if deadline:
         message = f"{message} · due {timezone.localtime(deadline):%b %d, %Y %I:%M %p}"
     return _bulk_create(
         recipients,
         virtual_classroom=vc,
         notification_type=Notification.TYPE_ASSESSMENT,
-        source_type="assessment",
-        source_id=assessment.pk,
-        title="New Assessment",
+        source_type=(
+            "assessment_schedule"
+            if assessment.available_at and assessment.available_at > now
+            else "assessment"
+        ),
+        source_id=(assignment.pk if assessment.available_at and assessment.available_at > now else assessment.pk),
+        title=title,
         message=message[:200],
         url=_reverse_or_blank("assessments:assessment_detail", assessment.pk),
         exclude_user_id=assessment.created_by_id,
@@ -565,9 +574,10 @@ def notify_assessment_assignment(assignment):
 def notify_assessment_available(assessment):
     """Bell notification once a scheduled assessment's window opens.
 
-    Fans out to every classroom the assessment is assigned to and shares the
-    ``("assessment", <pk>)`` key with ``notify_assessment_assignment`` so the
-    two paths cannot both light the bell for the same assessment.
+    Fans out to every assigned classroom. Scheduled assignments have a
+    separate advance notice, so this creates the second, availability notice.
+    Already available assessments keep the assignment producer's shared key
+    and do not get duplicated by a later availability sweep.
     """
     from apps.assessments.models import Assessment
 
@@ -579,16 +589,66 @@ def notify_assessment_available(assessment):
     return created
 
 
-def sync_attendance_notification(
-    *, user_id, virtual_classroom, session, is_absent, absent_label="absent"
-):
-    """Create or clear the bell notice for one student's attendance session.
+def notify_assessment_opening_soon(assignment):
+    """Notify enrolled students that a scheduled assessment opens shortly."""
+    from apps.assessments.models import Assessment, AssessmentAssignment
 
-    A student is notified once per attendance session when marked absent, and
-    the notice is removed if the teacher later corrects the record to present
-    or late -- so the bell never keeps a stale absence. Idempotent: re-saving
-    the same session does not multiply the red dot, because the
-    ``(recipient, type, source_type, source_id)`` key already holds one row.
+    if not isinstance(assignment, AssessmentAssignment):
+        return 0
+    assessment = assignment.assessment
+    if assessment is None or assessment.status != Assessment.STATUS_ACTIVE:
+        return 0
+    if not assessment.available_at:
+        return 0
+    recipients = active_student_user_ids(assignment.virtual_classroom)
+    if not recipients:
+        return 0
+    opens_at = timezone.localtime(assessment.available_at).strftime("%b %d, %Y %I:%M %p")
+    return _bulk_create(
+        recipients,
+        virtual_classroom=assignment.virtual_classroom,
+        notification_type=Notification.TYPE_ASSESSMENT,
+        source_type="assessment_opening_soon",
+        source_id=assignment.pk,
+        title="Assessment Opens Soon",
+        message="{} opens in about 2 minutes · {}".format(
+            assessment.title or "Assessment", opens_at
+        )[:200],
+        url=_reverse_or_blank("classrooms:classroom_detail", assignment.virtual_classroom_id),
+        exclude_user_id=assessment.created_by_id,
+    )
+
+
+def notify_teacher_classroom_assignment(classroom, assigned_by=None):
+    """Notify the newly assigned teacher when a classroom is created or changed."""
+    from apps.virtual_classrooms.models import VirtualClassroom
+
+    if not isinstance(classroom, VirtualClassroom) or not classroom.teacher_id:
+        return 0
+    if assigned_by is not None and classroom.teacher_id == getattr(assigned_by, "pk", assigned_by):
+        return 0
+    return _bulk_create(
+        [classroom.teacher_id],
+        virtual_classroom=classroom,
+        notification_type=Notification.TYPE_CLASSROOM,
+        source_type="classroom_assignment",
+        source_id=classroom.pk,
+        title="Virtual Classroom Assigned",
+        message="You have been assigned to {}.".format(classroom),
+        url=_reverse_or_blank("classrooms:classroom_detail", classroom.pk),
+    )
+
+
+def sync_attendance_notification(
+    *, user_id, virtual_classroom, session, is_absent=None, absent_label="absent",
+    status_label=None,
+):
+    """Create or refresh the bell notice for one student's attendance session.
+
+    ``status_label`` supports notices for every attendance status. The legacy
+    ``is_absent`` arguments remain accepted for older callers. Re-saving the
+    same status does not multiply the red dot; changing it refreshes the
+    message and marks it unread so the student sees the correction.
     """
     if not user_id or session is None:
         return 0
@@ -598,7 +658,8 @@ def sync_attendance_notification(
         "source_type": "attendance",
         "source_id": session.pk,
     }
-    if not is_absent:
+    label = status_label or (absent_label if is_absent else None)
+    if not label:
         Notification.objects.filter(**lookup).delete()
         return 0
     subject = (
@@ -610,19 +671,26 @@ def sync_attendance_notification(
     url = _reverse_or_blank("classrooms:classroom_detail", getattr(virtual_classroom, "pk", None))
     if url:
         url = "{}?tab=attendance".format(url)
-    _, was_created = Notification.objects.get_or_create(
+    message = "You were marked {} in {} on {}.".format(
+        label,
+        subject,
+        session_date.strftime("%b %d, %Y") if session_date else "",
+    )
+    notification, was_created = Notification.objects.get_or_create(
         **lookup,
         defaults={
             "virtual_classroom": virtual_classroom,
-            "title": "Marked {}".format(absent_label),
-            "message": "You were marked {} in {} on {}.".format(
-                absent_label,
-                subject,
-                session_date.strftime("%b %d, %Y") if session_date else "",
-            ),
+            "title": "Marked {}".format(label.title()),
+            "message": message,
             "url": url,
         },
     )
+    if not was_created and (notification.title != "Marked {}".format(label.title()) or notification.message != message):
+        notification.title = "Marked {}".format(label.title())
+        notification.message = message
+        notification.is_read = False
+        notification.read_at = None
+        notification.save(update_fields=["title", "message", "is_read", "read_at"])
     return int(was_created)
 
 
@@ -698,7 +766,6 @@ def can_access(notification, user):
         return False
     if notification.notification_type == Notification.TYPE_ASSESSMENT and notification.source_id:
         from apps.assessments.models import Assessment, AssessmentAssignment, AssessmentProctoringEvent
-        from apps.virtual_classrooms.models import VirtualClassroomEnrollment
 
         if notification.source_type == "assessment_proctoring_event":
             event = AssessmentProctoringEvent.objects.filter(pk=notification.source_id).first()
@@ -720,7 +787,7 @@ def can_access(notification, user):
                 virtual_classroom_id=notification.virtual_classroom_id,
             ).exists():
                 return False
-        elif notification.source_type in ("assessment_assignment", "assessment_reminder"):
+        elif notification.source_type in ("assessment_assignment", "assessment_reminder", "assessment_schedule", "assessment_opening_soon"):
             assignment = AssessmentAssignment.objects.filter(pk=notification.source_id).first()
             if not assignment or (
                 notification.virtual_classroom_id
@@ -743,6 +810,14 @@ def can_access(notification, user):
             virtual_classroom_id=notification.virtual_classroom_id,
         ).exists():
             return False
+    if notification.notification_type == Notification.TYPE_CLASSROOM and notification.source_type == "classroom_assignment":
+        from apps.virtual_classrooms.models import VirtualClassroom
+
+        return VirtualClassroom.objects.filter(
+            pk=notification.source_id,
+            teacher=user,
+            status=VirtualClassroom.STATUS_ACTIVE,
+        ).exists()
     # Re-check the role audience at click time, so a notification generated
     # before an account changed role cannot still open a notice it may no
     # longer read.

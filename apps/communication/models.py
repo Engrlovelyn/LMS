@@ -72,12 +72,14 @@ class Notification(models.Model):
     TYPE_ASSESSMENT = "assessment"
     TYPE_ATTENDANCE = "attendance"
     TYPE_MESSAGE = "message"
+    TYPE_CLASSROOM = "classroom"
     TYPE_CHOICES = [
         (TYPE_ANNOUNCEMENT, "Class Announcement"),
         (TYPE_MATERIAL, "Learning Material"),
         (TYPE_ASSESSMENT, "Assessment"),
         (TYPE_ATTENDANCE, "Attendance"),
         (TYPE_MESSAGE, "Message"),
+        (TYPE_CLASSROOM, "Virtual Classroom Assignment"),
     ]
 
     recipient = models.ForeignKey(

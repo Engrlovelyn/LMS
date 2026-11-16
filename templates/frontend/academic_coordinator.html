@@ -17,6 +17,7 @@
 <script src="{% static 'js/empty_state.js' %}"></script>
 <script src="{% static 'js/demographics.js' %}"></script>
 <script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/document_preview.bundle.js' %}"></script>
 <style>
 :root {
   --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
@@ -82,7 +83,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
 .sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:10px 10px 5px; white-space:nowrap; opacity:0; transition:opacity 0.15s; }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label { opacity:1; transition-delay:0.07s; }
-.nav-item { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
+.nav-item { display:flex; align-items:center; gap:0; padding:8px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; text-decoration:none; }
 .nav-item-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; font-size:15.5px; flex-shrink:0; transition:color .18s; }
 .nav-item-label { opacity:0; transition:opacity 0.15s; padding-right:12px; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
@@ -862,6 +863,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="window.location.href='/accounts/sessions/'"><i class="fa-solid fa-laptop" style="width:16px"></i> Device Logs</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -869,36 +871,37 @@ html,body{ width:100%; overflow-x:hidden; }
 
 <div class="layout">
   <!-- SIDEBAR -->
+  {% url 'dashboards:academic_coordinator' as coordinator_dashboard_url %}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
     
     <div class="sidebar-label">Main</div>
-    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+    <a class="nav-item active" href="{{ coordinator_dashboard_url }}" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a>
     <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
     
     <div class="sidebar-label">Academic Directory</div>
     {% if perms.academic_structure.view_academic_year or perms.academic_structure.view_section_custom or perms.academic_structure.view_subject_custom %}
-    <button class="nav-item" onclick="showView('schoolyear')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-day"></i></div><span class="nav-item-label">School Year</span></button>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}schoolyear/" onclick="showView('schoolyear')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-day"></i></div><span class="nav-item-label">School Year</span></a>
     {% endif %}
     {% if perms.virtual_classrooms.view_virtual_classroom %}
-    <button class="nav-item" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}classrooms/" onclick="showView('classrooms')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Virtual Classrooms</span></a>
     {% endif %}
     
     <div class="sidebar-label">Teaching</div>
-    <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Material Repository</span></button>
-    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span></button>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}materials/" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Material Repository</span></a>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}assessments/" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span></a>
     
     <div class="sidebar-label">Insights</div>
-    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></button>
-    <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Student Performance</span></button>
-    <button class="nav-item" onclick="showView('analytics')"><div class="nav-item-icon"><i class="fa-solid fa-chart-pie"></i></div><span class="nav-item-label">Analytics & Reports</span></button>
-    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-users-viewfinder"></i></div><span class="nav-item-label">Demographics</span></button>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}attendance/" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance</span></a>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}performance/" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-chart-bar"></i></div><span class="nav-item-label">Student Performance</span></a>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}analytics/" onclick="showView('analytics')"><div class="nav-item-icon"><i class="fa-solid fa-chart-pie"></i></div><span class="nav-item-label">Analytics & Reports</span></a>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}demographics/" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-users-viewfinder"></i></div><span class="nav-item-label">Demographics</span></a>
     
     <div class="sidebar-label">Communication</div>
-    <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}announcements/" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></a>
     
     <div class="sidebar-label">Settings</div>
-    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
+    <a class="nav-item" href="{{ coordinator_dashboard_url }}settings/" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></a>
     <div class="sidebar-spacer"></div>
     </div>
   </aside>
@@ -1118,7 +1121,18 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">
           <div class="card-title"><i class="fa-solid fa-chalkboard" style="color:var(--blue);"></i> All Virtual Classrooms — <span data-ay>—</span></div>
-          <select class="form-control" style="width:170px;" onchange="tassEXFiltered()"><option>All Grade Levels</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <input class="form-control" id="vcSearch" type="search" placeholder="Search class, subject, or teacher..." aria-label="Search virtual classrooms by class, subject, or teacher" style="width:260px;" oninput="renderVCTable()">
+            <select class="form-control" id="vcGradeFilter" style="width:170px;" onchange="renderVCTable()">
+              <option value="">All Grade Levels</option>
+              <option value="Grade 7">Grade 7</option>
+              <option value="Grade 8">Grade 8</option>
+              <option value="Grade 9">Grade 9</option>
+              <option value="Grade 10">Grade 10</option>
+              <option value="Grade 11">Grade 11</option>
+              <option value="Grade 12">Grade 12</option>
+            </select>
+          </div>
         </div>
         <div class="card-body" style="padding:0;">
           <table class="data-table">
@@ -1155,12 +1169,12 @@ html,body{ width:100%; overflow-x:hidden; }
         <div class="modal-title">Create Virtual Classroom</div>
         <div class="modal-sub">Links a subject, section, grade level, teacher, and Academic Year into one instructional unit.</div>
         <div class="form-row-2">
-          <div class="form-group"><label class="form-label">Subject</label><select class="form-control"><option>Science 10</option><option>Mathematics 9</option><option>Research 2 (Elective)</option></select></div>
-          <div class="form-group"><label class="form-label">Section</label><select class="form-control"><option>Grade 10 – Faith</option><option>Grade 9 – Hope</option><option>Grade 12 STEM-A</option></select></div>
+          <div class="form-group"><label class="form-label">Subject</label><select class="form-control" id="coordVCSubject"></select></div>
+          <div class="form-group"><label class="form-label">Section</label><select class="form-control" id="coordVCSection"></select></div>
         </div>
         <div class="form-row-2">
           <div class="form-group"><label class="form-label">Academic Year</label><select class="form-control" id="coordVCYear"></select></div>
-          <div class="form-group"><label class="form-label">Grading Period <span style="font-weight:400;color:var(--gray-400);">(SHS electives only)</span></label><select class="form-control"><option>N/A — Year-long</option><option>1st Trimester</option><option>2nd Trimester</option><option>3rd Trimester</option></select></div>
+          <div class="form-group"><label class="form-label">Grading Period <span style="font-weight:400;color:var(--gray-400);">(SHS electives only)</span></label><select class="form-control" id="coordVCGrading"><option value="">N/A — Year-long</option><option value="1ST_TRIMESTER">1st Trimester</option><option value="2ND_TRIMESTER">2nd Trimester</option><option value="3RD_TRIMESTER">3rd Trimester</option></select></div>
         </div>
         <div class="form-group"><label class="form-label">Program / SHS Track <span style="font-weight:400;color:var(--gray-400);">(Grade 11–12 only)</span></label><select class="form-control" id="vcTrack">
           <option value="N/A — Junior HS">N/A — Junior HS (Year-long)</option>
@@ -1288,6 +1302,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="card">
         <div class="card-body">
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="repoGradePage" style="width:130px;max-width:100%;" onchange="renderMaterials()"><option value="">All Grades</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
             <select class="form-control" id="repoSubjectPage" style="width:170px;max-width:100%;" onchange="renderMaterials()"><option value="">All Subjects</option></select>
             <select class="form-control" id="repoTypePage" style="width:150px;max-width:100%;" onchange="renderMaterials()">
               <option value="all">All Types</option><option value="pdf">PDF</option><option value="ppt">Presentation</option><option value="doc">Word Doc</option><option value="vid">Video</option><option value="img">Image</option><option value="aud">Audio</option><option value="lnk">Link</option>
@@ -1320,6 +1335,7 @@ html,body{ width:100%; overflow-x:hidden; }
         <div class="card-header"><div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--blue);"></i> Assessment Repository</div><span class="vo-tag"><i class="fa-solid fa-eye"></i> View Only</span></div>
         <div class="card-body">
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="assessRepoGradePage" style="width:130px;max-width:100%;" onchange="renderAssessmentsTable()"><option value="">All Grades</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
             <select class="form-control" id="assessRepoTypePage" style="width:170px;max-width:100%;" onchange="renderAssessmentsTable()"><option value="">All Types</option></select>
             <select class="form-control" id="assessRepoStatusPage" style="width:140px;max-width:100%;" onchange="renderAssessmentsTable()"><option value="">All Status</option><option>Graded</option><option>Pending</option></select>
             <input class="form-control" id="assessRepoSearchPage" placeholder="Search assessment..." style="flex:1;min-width:220px" oninput="renderAssessmentsTable()">
@@ -1753,8 +1769,29 @@ function renderVCTable() {
     cards[2].textContent = String(elective);
   }
   if (!tbody) return;
+
+  // Search matches the classroom name, subject, teacher, section and track, so
+  // a coordinator can find a classroom by any of the details they know.
+  const qEl = document.getElementById('vcSearch');
+  const q = (qEl ? String(qEl.value) : '').trim().toLowerCase();
+  const gEl = document.getElementById('vcGradeFilter');
+  const grade = gEl ? gEl.value : '';
+  const rows = [];
+  vcData.forEach((v, i) => {
+    if (grade && String(v.grade || '') !== grade) return;
+    if (q) {
+      const haystack = [v.name, v.subject, v.teacher, v.section, v.grade, v.track, v.type]
+        .join(' ')
+        .toLowerCase();
+      if (haystack.indexOf(q) === -1) return;
+    }
+    rows.push({ v: v, i: i });
+  });
+
   if (vcData.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>'; return; }
-  tbody.innerHTML = vcData.map((v, i) => {
+  if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No Virtual Classrooms match your search.</td></tr>'; return; }
+
+  tbody.innerHTML = rows.map(({ v, i }) => {
     const typeTag = v.type === 'elective' ? '<span class="vc-elective-tag">Elective · Per-Trimester</span>' : '<span class="vc-core-tag">Core · Year-Long</span>';
     const trackTag = v.track && v.track.indexOf('N/A') !== 0 ? '<div style="font-size:11px;color:var(--gray-500);margin-top:4px;"><i class="fa-solid fa-route" style="margin-right:4px;"></i>'+v.track+'</div>' : '';
     const pill = v.status === 'active' ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Archived</span>';
@@ -1813,35 +1850,65 @@ function archiveVC(i) { archiveVCIndex=i; document.getElementById('archiveVCMsg'
 function confirmArchiveSection(){ if(archiveSectionIndex<0)return; sectionsData[archiveSectionIndex].status='archived'; closeModal('archiveSectionModal'); showToast('Section archived','success'); persistACState(); renderSectionsTable(); archiveSectionIndex=-1; }
 function confirmArchiveVC(){ if(archiveVCIndex<0)return; vcData[archiveVCIndex].status='archived'; closeModal('archiveVCModal'); showToast('Virtual Classroom archived','success'); persistACState(); renderVCTable(); renderDashVCList(); archiveVCIndex=-1; }
 
-function createVirtualClassroom(){
-  const vcModal=document.getElementById('createVCModal');
-  const sels=vcModal.getElementsByTagName('select');
-  const subject=sels[0].value, section=sels[1].value, ay=sels[2].value, grading=sels[3].value;
-  const teacherSel=document.getElementById('coordVCTeacher');
-  const teacher=(teacherSel?teacherSel.value:sels[4].value);
-  const track=document.getElementById('vcTrack')?document.getElementById('vcTrack').value:'N/A — Junior HS';
-  if(!teacher){showToast('Please assign a teacher to this Virtual Classroom.','error');return;}
-  const secParts=section.split(' – ');
-  const grade=secParts[0]||'Grade 11';
-  const isSHS=(grade.indexOf('11')>=0||grade.indexOf('12')>=0);
-  const trackNote=(isSHS&&track.indexOf('N/A')!==0)?' · '+track:'';
-  vcData.unshift({
-    name:subject+trackNote,
-    subject:subject,
-    grade:grade,
-    section:(secParts[1]||'Faith').trim(),
-    teacher:teacher,
-    type:grading.indexOf('Trimester')>=0?'elective':'core',
-    track:track,
-    students:0,
-    status:'active',
-    ay:ay
+function acCsrf(){
+  if (window.csrfToken) return window.csrfToken;
+  try { var m=document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)'); return m?decodeURIComponent(m.pop()):''; } catch(e){ return ''; }
+}
+function acJson(url, opts){
+  opts=opts||{};
+  var init={method:opts.method||'GET',credentials:'same-origin',headers:{}};
+  if(opts.body!==undefined){init.headers['Content-Type']='application/json';init.body=JSON.stringify(opts.body);}
+  init.headers['X-CSRFToken']=acCsrf();
+  return fetch(url,init).then(function(r){
+    return r.json().catch(function(){return {};}).then(function(d){
+      if(!r.ok||d.ok===false){var e=new Error(d.message||('request failed ('+r.status+')'));e.payload=d;throw e;}
+      return d;
+    });
   });
-  closeModal('createVCModal');
-  persistACState();
-  renderVCTable();
-  renderDashVCList();
-  showToast('Virtual Classroom created successfully.','success');
+}
+function createVirtualClassroom(){
+  var subjSel=document.getElementById('coordVCSubject');
+  var secSel=document.getElementById('coordVCSection');
+  var ayEl=document.getElementById('coordVCYear');
+  var gradingEl=document.getElementById('coordVCGrading');
+  var teacherSel=document.getElementById('coordVCTeacher');
+  var subject=subjSel?subjSel.value:'';
+  var section=secSel?secSel.value:'';
+  var ay=ayEl?ayEl.value:'';
+  var grading=gradingEl?gradingEl.value:'';
+  var teacher=teacherSel?teacherSel.value:'';
+  var teacherId=(teacherSel&&teacherSel.selectedIndex>=0)?(teacherSel.options[teacherSel.selectedIndex].getAttribute('data-id')||''):'';
+  // Validate every required field before writing anything. The old flow only
+  // mutated local state, so the classroom never reached the database.
+  if(!ay){showToast('Select an Academic Year.','error');return;}
+  if(!subject){showToast('Select a subject.','error');return;}
+  if(!section){showToast('Select a section.','error');return;}
+  if(!teacher){showToast('Please assign a teacher to this Virtual Classroom.','error');return;}
+  var subjOpt=subjSel?subjSel.options[subjSel.selectedIndex]:null;
+  var secOpt=secSel?secSel.options[secSel.selectedIndex]:null;
+  var subjGrade=subjOpt?String(subjOpt.getAttribute('data-grade')||''):'';
+  var secGrade=secOpt?String(secOpt.getAttribute('data-grade')||''):'';
+  if(subjGrade&&secGrade&&subjGrade!==secGrade){
+    showToast('The section is '+secGrade+' but the subject is '+subjGrade+'. Pick a matching pair.','error');
+    return;
+  }
+  acJson('/api/virtual-classroom/create/',{method:'POST',body:{
+    academic_year:ay,
+    grade:(secGrade||subjGrade).replace(/[^0-9]/g,''),
+    section:section,
+    subject:subject,
+    teacher:teacher,
+    teacher_id:teacherId,
+    grading_period:grading
+  }}).then(function(d){
+    closeModal('createVCModal');
+    showToast(d&&d.message?d.message:'Virtual Classroom created successfully.','success');
+    // Reload so the classroom appears with its real database id on this and
+    // every other dashboard.
+    setTimeout(function(){ location.reload(); }, 500);
+  }).catch(function(err){
+    showToast(err.message||'Could not create the Virtual Classroom.','error');
+  });
 }
 
 // ── RENDER: TOPIC OUTLINE ──
@@ -1944,6 +2011,7 @@ function renderMaterials(filter) {
   if (!repoResourcesLoaded && !REPO_RESOURCES.length) loadRepoResources(true);
 
   const q = (document.getElementById('repoSearchPage')?.value || '').toLowerCase();
+  const grade = document.getElementById('repoGradePage')?.value || '';
   const subject = document.getElementById('repoSubjectPage')?.value || '';
   const type = document.getElementById('repoTypePage')?.value || 'all';
 
@@ -1954,6 +2022,7 @@ function renderMaterials(filter) {
   }
 
   const items = all.filter(r =>
+    (!grade || parseInt(String(r.grade_level || r.gradeLevel || '').replace(/\D+/g, ''), 10) === parseInt(grade.replace(/\D+/g, ''), 10)) &&
     (!subject || r.subject === subject) &&
     (type === 'all' || !type || r.type === type) &&
     (!q || [r.title, r.topic, r.subject, r.meta, r.uploaded_by].join(' ').toLowerCase().includes(q))
@@ -1982,7 +2051,13 @@ function renderMaterials(filter) {
     ).join('');
 }
 
-/* Read-only resource detail — no destination picker, no POST. */
+/* Read-only resource detail — no destination picker, no POST.
+   The modal now renders the document itself instead of only describing it:
+   PDFs and images are embedded through the same authenticated preview endpoint
+   the student view uses (with `?inline=1`, so the browser's own renderer keeps
+   the original layout), and Word/PowerPoint/text files show their extracted
+   text inside a `white-space:pre-wrap` block, which preserves the paragraph
+   and slide breaks instead of collapsing the document into one paragraph. */
 function viewRepoResource(id) {
   const r = repoResourceSource().find(x => String(x.id) === String(id));
   if (!r) { showToast('This resource is no longer in the repository.', 'error'); return; }
@@ -1997,6 +2072,7 @@ function viewRepoResource(id) {
         '<div style="font-size:11px;color:var(--text-muted);">' + escHtml(r.meta || '') + '</div></div>' +
         '<span class="vo-tag" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Only</span>' +
       '</div>' +
+      '<div id="acRepoPreviewBody" style="margin:6px 0 10px;min-height:60px;"><div style="padding:22px;text-align:center;color:var(--text-muted);font-size:12.5px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading preview…</div></div>' +
       row('Subject', escHtml(r.subject)) +
       row('Topic', escHtml(r.topic)) +
       row('File Type', escHtml(r.meta)) +
@@ -2009,6 +2085,85 @@ function viewRepoResource(id) {
       '</div>' +
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
+  loadAcRepoPreview(r);
+}
+
+function acRepoPreviewFallback(r, message) {
+  const description = String((r && r.description) || '').trim();
+  const url = String((r && r.url) || '').trim();
+  return '<div style="padding:16px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;">' +
+    (description
+      ? '<div style="white-space:pre-wrap;line-height:1.7;">' + escHtml(description) + '</div>'
+      : '<p style="margin:0;color:var(--text-muted);font-size:12.5px;">' + escHtml(message || 'A preview is not available for this file format.') + '</p>') +
+    (url ? '<p style="margin:12px 0 0;font-size:12px;"><a href="' + escHtml(url) + '" target="_blank" rel="noopener">Open the file in a new tab</a></p>' : '') +
+    '</div>';
+}
+
+function loadAcRepoPreview(r) {
+  const body = document.getElementById('acRepoPreviewBody');
+  if (!body) return;
+  const resourceId = r && r.id != null ? String(r.id) : '';
+  if (!resourceId || !/^\d+$/.test(resourceId)) {
+    body.innerHTML = acRepoPreviewFallback(r, 'This row has no stored file to preview.');
+    return;
+  }
+  fetch('/teaching/resources/' + encodeURIComponent(resourceId) + '/preview/', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' }
+  })
+    .then(function (response) {
+      if (!response.ok) throw new Error('This resource is unavailable or you no longer have access.');
+      return response.json();
+    })
+    .then(function (data) { renderAcRepoPreview(r, data); })
+    .catch(function (error) {
+      const box = document.getElementById('acRepoPreviewBody');
+      if (box) box.innerHTML = acRepoPreviewFallback(r, (error && error.message) || 'Could not load this preview.');
+    });
+}
+
+function renderAcRepoPreview(r, data) {
+  const body = document.getElementById('acRepoPreviewBody');
+  if (!body) return;
+  const safeUrl = function (url) {
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? parsed.href : '';
+    } catch (e) { return ''; }
+  };
+  const fileUrl = safeUrl((data && data.preview_file_url) || '');
+  const linkUrl = safeUrl((data && data.external_url) || '');
+  const name = (data && data.title) || r.title || 'Learning material';
+  const extension = String((data && data.extension) || (data && data.file_name) || '').split('.').pop().toLowerCase();
+  const text = String((data && data.text) || '');
+  const wordLike = ['docx', 'pptx', 'txt', 'md', 'csv', 'doc', 'ppt'];
+  if (data && data.office_pdf_url && ['docx', 'pptx'].indexOf(extension) >= 0) {
+    body.innerHTML = '<iframe title="' + escHtml(name) + ' document preview" src="' + escHtml(data.office_pdf_url) + '" style="width:100%;height:54vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;"></iframe>';
+  } else if (extension === 'docx' && fileUrl && typeof window.tassRenderDocumentPreview === 'function') {
+    body.innerHTML = '<div style="max-height:54vh;overflow:auto;padding:16px;background:#e8edf4;border:1px solid var(--card-border);border-radius:12px;">Loading full document preview…</div>';
+    window.tassRenderDocumentPreview(fileUrl, body.firstElementChild, '54vh').catch(function (error) {
+      body.textContent = (error && error.message) || 'The full document preview could not be rendered.';
+    });
+  } else if (data && data.html && ['docx', 'pptx'].indexOf(extension) >= 0) {
+    body.innerHTML = '<iframe sandbox="" title="' + escHtml(name) + ' formatted document preview" srcdoc="' + escHtml(data.html) + '" style="width:100%;height:54vh;border:1px solid var(--card-border);border-radius:12px;background:#e8edf4;"></iframe>';
+  } else if (text && wordLike.indexOf(extension) >= 0) {
+    // pre-wrap keeps the document's own paragraphs/slide breaks. The extracted
+    // text is the document structure, and collapsing it would lose it.
+    body.innerHTML = '<div style="max-height:46vh;overflow:auto;padding:16px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;">' +
+      '<pre style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:13px;line-height:1.75;color:var(--text-primary);">' + escHtml(text) + '</pre></div>';
+  } else if ((extension === 'pdf' || r.type === 'pdf') && fileUrl) {
+    body.innerHTML = '<iframe src="' + escHtml(fileUrl) + '" style="width:100%;height:46vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;" title="' + escHtml(name) + '"></iframe>';
+  } else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].indexOf(extension) >= 0 && fileUrl) {
+    body.innerHTML = '<div style="max-height:46vh;overflow:auto;text-align:center;padding:10px;background:var(--accent);border-radius:12px;"><img src="' + escHtml(fileUrl) + '" alt="' + escHtml(name) + '" style="max-width:100%;max-height:44vh;object-fit:contain;"></div>';
+  } else if (['mp4', 'mov', 'avi', 'webm'].indexOf(extension) >= 0 && fileUrl) {
+    body.innerHTML = '<video controls playsinline style="width:100%;max-height:46vh;background:#000;border-radius:12px;" src="' + escHtml(fileUrl) + '">Your browser cannot play this video.</video>';
+  } else if (['mp3', 'wav', 'm4a', 'aac', 'ogg'].indexOf(extension) >= 0 && fileUrl) {
+    body.innerHTML = '<div style="padding:22px;background:var(--accent);border-radius:12px;text-align:center;"><i class="fa-solid fa-headphones" style="font-size:30px;color:var(--blue);margin-bottom:12px;"></i><audio controls style="display:block;width:100%;" src="' + escHtml(fileUrl) + '">Your browser cannot play this audio.</audio></div>';
+  } else if (linkUrl) {
+    body.innerHTML = '<iframe sandbox="allow-scripts allow-forms allow-popups" referrerpolicy="no-referrer" src="' + escHtml(linkUrl) + '" style="width:100%;height:46vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;" title="' + escHtml(name) + '"></iframe><p style="margin:6px 0 0;font-size:11.5px;color:var(--text-muted);">If the site blocks embedded viewing, <a href="' + escHtml(linkUrl) + '" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.</p>';
+  } else {
+    body.innerHTML = acRepoPreviewFallback(r, 'A preview is not available for this file format. The file can still be downloaded.');
+  }
 }
 
 function downloadRepoResourceReport() {
@@ -2068,7 +2223,6 @@ const acHas = (key, field) => {
 };
 
 function initDashCharts() {
-  if (chartsInit.dash) return; chartsInit.dash = true;
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.color = '#4a637f';
 
@@ -2096,7 +2250,6 @@ function initDashCharts() {
 }
 
 function initAssessCharts() {
-  if (chartsInit.assess) return; chartsInit.assess = true;
   // Stacked pass/fail series. The backend fills `passed`/`failed`, not `values`,
   // so acHas() needs the field named explicitly.
   if (acHas('assessPassFail', 'passed')) {
@@ -2174,10 +2327,12 @@ function renderAssessmentsTable(){
   }
 
   const q = (document.getElementById('assessRepoSearchPage')?.value || '').toLowerCase();
+  const grade = document.getElementById('assessRepoGradePage')?.value || '';
   const type = document.getElementById('assessRepoTypePage')?.value || '';
   const status = document.getElementById('assessRepoStatusPage')?.value || '';
 
   const items = rows.filter(r =>
+    (!grade || parseInt(String(r.grade || r.gradeLevel || (String(r.cls || r.class || '').match(/(?:grade\s*|\bG)(\d+)/i) || [])[1] || '').replace(/\D+/g, ''), 10) === parseInt(grade.replace(/\D+/g, ''), 10)) &&
     (!type || r.type === type) &&
     (!status || r.status === status) &&
     (!q || [r.title, r.type, r.teacher, r.cls].join(' ').toLowerCase().includes(q))
@@ -2261,7 +2416,6 @@ function mean(nums){
 }
 
 function initPerfCharts() {
-  if (chartsInit.perf) return; chartsInit.perf = true;
   if (acHas('perfByClass')) {
     safeChart('perfClassChart', {
       type: 'bar',
@@ -2317,7 +2471,6 @@ function renderPerfTable(){
 }
 
 function initAttendCharts() {
-  if (chartsInit.attend) return; chartsInit.attend = true;
   if (acHas('attendByClass')) {
     safeChart('attendClassChart', {
       type: 'bar',
@@ -2390,7 +2543,6 @@ function refreshACNotifications(){
 }
 
 function initAnalyticsCharts() {
-  if (chartsInit.analytics) return; chartsInit.analytics = true;
   if (acHas('enrollByGrade')) {
     safeChart('anEnrollChart', {
       type: 'bar',
@@ -3277,12 +3429,31 @@ window.applyACData = function(data, opts){
   var teacherRows = Array.isArray(data.teachers) ? data.teachers : [];
   var teacherOptions = '<option value="">— Select teacher —</option>' + teacherRows.map(function(t){
     var label = escHtml(t.name) + (t.subject ? ' — ' + escHtml(t.subject) : '');
-    return '<option value="' + escHtml(t.name) + '">' + label + '</option>';
+    var tid = String(t.id == null ? '' : t.id).replace(/^t/, '');
+    return '<option value="' + escHtml(t.name) + '" data-id="' + escHtml(tid) + '">' + label + '</option>';
   }).join('');
   ['coordVCTeacher','editVCTeacher'].forEach(function(id){
     var sel = document.getElementById(id);
     if (sel) sel.innerHTML = teacherOptions;
   });
+
+  // Subject / Section pickers for the Create modal, from the real academic
+  // structure. These used to be hardcoded sample names, so a classroom could
+  // be "created" for a subject or section that did not exist.
+  var coordSubjSel = document.getElementById('coordVCSubject');
+  if (coordSubjSel) {
+    var subjOpts = (subjectsData || []).map(function(s){
+      return '<option value="'+escHtml(s.name)+'" data-grade="'+escHtml(s.grade||'')+'" data-type="'+escHtml(s.type||'Core')+'">'+escHtml(s.name)+(s.grade?' ('+escHtml(s.grade)+')':'')+'</option>';
+    }).join('');
+    coordSubjSel.innerHTML = subjOpts || '<option value="">— No subjects —</option>';
+  }
+  var coordSecSel = document.getElementById('coordVCSection');
+  if (coordSecSel) {
+    var secOpts = (sectionsData || []).map(function(s){
+      return '<option value="'+escHtml(s.name)+'" data-grade="'+escHtml(s.grade||'')+'">'+escHtml((s.grade?s.grade+' – ':'')+s.name)+'</option>';
+    }).join('');
+    coordSecSel.innerHTML = secOpts || '<option value="">— No sections —</option>';
+  }
 
   // Academic Years table and the school-year pickers, straight from the
   // backend (the read-only table used to be static and the pickers hardcoded
@@ -3401,7 +3572,12 @@ window.applyACData = function(data, opts){
   if (typeof renderACAnnouncements === 'function') renderACAnnouncements();
   if (typeof renderAnalyticsStats === 'function') renderAnalyticsStats();
   if (typeof populateAnalyticsClassSelect === 'function') populateAnalyticsClassSelect();
-  if (typeof initReportCharts === 'function') initReportCharts();
+  var activeView = (document.querySelector('.view.active') || {}).id || '';
+  if (activeView === 'view-dashboard') initDashCharts();
+  else if (activeView === 'view-assessments') initAssessCharts();
+  else if (activeView === 'view-attendance') initAttendCharts();
+  else if (activeView === 'view-performance') initPerfCharts();
+  else if (activeView === 'view-analytics') initReportCharts();
 };
 
 /* Bootstrap with the server-rendered payload, then keep the dashboard live.
@@ -3476,5 +3652,8 @@ window.csrfToken = (function () {
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
 <script src="{% static 'js/notifications.js' %}?v=3"></script>
+{{ menu_permission_codenames|json_script:"menu-permission-codenames" }}
+<script src="{% static 'js/menu_permissions.js' %}" defer></script>
+<script src="{% static 'js/refresh_state.js' %}?v=1"></script>
 </body>
 </html>

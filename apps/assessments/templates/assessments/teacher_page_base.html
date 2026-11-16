@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}
+<style>
+  /* Match the current teacher workspace shell on server rendered pages. */
+  header { height: 72px; background: linear-gradient(90deg,#321807,#b45309); }
+  header .brand-block { order: 2; padding-left: 12px; }
+  header .header-main { order: 3; }
+  header .hamburger-btn { order: 1; margin-left: 16px; }
+  .layout { margin-top: 72px; min-height: calc(100vh - 72px); }
+  .layout > .sidebar {
+    top: 72px; width: 64px; padding: 0;
+    background: linear-gradient(180deg,#111,#000);
+    border-right: 1px solid rgba(255,255,255,.06);
+    overflow: hidden;
+    transition: width .2s ease, box-shadow .2s ease;
+  }
+  .layout > .sidebar:hover,
+  body.sidebar-expanded .layout > .sidebar { width: 240px; box-shadow: 4px 0 32px rgba(17,17,17,.35); }
+  .layout > .sidebar .sidebar-inner { padding: 12px 8px; gap: 2px; }
+  .layout > .sidebar .sidebar-section-label { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
+  .layout > .sidebar:hover .sidebar-section-label,
+  body.sidebar-expanded .layout > .sidebar .sidebar-section-label { opacity: 1; max-height: 24px; padding: 12px 10px 4px; }
+  .layout > .sidebar .nav-item { gap: 0; padding: 8px 0; color: rgba(255,255,255,.85); font-size: 13px; }
+  .layout > .sidebar .nav-item:hover { background: #1f2937; color: #fff; }
+  .layout > .sidebar .nav-item.active { background: #f59e0b; color: #111; }
+  .layout > .sidebar .nav-item-icon { width: 64px; min-width: 64px; }
+  .layout > .sidebar .nav-item-label { opacity: 0; max-width: 0; overflow: hidden; transition: opacity .15s ease; }
+  .layout > .sidebar:hover .nav-item-label,
+  body.sidebar-expanded .layout > .sidebar .nav-item-label { opacity: 1; max-width: 200px; }
+  .layout > .main { margin-left: 64px; transition: margin-left .2s ease; }
+  body.sidebar-expanded .layout > .main { margin-left: 240px; }
+  body.sidebar-expanded .layout > .sidebar .sidebar-section-label,
+  body.sidebar-expanded .layout > .sidebar .nav-item-label { opacity: 1; }
+  @media (max-width: 900px) {
+    .layout > .sidebar { top: 72px; width: 240px; transform: translateX(-110%); }
+    .layout > .sidebar.mobile-open { transform: translateX(0); }
+    .layout > .sidebar .sidebar-section-label,
+    .layout > .sidebar .nav-item-label { opacity: 1; max-height: 24px; max-width: 200px; }
+    .layout > .main, body.sidebar-expanded .layout > .main { margin-left: 0; }
+  }
+</style>
+{% endblock %}
+{% block app_header %}
+<header>
+  <button class="hamburger-btn" aria-label="Toggle navigation" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+  <div class="brand-block">
+    <div class="brand-logos">
+      <img src="{% static 'dashboards/img/SVI_logo.png' %}" class="brand-icon-img" alt="SVI">
+      <img src="{% static 'dashboards/img/TASS_logo.webp' %}" class="brand-icon-img" alt="TASS">
+    </div>
+    <div class="brand-text">San Vicente Institute<span>Learning Management System</span></div>
+  </div>
+  <div class="header-main"><div class="header-right">
+    <button class="icon-btn" onclick="toggleNotif()" aria-label="Notifications"><i class="fa-solid fa-bell"></i><span class="badge" id="headerNotifBadge"{% if not unread_notification_count %} style="display:none"{% endif %}></span></button>
+    <button class="profile-btn" onclick="toggleProfile()" aria-label="Profile menu">
+      <img src="{{ user_avatar_url|default:'/static/dashboards/img/profile-placeholder.jpg' }}" class="profile-img" alt="Profile">
+      <div><div class="profile-name">{{ user_display_name }}</div><div class="profile-role">{{ user_role_label|default:user_role|default:'Teacher' }}</div></div>
+      <i class="fa-solid fa-chevron-down" style="font-size:9px;opacity:.5;margin-left:4px"></i>
+    </button>
+  </div></div>
+  <div class="notif-panel" id="notifPanel"><div class="notif-header">Notifications <span style="font-size:11px;color:var(--blue);cursor:pointer" onclick="markAllRead()">Mark all read</span></div><div id="notifList"><div class="notif-empty" id="notifEmpty"><i class="fa-solid fa-bell-slash"></i><span>No new notifications</span></div></div></div>
+  <div class="profile-panel" id="profilePanel">
+    <div class="profile-panel-header"><img src="{{ user_avatar_url|default:'/static/dashboards/img/profile-placeholder.jpg' }}" class="profile-img-lg" alt="Profile"><div class="profile-panel-name">{{ user_display_name }}</div><div class="profile-panel-role">{{ user_role_label|default:user_role|default:'Teacher' }}</div></div>
+    <a class="profile-menu-item" href="{% url 'dashboards:teacher' %}settings/"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</a>
+    <a class="profile-menu-item" href="{% url 'dashboards:teacher' %}settings/"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</a>
+    <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
+  </div>
+</header>
+{% endblock %}
+{% block sidebar %}
+<a class="nav-item" href="{% url 'dashboards:teacher' %}">
+  <div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:teacher' %}settings/">
+  <div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:teacher' %}classes/">
+  <div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">My Classes</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:teacher' %}resourcelibrary/">
+  <div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Resource Repository</span>
+</a>
+<a class="nav-item active" href="{% url 'dashboards:teacher' %}assessmentrepo/">
+  <div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:teacher' %}activitylog/">
+  <div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:teacher' %}analytics/">
+  <div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span>
+</a>
+<a class="nav-item" href="{% url 'dashboards:teacher' %}settings/">
+  <div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span>
+</a>
+{% endblock %}
+{% block extra_js %}<script>document.body.classList.add('sidebar-expanded');</script>{% endblock %}

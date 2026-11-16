@@ -134,7 +134,11 @@ def messageable_contacts(user):
 
     roles = set(user.groups.values_list("name", flat=True))
     is_staff = bool(user.is_superuser or (roles & STAFF_GROUPS))
-    wants_teachers = is_staff or ("student" in roles)
+    # Classroom access identifies learners by their StudentProfile even when
+    # role-group synchronization has not run yet. Keep the personal picker in
+    # sync with that access rule.
+    is_student = "student" in roles or getattr(user, "student_profile", None) is not None
+    wants_teachers = is_staff or is_student
     wants_students = is_staff or ("teacher" in roles)
     if not (wants_teachers or wants_students):
         return [], {}
@@ -146,7 +150,36 @@ def messageable_contacts(user):
     if not vc_ids:
         return [], {}
 
-    for vc in VirtualClassroom.objects.filter(pk__in=vc_ids).select_related("teacher"):
+    classrooms = VirtualClassroom.objects.filter(pk__in=vc_ids).select_related(
+        "teacher", "teacher__employee_profile"
+    )
+
+    # One query for every roster instead of one per classroom, and the student
+    # profile is already joined so building a display name never triggers a
+    # per-learner lookup. Staff (school-wide reach) were otherwise issuing
+    # thousands of queries to render a single class page.
+    enrollments_by_vc = {}
+    if wants_students:
+        # Every learner enrolled in the room, whatever their account status:
+        # a teacher (or staff member) picks recipients from the class roster,
+        # and learners are created "pending_verification" until they activate
+        # their account, so keying the picker on ACTIVE hid the very class
+        # the teacher runs. Only archived accounts are left out.
+        enrollments = (
+            VirtualClassroomEnrollment.objects.filter(
+                virtual_classroom_id__in=vc_ids,
+                status=VirtualClassroomEnrollment.STATUS_ACTIVE,
+            )
+            .exclude(student__user__status=User.Status.ARCHIVED)
+            .select_related("student", "student__user")
+            .order_by("virtual_classroom_id", "id")
+        )
+        for enrollment in enrollments:
+            enrollments_by_vc.setdefault(enrollment.virtual_classroom_id, []).append(
+                enrollment
+            )
+
+    for vc in classrooms:
         bucket = []
         if wants_teachers and vc.teacher_id and vc.teacher_id != user.pk and vc.teacher.status == User.Status.ACTIVE:
             entry = {"id": vc.teacher_id, "name": display_name(vc.teacher), "role": "Teacher", "classroom_id": vc.pk}
@@ -155,25 +188,13 @@ def messageable_contacts(user):
                 seen.add(vc.teacher_id)
                 contacts.append(entry)
         if wants_students:
-            # Every learner enrolled in the room, whatever their account status:
-            # a teacher (or staff member) picks recipients from the class roster,
-            # and learners are created "pending_verification" until they activate
-            # their account, so keying the picker on ACTIVE hid the very class
-            # the teacher runs. Only archived accounts are left out.
-            enrolls = (
-                VirtualClassroomEnrollment.objects.filter(
-                    virtual_classroom=vc,
-                    status=VirtualClassroomEnrollment.STATUS_ACTIVE,
-                )
-                .exclude(student__user__status=User.Status.ARCHIVED)
-                .select_related("student__user")
-                .distinct()
-            )
-            for enrollment in enrolls:
-                su = enrollment.student.user
+            for enrollment in enrollments_by_vc.get(vc.pk, ()):
+                student = enrollment.student
+                su = student.user
                 if su.pk == user.pk:
                     continue
-                entry = {"id": su.pk, "name": display_name(su), "role": "Student", "classroom_id": vc.pk}
+                name = "{} {}".format(student.first_name, student.last_name).strip() or su.email
+                entry = {"id": su.pk, "name": name, "role": "Student", "classroom_id": vc.pk}
                 bucket.append(entry)
                 if su.pk not in seen:
                     seen.add(su.pk)

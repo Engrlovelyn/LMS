@@ -19,8 +19,13 @@
   <i class="fa-solid fa-triangle-exclamation"></i>
   <span>Warning! You have left the assessment page. Please return to your assessment.</span>
 </div>
-<div id="assessmentShotToast" style="display:none;position:fixed;bottom:24px;right:24px;z-index:5001;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.3);">
-  <i class="fa-solid fa-camera"></i> Screenshots and copying are not allowed during this assessment.
+<div id="assessmentShotModal" role="alertdialog" aria-modal="true" aria-labelledby="assessmentShotTitle" aria-describedby="assessmentShotMessage" style="display:none;position:fixed;inset:0;z-index:6000;background:rgba(15,23,42,.68);align-items:center;justify-content:center;padding:20px;">
+  <div style="width:min(440px,100%);background:#fff;border-radius:16px;padding:26px;box-shadow:0 24px 70px rgba(0,0,0,.3);text-align:center;">
+    <div aria-hidden="true" style="font-size:38px;margin-bottom:10px;">📸</div>
+    <h2 id="assessmentShotTitle" style="margin:0 0 10px;color:#991b1b;font-size:21px;">Screenshot warning</h2>
+    <p id="assessmentShotMessage" style="margin:0 0 20px;color:#475569;line-height:1.55;">A screenshot shortcut was detected. This event has been recorded and reported to your teacher. Some screenshots cannot be detected by the browser.</p>
+    <button type="button" id="assessmentShotDismiss" class="btn btn-danger"><i class="fa-solid fa-check"></i> I Understand</button>
+  </div>
 </div>
 <div class="page-header">
   <div>
@@ -69,7 +74,7 @@
 </div>
 {% endif %}
 
-<form method="post" novalidate id="assessmentForm"
+<form method="post" enctype="multipart/form-data" novalidate id="assessmentForm"
       data-attempt-id="{{ attempt.pk }}"
       data-assessment-id="{{ assessment.pk }}"
       data-assignment-id="{{ assignment.pk }}"
@@ -87,7 +92,7 @@
   {% endif %}
 
   {% for part, entries in item_groups %}
-  <div class="card" style="margin-bottom:18px;">
+  <div class="card" id="submissionAttachmentsCard" style="margin-bottom:18px;">
     <div class="card-header">
       <div class="card-title">
         <i class="fa-solid fa-question"></i>
@@ -122,9 +127,37 @@
   </div>
   {% endfor %}
 
+  {% if assessment.has_subjective_parts %}
+  {% if assessment.allow_submission_attachments or assessment.allow_submission_links %}
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-header"><div class="card-title"><i class="fa-solid fa-paperclip"></i> Written Work Attachments</div></div>
+    <div class="card-body">
+      {% if assessment.allow_submission_attachments %}
+      <div class="form-group"><label class="form-label" for="submissionFile">Attach a file{% if assessment.accepted_file_format %} ({{ assessment.accepted_file_format }}){% endif %}</label><input class="form-control" type="file" id="submissionFile" name="submission_file"{% if assessment.accepted_file_format %} accept="{{ assessment.accepted_file_format }}"{% endif %}></div>
+      {% endif %}
+      {% if assessment.allow_submission_links %}
+      <div class="form-group"><label class="form-label" for="submissionLink">Link to written work</label><input class="form-control" type="url" id="submissionLink" name="submission_link" placeholder="https://..."></div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <div id="assessmentQuestionNav" class="card" style="margin-bottom:18px;display:none;">
+    <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <button type="button" class="btn btn-outline" id="assessmentPreviousQuestion">
+        <i class="fa-solid fa-arrow-left"></i> Previous
+      </button>
+      <span id="assessmentQuestionPosition" role="status" aria-live="polite" style="font-size:13px;font-weight:600;"></span>
+      <button type="button" class="btn btn-primary" id="assessmentNextQuestion">
+        Next <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
   <div class="form-actions" style="justify-content:flex-start;">
     <a class="btn btn-outline" href="{% url 'assessments:assessment_detail' assessment.pk %}">Cancel</a>
-    <button type="submit" class="btn btn-primary">
+    <button type="submit" class="btn btn-primary" id="assessmentSubmitButton">
       <i class="fa-solid fa-paper-plane"></i> Submit Assessment
     </button>
   </div>
@@ -150,7 +183,8 @@
   var csrfInput = document.querySelector('#assessmentForm input[name="csrfmiddlewaretoken"]');
   var csrf = (csrfInput && csrfInput.value) || window.csrfToken || '';
   var banner = document.getElementById('assessmentFocusWarning');
-  var shotToast = document.getElementById('assessmentShotToast');
+  var shotModal = document.getElementById('assessmentShotModal');
+  var shotDismiss = document.getElementById('assessmentShotDismiss');
   var submitted = false;
 
   // A single tab switch fires blur + visibilitychange within a few ms; the
@@ -179,6 +213,15 @@
 
   function showWarning() { if (banner) banner.style.display = 'flex'; }
   function hideWarning() { if (banner) banner.style.display = 'none'; }
+  function showShotWarning() {
+    if (shotModal) {
+      shotModal.style.display = 'flex';
+      if (shotDismiss) shotDismiss.focus();
+    }
+  }
+  if (shotDismiss) shotDismiss.addEventListener('click', function () {
+    if (shotModal) shotModal.style.display = 'none';
+  });
 
   var hiddenStart = null;
   document.addEventListener('visibilitychange', function () {
@@ -205,10 +248,7 @@
     var isSave = e.ctrlKey && (e.key === 's' || e.key === 'S');
     if (isShot || isPrint || isSave) {
       send('screenshot_key', { detail: e.key });
-      if (shotToast) {
-        shotToast.style.display = 'block';
-        setTimeout(function () { shotToast.style.display = 'none'; }, 2600);
-      }
+      showShotWarning();
     }
   });
 
@@ -241,6 +281,34 @@
 (function(){
   var form=document.getElementById('assessmentForm');
   if(!form)return;
+  var questionGroups=Array.prototype.slice.call(form.querySelectorAll('.card .form-group')).filter(function(group){return !group.closest('#submissionAttachmentsCard');});
+  var questionNav=document.getElementById('assessmentQuestionNav');
+  var questionPosition=document.getElementById('assessmentQuestionPosition');
+  var previousQuestion=document.getElementById('assessmentPreviousQuestion');
+  var nextQuestion=document.getElementById('assessmentNextQuestion');
+  var submitButton=document.getElementById('assessmentSubmitButton');
+  var questionCards=[];
+  questionGroups.forEach(function(group){
+    var card=group.closest('.card');
+    if(card&&questionCards.indexOf(card)===-1)questionCards.push(card);
+  });
+  if(questionGroups.length){
+    questionNav.style.display='';
+    var currentQuestion=0;
+    function showQuestion(index){
+      currentQuestion=Math.max(0,Math.min(index,questionGroups.length-1));
+      var selectedCard=questionGroups[currentQuestion].closest('.card');
+      questionGroups.forEach(function(group,i){group.style.display=i===currentQuestion?'':'none';});
+      questionCards.forEach(function(card){card.style.display=card===selectedCard?'':'none';});
+      previousQuestion.disabled=currentQuestion===0;
+      nextQuestion.disabled=currentQuestion===questionGroups.length-1;
+      submitButton.style.display=currentQuestion===questionGroups.length-1?'':'none';
+      questionPosition.textContent='Question '+(currentQuestion+1)+' of '+questionGroups.length;
+    }
+    previousQuestion.addEventListener('click',function(){showQuestion(currentQuestion-1);});
+    nextQuestion.addEventListener('click',function(){showQuestion(currentQuestion+1);});
+    showQuestion(0);
+  }
   var statusEl=document.getElementById('assessmentSaveStatus');
   var timerEl=document.getElementById('assessmentTimer');
   var csrf=(form.querySelector('input[name="csrfmiddlewaretoken"]')||{}).value||'';
@@ -343,10 +411,13 @@
     var left=Math.max(0,Math.ceil((endAt-Date.now())/1000));
     if(timerEl)timerEl.textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');
     if(left===0){
-      if(!timerExpired&&Number(form.dataset.remainingSeconds||0)>0){
+      if(!timerExpired){
         timerExpired=true;
         setStatus('Time expired. Submitting saved answers.','#b45309');
-        if(form.requestSubmit)form.requestSubmit();
+        var autoSubmitField=form.querySelector('input[name="auto_submit"]');
+        if(!autoSubmitField){autoSubmitField=document.createElement('input');autoSubmitField.type='hidden';autoSubmitField.name='auto_submit';form.appendChild(autoSubmitField);}
+        autoSubmitField.value='1';
+        if(form.requestSubmit)form.requestSubmit();else form.submit();
       }
     }
   }

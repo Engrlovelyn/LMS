@@ -1,9 +1,6 @@
 """Shared student ordering rule for the whole LMS."""
 
-from django.db.models import Case, F, IntegerField, OuterRef, Subquery, Value, When
-
-MALE = "M"
-FEMALE = "F"
+from django.db.models import F, IntegerField, OuterRef, Subquery
 
 
 def _grade_expression(queryset, prefix):
@@ -37,23 +34,15 @@ def _grade_expression(queryset, prefix):
 
 
 def order_students(queryset, *, prefix="", leading_order=()):
-    """Order students by grade level ascending, then surname A-Z."""
-    sex_field = "{}sex".format(prefix)
+    """Order students by grade level, surname, then first name A-Z."""
     last_field = "{}last_name".format(prefix)
     first_field = "{}first_name".format(prefix)
 
     return queryset.annotate(
         _grade_sort=_grade_expression(queryset, prefix),
-        _sex_rank=Case(
-            When(**{sex_field: MALE}, then=Value(0)),
-            When(**{sex_field: FEMALE}, then=Value(1)),
-            default=Value(2),
-            output_field=IntegerField(),
-        )
     ).order_by(
         *leading_order,
         F("_grade_sort").asc(nulls_last=True),
-        "_sex_rank",
         F(last_field).asc(nulls_last=True),
         F(first_field).asc(nulls_last=True),
         "pk",

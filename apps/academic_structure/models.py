@@ -30,7 +30,7 @@ class AcademicYear(models.Model):
             ("update_academic_year", "Update Academic Year"),
             ("archive_academic_year", "Archive Academic Year"),
             ("manage_academic_structure_template", "Manage Academic Structure Template"),
-            ("rollover_academic_year", "Rollover Academic Year"),
+            ("rollover_academic_year", "Carry Over Academic Year"),
             ("promote_student", "Promote Student"),
             ("validate_section_subject_coverage", "Validate Section Subject Coverage"),
         ]

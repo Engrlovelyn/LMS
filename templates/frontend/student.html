@@ -16,6 +16,7 @@
      aborts the rest of that block and blanks the view. -->
 <script src="{% static 'js/empty_state.js' %}"></script>
 <script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/document_preview.bundle.js' %}"></script>
 <style>
 :root {
   --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
@@ -275,6 +276,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .assess-status.open{background:#dcfce7;color:#16a34a}
 .assess-status.scheduled{background:#fef3c7;color:#d97706}
 .assess-status.closed{background:var(--gray-100);color:var(--text-muted)}
+.assess-status.missing{background:#fee2e2;color:#b91c1c}
 .assess-status.awaiting{background:#fef3c7;color:#d97706}
 .assess-status.grading{background:#fef3c7;color:#7c3aed}
 .assess-status.completed{background:#fef3c7;color:#d97706}
@@ -563,6 +565,12 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 
 /* CONFIRM */
 .confirm-box{width:380px;text-align:center;padding:32px}
+#proctorModal.proctor-warning-overlay{background:rgba(0,0,0,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1100}
+#proctorModal .proctor-warning-box{width:400px;max-width:calc(100vw - 32px);padding:28px 30px 24px;background:#fff!important;border:0;border-radius:18px;color:#172033;box-shadow:0 24px 70px rgba(0,0,0,.3)}
+#proctorModal .proctor-warning-box .confirm-icon{font-size:28px;margin-bottom:10px}
+#proctorModal .proctor-warning-box .confirm-title{font-size:19px;color:#172033;margin-bottom:8px}
+#proctorModal .proctor-warning-box .confirm-msg{font-size:13px;color:#64748b;margin:0 auto 18px;max-width:310px}
+#proctorModal .proctor-warning-box .confirm-actions .btn{min-height:38px;padding:8px 18px;background:#e34f55;border-color:#e34f55;border-radius:9px}
 .confirm-icon{font-size:38px;margin-bottom:14px}
 .confirm-title{font-family:'Fraunces',serif;font-size:20px;color:var(--navy);margin-bottom:8px}
 .confirm-msg{font-size:13.5px;color:var(--gray-600);margin-bottom:22px;line-height:1.6}
@@ -719,6 +727,14 @@ html{ scroll-behavior:smooth; }
 .subject-header h2{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; }
 .subject-header p{ opacity:.7; font-size:13px; margin-top:4px; }
 .subject-tabs{ display:flex; gap:4px; background:var(--gray-100); border-radius:12px; padding:4px; margin-bottom:24px; overflow-x:auto; }
+#view-subject.vc-themed{position:relative;isolation:isolate;padding:16px;border-radius:18px;background-color:var(--vc-theme-tint);background-image:linear-gradient(var(--vc-theme-overlay),var(--vc-theme-overlay)),var(--vc-theme-wallpaper);background-size:cover;background-position:center;background-attachment:fixed;}
+#view-subject.vc-themed{--vc-theme-overlay:rgba(255,255,255,.78)}
+[data-theme="dark"] #view-subject.vc-themed{--vc-theme-overlay:rgba(15,23,42,.78)}
+#view-subject.vc-themed .subject-tabs{background:color-mix(in srgb,var(--vc-theme-color) 14%,var(--card-bg));border:1px solid var(--vc-theme-border)}
+#view-subject.vc-themed .subject-tabs .tab-btn.active{background:var(--vc-theme-color);color:#fff}
+#view-subject.vc-themed .card{border-color:var(--vc-theme-border)}
+#view-subject.vc-themed .card-header{background:color-mix(in srgb,var(--vc-theme-color) 5%,var(--card-bg))}
+#view-subject.vc-themed .btn-primary{background:var(--vc-theme-color);border-color:var(--vc-theme-color)}
 .material-item:hover{ border-color:var(--blue); }
 .material-actions{ margin-left:auto; display:flex; gap:6px; align-items:center; }
 .new-badge{ font-size:10px; background:#dcfce7; color:#16a34a; border-radius:20px; padding:2px 8px; font-weight:700; }
@@ -919,6 +935,7 @@ html{ scroll-behavior:smooth; }
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="window.location.href='/accounts/sessions/'"><i class="fa-solid fa-laptop" style="width:16px"></i> Device Logs</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -1148,7 +1165,7 @@ html{ scroll-behavior:smooth; }
     <!-- ══════════ PERFORMANCE VIEW ══════════ -->
     <div class="view" id="view-performance">
       <div class="page-header">
-        <div><div class="page-title">Performance Tracking</div><div class="page-sub">Your grades, assessment completion, and attendance across grading periods</div></div>
+        <div><div class="page-title">Performance Tracking</div><div class="page-sub">Your assessment completion, scores, and attendance. Completion details are view-only.</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <select class="form-control" id="perfPeriodFilter" onchange="renderStudentPerformance()" style="width:150px;"><option value="">All Periods</option><option>Quarter 1</option><option>Quarter 2</option></select>
           <button class="btn btn-outline" onclick="exportStudentReport()"><i class="fa-solid fa-download"></i> Export Report</button>
@@ -1159,6 +1176,10 @@ html{ scroll-behavior:smooth; }
         <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-xmark-circle"></i></div><div class="stat-val" id="perfFailedVal">—</div><div class="stat-label">Failed Assessments</div></div>
         <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><div class="stat-val" id="perfPendingVal">—</div><div class="stat-label">Pending Submissions</div></div>
         <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-circle-exclamation"></i></div><div class="stat-val" id="perfOverdueVal">—</div><div class="stat-label">Overdue</div></div>
+      </div>
+      <div class="card" style="margin-bottom:18px;background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);">
+        <div class="card-header"><div><div class="card-title"><i class="fa-solid fa-list-check" style="color:var(--blue);margin-right:6px;"></i>My Assessment Completion <span style="font-size:10px;color:var(--text-muted);font-weight:600;margin-left:4px;">VIEW ONLY</span></div><div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">See which assessments are not submitted, awaiting grading, or complete.</div></div></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;" id="studentCompletionWrap"><div style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">Assessment completion will appear here.</div></div>
       </div>
       <div class="card" style="background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);">
         <div class="card-header"><div class="card-title"><i class="fa-solid fa-table-list" style="color:var(--blue);margin-right:6px;"></i>Assessment Results</div></div>
@@ -1239,8 +1260,8 @@ html{ scroll-behavior:smooth; }
 </div>
 
 <!-- ══════ PROCTOR WARNING MODAL ══════ -->
-<div class="modal-overlay" id="proctorModal">
-  <div class="modal-box confirm-box">
+<div class="modal-overlay proctor-warning-overlay" id="proctorModal">
+  <div class="modal-box confirm-box proctor-warning-box">
     <div class="confirm-icon" id="proctorIcon">⚠️</div>
     <div class="confirm-title" id="proctorTitle">Warning</div>
     <div class="confirm-msg" id="proctorMsg">This attempt was recorded.</div>
@@ -1295,11 +1316,64 @@ html{ scroll-behavior:smooth; }
     </div>
     <div id="activeAssessmentStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Saved</div>
     <div id="activeAssessmentQuestions" style="overflow:auto;flex:1;min-height:180px;padding:0 3px;"></div>
+    <div id="activeAssessmentNavigation" style="display:none;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;">
+      <button class="btn btn-outline" id="activeAssessmentPrevious" type="button"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+      <span id="activeAssessmentPosition" role="status" aria-live="polite" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-primary" id="activeAssessmentNext" type="button">Next <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
     <div id="activeAssessmentError" role="alert" style="display:none;color:var(--danger);font-size:13px;margin-top:10px;"></div>
     <div class="modal-footer" style="margin-top:12px;">
       <button class="btn btn-outline" type="button" onclick="closeActiveAssessment()">Close</button>
       <button class="btn btn-primary" id="activeAssessmentSubmit" type="button" onclick="submitActiveAssessment(false)"><i class="fa-solid fa-paper-plane"></i> Submit Assessment</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════ ASSESSMENT RESULT MODAL (in-SPA) ══════ -->
+<style>
+#assessmentResultModal .ar-wrap{display:flex;flex-direction:column;gap:12px;}
+#assessmentResultModal .ar-head{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;border-radius:14px;padding:18px 20px;}
+#assessmentResultModal .ar-eyebrow{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#fbbf24;font-weight:700;margin-bottom:6px;}
+#assessmentResultModal .ar-title{font-size:19px;font-weight:800;line-height:1.25;}
+#assessmentResultModal .ar-sub{font-size:12.5px;color:#cbd5e1;margin-top:4px;}
+#assessmentResultModal .ar-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+#assessmentResultModal .ar-pill{font-size:11.5px;background:rgba(255,255,255,.12);border-radius:20px;padding:4px 11px;display:inline-flex;align-items:center;gap:6px;}
+#assessmentResultModal .ar-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+#assessmentResultModal .ar-stat{background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;}
+#assessmentResultModal .ar-stat-val{font-size:22px;font-weight:800;color:var(--navy);line-height:1.1;}
+#assessmentResultModal .ar-stat-lbl{font-size:10.5px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+#assessmentResultModal .ar-remarks{background:#fffbea;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;font-size:13px;color:#92400e;line-height:1.55;}
+#assessmentResultModal .ar-remarks b{display:block;margin-bottom:4px;}
+#assessmentResultModal .ar-part{border:1px solid var(--card-border);border-radius:12px;overflow:hidden;}
+#assessmentResultModal .ar-part-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;background:var(--accent);border-bottom:1px solid var(--card-border);}
+#assessmentResultModal .ar-part-title{font-size:14px;font-weight:700;color:var(--navy);}
+#assessmentResultModal .ar-part-type{font-size:11px;color:var(--text-muted);margin-top:2px;}
+#assessmentResultModal .ar-part-score{font-size:12px;font-weight:700;background:var(--card-bg);border:1px solid var(--card-border);border-radius:20px;padding:4px 11px;white-space:nowrap;}
+#assessmentResultModal .ar-q{padding:14px 16px;border-bottom:1px solid var(--gray-100);}
+#assessmentResultModal .ar-q:last-child{border-bottom:none;}
+#assessmentResultModal .ar-q-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px;}
+#assessmentResultModal .ar-q-text{font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.5;}
+#assessmentResultModal .ar-q-num{font-size:11px;font-weight:800;color:#fff;background:var(--navy);border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+#assessmentResultModal .ar-status{font-size:11.5px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap;}
+#assessmentResultModal .ar-status.ok{background:#dcfce7;color:#15803d;}
+#assessmentResultModal .ar-status.bad{background:#fee2e2;color:#b91c1c;}
+#assessmentResultModal .ar-status.wait{background:#fef3c7;color:#b45309;}
+#assessmentResultModal .ar-ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+#assessmentResultModal .ar-ans{border:1px solid var(--card-border);border-radius:10px;padding:10px 12px;background:var(--card-bg);}
+#assessmentResultModal .ar-ans.mine.correct{border-color:#86efac;background:#f0fdf4;}
+#assessmentResultModal .ar-ans.mine.wrong{border-color:#fca5a5;background:#fef2f2;}
+#assessmentResultModal .ar-ans-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--text-muted);margin-bottom:5px;}
+#assessmentResultModal .ar-ans-body{font-size:13px;color:var(--text-primary);line-height:1.55;word-break:break-word;}
+#assessmentResultModal .ar-feedback{margin-top:8px;font-size:12.5px;color:#5b21b6;background:#f5f3ff;border-radius:8px;padding:8px 10px;}
+@media(max-width:640px){#assessmentResultModal .ar-stats{grid-template-columns:repeat(2,1fr);}#assessmentResultModal .ar-ans-grid{grid-template-columns:1fr;}}
+</style>
+<div class="modal-overlay" id="assessmentResultModal" aria-hidden="true">
+  <div class="modal-box" style="width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 24px);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:flex-start;gap:16px;border-bottom:1px solid var(--card-border);padding-bottom:12px;margin-bottom:14px;">
+      <div style="flex:1;min-width:0;"><div class="modal-title" id="assessmentResultTitle">Assessment Results</div><div class="modal-sub" id="assessmentResultSub" style="margin-bottom:0;">Review your answers and feedback</div></div>
+      <button class="btn btn-outline btn-sm" type="button" onclick="closeModal('assessmentResultModal')"><i class="fa-solid fa-xmark"></i> Close</button>
+    </div>
+    <div id="assessmentResultBody" style="overflow:auto;flex:1;min-height:160px;"></div>
   </div>
 </div>
 
@@ -1552,6 +1626,7 @@ function renderSubjectTabsFor(title){ if(typeof renderMaterials==='function')ren
 
 function openSubject(title, teacher, sub, color, gradeNum, vcId, teacherId) {
   currentSVCId = (vcId === undefined || vcId === null || vcId === '') ? null : String(vcId);
+  window.currentSVCId = currentSVCId;
   currentSVTeacherId = (teacherId === undefined || teacherId === null || teacherId === '') ? null : String(teacherId);
   currentSubject = title;
   const meta = (typeof SUBJECTS!=='undefined' && (SUBJECTS.find(s=>s.id===vcId) || SUBJECTS.find(s=>s.title===title))) || null;
@@ -1563,7 +1638,11 @@ function openSubject(title, teacher, sub, color, gradeNum, vcId, teacherId) {
   document.getElementById('subjectTitle').textContent = title;
   document.getElementById('subjectTeacher').textContent = teacher;
   document.getElementById('subjectSub').textContent = sub;
-  document.getElementById('subjectHeaderEl').style.background = `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`;
+  if(typeof STUDENT_LIVE!=='undefined'){
+    STUDENT_LIVE.themeColor=(meta&&meta.color)||color||'#4F46E5';
+    STUDENT_LIVE.background=(meta&&meta.background)||'';
+  }
+  applyStudentClassTheme();
   document.getElementById('subjectGradeLabel').innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Grade ${gradeNum}`;
   const yl=document.getElementById('subjectYearLabel'); if(yl) yl.innerHTML = `<i class="fa-solid fa-calendar"></i> `+(meta?meta.year:'S.Y. 2025-2026');
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -1571,19 +1650,34 @@ function openSubject(title, teacher, sub, color, gradeNum, vcId, teacherId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-btn')[0].classList.add('active');
   showView('subject');
+  if(currentSVCId){
+    fetch('/api/my/classrooms/'+encodeURIComponent(currentSVCId)+'/',{credentials:'same-origin',headers:{'Accept':'application/json'}})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){if(d&&d.ok!==false)applyStudentClassroomPayload(d);})
+      .catch(function(){});
+  }
 }
 
 // Applies the teacher's wallpaper/theme for the classroom currently on screen,
 // so a cover change propagates to this student without a page reload.
 function applyStudentClassTheme() {
+  const root=document.getElementById('view-subject');
   const el = document.getElementById('subjectHeaderEl');
-  if (!el) return;
   const c = (STUDENT_LIVE && STUDENT_LIVE.themeColor) || '#4F46E5';
   const bg = (STUDENT_LIVE && STUDENT_LIVE.background) || '';
+  const theme=/^#[0-9a-f]{6}$/i.test(String(c))?String(c):'#4F46E5';
+  if(root){
+    root.classList.add('vc-themed');
+    root.style.setProperty('--vc-theme-color',theme);
+    root.style.setProperty('--vc-theme-tint','color-mix(in srgb,'+theme+' 10%,var(--body-bg))');
+    root.style.setProperty('--vc-theme-border','color-mix(in srgb,'+theme+' 35%,var(--card-border))');
+    root.style.setProperty('--vc-theme-wallpaper',bg?'url('+JSON.stringify(bg)+')':'linear-gradient(135deg,'+theme+'2b,'+theme+'12)');
+  }
+  if(!el)return;
   if (bg) {
-    try { el.style.background = "url('" + bg + "') center / cover no-repeat, linear-gradient(135deg, " + c + " 0%, " + c + "99 100%)"; } catch (e) {}
+    try { el.style.background = 'linear-gradient(135deg,rgba(0,0,0,.28),rgba(0,0,0,.12)),url('+JSON.stringify(bg)+') center/cover no-repeat'; } catch (e) {}
   } else {
-    el.style.background = 'linear-gradient(135deg, ' + c + ' 0%, ' + c + '99 100%)';
+    el.style.background = 'linear-gradient(135deg, ' + theme + ' 0%, ' + theme + '99 100%)';
   }
 }
 
@@ -1705,27 +1799,20 @@ function resourceKindLabel(m){
   if(/\.(docx?|doc)$/.test(n)) return 'Document';
   return 'Learning Resource';
 }
+const STUDENT_RESOURCE_PREVIEW_PAGE_URL = "{% url 'teaching:resource_preview_page' 0 %}";
 function previewResource(name, kind, placementId){
   const m=findStudentMaterial(name, currentSVCId, placementId)||{name:name,icon:'fa-file',color:'#f59e0b',size:'',download_url:'',preview_url:'',link_url:''};
   logStudentActivity('You viewed ' + name, 'visit');
-  const titleEl=document.getElementById('resourcePreviewTitle'); if(titleEl) titleEl.textContent=name;
-  const subEl=document.getElementById('resourcePreviewSub'); if(subEl) subEl.textContent=resourceKindLabel(m)+(m.size?' · '+m.size:'');
-  const body=document.getElementById('resourcePreviewBody');
-  if(body) body.innerHTML='<div style="padding:28px;text-align:center;color:var(--text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading resource preview…</div>';
-  const dl=document.getElementById('resourcePreviewDownload');
-  if(dl){
-    dl.style.display=(m.download_url||m.link_url)?'inline-flex':'none';
-    dl.onclick=function(){ downloadResource(name, currentSVCId, placementId); };
-  }
-  openModal('resourcePreviewModal');
-  if(!m.preview_url){ renderResourcePreview(m,{preview_file_url:m.download_url,external_url:m.link_url,description:m.description}); return; }
-  fetch(m.preview_url,{credentials:'same-origin',headers:{Accept:'application/json'}})
-    .then(function(response){if(!response.ok)throw new Error('This resource is unavailable or you no longer have access.');return response.json();})
-    .then(function(data){renderResourcePreview(m,data);})
-    .catch(function(error){if(body)body.innerHTML='<div style="padding:24px;color:var(--danger);">'+escHtml(error.message||'Could not load this resource preview.')+'</div>';});
+  const resourceId=Number(m.resource_id||0);
+  if(!resourceId){showToast('This material is unavailable. Refresh the page and try again.','error');return;}
+  const previewUrl=STUDENT_RESOURCE_PREVIEW_PAGE_URL.replace('/0/preview-page/','/'+encodeURIComponent(resourceId)+'/preview-page/');
+  const previewWindow=window.open(previewUrl,'_blank');
+  if(!previewWindow)showToast('Allow pop-ups to open the material preview in a new tab.','error');
+  else previewWindow.opener=null;
 }
-function renderResourcePreview(m,data){
-  const body=document.getElementById('resourcePreviewBody'); if(!body)return;
+function renderResourcePreview(m,data,targetWindow){
+  targetWindow=targetWindow||window;
+  const body=targetWindow.document.getElementById('resourcePreviewBody'); if(!body)return;
   const fileUrl=data.preview_file_url||'';
   const externalUrl=data.external_url||m.link_url||'';
   const extension=String(data.extension||m.file_name||m.name||'').split('.').pop().toLowerCase();
@@ -1733,7 +1820,16 @@ function renderResourcePreview(m,data){
   const description=data.description||m.description||'';
   const safeUrl=(url)=>{try{const parsed=new URL(url,window.location.origin);return (parsed.protocol==='http:'||parsed.protocol==='https:')?parsed.href:'';}catch(e){return '';} };
   const viewUrl=safeUrl(fileUrl), linkUrl=safeUrl(externalUrl);
-  if(text&&(extension==='docx'||extension==='pptx'||extension==='txt'||extension==='md'||extension==='csv')){
+  if(data.office_pdf_url&&(extension==='docx'||extension==='pptx')){
+    body.innerHTML='<iframe title="'+escHtml(m.name)+' document preview" src="'+escHtml(data.office_pdf_url)+'" style="width:100%;height:72vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;"></iframe>';
+  }else if(extension==='docx'&&viewUrl&&typeof targetWindow.tassRenderDocumentPreview==='function'){
+    body.innerHTML='<div style="max-height:72vh;overflow:auto;padding:16px;background:#e8edf4;border:1px solid var(--card-border);border-radius:12px;">Loading full document preview…</div>';
+    targetWindow.tassRenderDocumentPreview(viewUrl,body.firstElementChild).catch(function(error){
+      body.textContent=(error&&error.message)||'The full document preview could not be rendered.';
+    });
+  }else if(data.html&&(extension==='docx'||extension==='pptx')){
+    body.innerHTML='<div style="padding:10px 12px;margin-bottom:10px;border:1px solid var(--card-border);border-radius:10px;color:var(--text-muted);font-size:12px;">This is a best-effort browser rendering. Install Microsoft Word or LibreOffice on the server for a page-faithful preview.</div><iframe sandbox="" title="'+escHtml(m.name)+' formatted document preview" srcdoc="'+escHtml(data.html)+'" style="width:100%;height:72vh;border:1px solid var(--card-border);border-radius:12px;background:#e8edf4;"></iframe>';
+  }else if(text&&(extension==='docx'||extension==='pptx'||extension==='txt'||extension==='md'||extension==='csv')){
     body.innerHTML='<div style="max-height:70vh;overflow:auto;padding:24px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;"><h3 style="margin:0 0 14px;color:var(--navy);">'+escHtml(m.name)+'</h3>'+(description?'<p style="margin:0 0 16px;color:var(--text-muted);">'+escHtml(description)+'</p>':'')+'<pre style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:14px;line-height:1.75;color:var(--text-primary);">'+escHtml(text)+'</pre></div>';
   }else if((extension==='pdf'||m.resource_type==='pdf')&&viewUrl){
     body.innerHTML='<iframe src="'+escHtml(viewUrl)+'" style="width:100%;height:72vh;border:1px solid var(--card-border);border-radius:12px;background:#fff;" title="'+escHtml(m.name)+'"></iframe>';
@@ -1856,12 +1952,17 @@ function renderActiveAssessment(data){
   const host=document.getElementById('activeAssessmentQuestions');
   if(!host)return;
   let html='';
-  (data.parts||[]).forEach(function(part,index){
-    html+='<section style="border:1px solid var(--card-border);border-radius:12px;margin:0 0 14px;background:var(--card-bg);"><header style="padding:13px 16px;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;gap:12px;"><strong>'+escHtml(part.title||('Part '+(index+1)))+'</strong><span style="color:var(--text-muted);font-size:12px;">'+escHtml(part.points)+' pts</span></header><div style="padding:16px;">'+(part.question_text?'<p style="margin:0 0 14px;color:var(--text-muted);white-space:pre-wrap;">'+escHtml(part.question_text)+'</p>':'');
+  const questions=[];
+  (data.parts||[]).forEach(function(part,partIndex){
     (part.questions||[]).forEach(function(question){
-      html+='<article style="margin:0 0 18px;"><div style="font-weight:650;margin-bottom:9px;white-space:pre-wrap;">'+escHtml(question.fields[0]&&question.fields[0].label||question.key)+'</div>'+activeAssessmentImage(question.image,'Question image');
-      question.fields.forEach(function(field){
-        if(question.fields.length>1)html+='<label style="display:block;font-size:13px;margin:10px 0 6px;">'+escHtml(field.label)+'</label>';
+      questions.push({part:part,partIndex:partIndex,question:question});
+    });
+  });
+  questions.forEach(function(entry,index){
+      const part=entry.part, question=entry.question, fields=Array.isArray(question.fields)?question.fields:[];
+      html+='<section class="active-assessment-question" data-question-index="'+index+'" style="border:1px solid var(--card-border);border-radius:12px;margin:0 0 14px;background:var(--card-bg);"><header style="padding:13px 16px;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;gap:12px;"><strong>'+escHtml(part.title||('Part '+(entry.partIndex+1)))+'</strong><span style="color:var(--text-muted);font-size:12px;">'+escHtml(part.points)+' pts</span></header><div style="padding:16px;">'+(part.question_text?'<p style="margin:0 0 14px;color:var(--text-muted);white-space:pre-wrap;">'+escHtml(part.question_text)+'</p>':'')+'<div style="font-weight:650;margin-bottom:9px;white-space:pre-wrap;">'+escHtml(question.question_text||fields[0]&&fields[0].label||question.key||'Question')+'</div>'+activeAssessmentImage(question.image,'Question image');
+      fields.forEach(function(field){
+        if(fields.length>1)html+='<label style="display:block;font-size:13px;margin:10px 0 6px;">'+escHtml(field.label)+'</label>';
         if(field.kind==='checkboxes'||field.kind==='radios'){
           var choicePosition=0;
           html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;">'+(field.choices||[]).filter(function(option){return option.value!=='';}).map(function(option){
@@ -1876,13 +1977,39 @@ function renderActiveAssessment(data){
           html+='<input class="form-control" type="'+(field.kind==='number'?'number':'text')+'" data-answer-field="'+escHtml(field.name)+'" data-field-kind="'+field.kind+'"'+(field.kind==='number'?' step="any"':'')+' placeholder="Type your answer here">';
         }
       });
-      html+='</article>';
-    });
-    html+='</div></section>';
+      html+='</div></section>';
   });
-  host.innerHTML=html||'<div style="padding:24px;text-align:center;color:var(--text-muted);">This assessment has no questions.</div>';
+  html=html||'<div style="padding:24px;text-align:center;color:var(--text-muted);">This assessment has no questions.</div>';
+  host.innerHTML=html;
+  activeAssessmentState.questionCount=questions.length;
+  activeAssessmentState.currentQuestion=0;
+  updateActiveAssessmentNavigation();
   setActiveAssessmentAnswers(data.answers||{});
 }
+function updateActiveAssessmentNavigation(){
+  const state=activeAssessmentState;
+  const nav=document.getElementById('activeAssessmentNavigation');
+  const previous=document.getElementById('activeAssessmentPrevious');
+  const next=document.getElementById('activeAssessmentNext');
+  const position=document.getElementById('activeAssessmentPosition');
+  const submit=document.getElementById('activeAssessmentSubmit');
+  const cards=Array.prototype.slice.call(document.querySelectorAll('#activeAssessmentQuestions .active-assessment-question'));
+  const total=state?state.questionCount:0, current=state?state.currentQuestion:0;
+  if(nav)nav.style.display=total>1?'flex':'none';
+  cards.forEach(function(card,index){card.style.display=index===current?'':'none';});
+  if(previous)previous.disabled=current===0;
+  if(next)next.style.display=current>=total-1?'none':'';
+  if(position)position.textContent=total?'Question '+(current+1)+' of '+total:'';
+  if(submit)submit.style.display=total&&current===total-1?'':'none';
+}
+function moveActiveAssessmentQuestion(delta){
+  const state=activeAssessmentState;
+  if(!state)return;
+  state.currentQuestion=Math.max(0,Math.min(state.questionCount-1,state.currentQuestion+delta));
+  updateActiveAssessmentNavigation();
+}
+document.getElementById('activeAssessmentPrevious').addEventListener('click',function(){moveActiveAssessmentQuestion(-1);});
+document.getElementById('activeAssessmentNext').addEventListener('click',function(){moveActiveAssessmentQuestion(1);});
 function activeAssessmentStore(answers,revision){
   try{localStorage.setItem(activeAssessmentState.storageKey,JSON.stringify({answers:answers,revision:revision,savedAt:new Date().toISOString()}));}catch(e){}
 }
@@ -1940,6 +2067,7 @@ async function openRealAssessment(assessment, assignmentId){
     const response=await fetch(startUrl,{credentials:'same-origin',headers:{Accept:'application/json'}});
     const data=await response.json();
     if(!response.ok||!data.ok){showToast(data.message||'This assessment is unavailable.','error');return;}
+    quizAssessmentId=data.assessment.id;
     const storageKey='tass_assessment_attempt_'+data.attempt_id;
     activeAssessmentState={data:data,fields:(data.parts||[]).flatMap(function(part){return (part.questions||[]).flatMap(function(q){return q.fields||[];});}),storageKey:storageKey,revision:Number(data.revision||0),serverRevision:Number(data.revision||0),busy:false,pending:false,retryDelay:1500,debounceTimer:null,retryTimer:null,submitting:false};
     renderActiveAssessment(data);
@@ -1954,6 +2082,7 @@ async function openRealAssessment(assessment, assignmentId){
     const questionHost=document.getElementById('activeAssessmentQuestions');
     if(!questionHost.dataset.autosaveBound){questionHost.addEventListener('input',queueActiveAssessmentSave);questionHost.addEventListener('change',queueActiveAssessmentSave);questionHost.dataset.autosaveBound='1';}
     startActiveAssessmentTimer(data.remaining_seconds);
+    proctorStart();
   }catch(error){showToast('Could not open the assessment. Check your connection and try again.','error');}
 }
 function closeActiveAssessment(){
@@ -1974,9 +2103,10 @@ async function submitActiveAssessment(auto){
   activeAssessmentSetStatus(auto?'Time expired. Submitting saved answers…':'Submitting assessment…','#b45309');
   const url=STUDENT_ASSESSMENT_SUBMIT_URL.replace('/0/submit/','/'+encodeURIComponent(state.data.assessment.id)+'/submit/')+'?assignment_id='+encodeURIComponent(state.data.assignment_id)+'&format=json';
   try{
-    const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf(),'Accept':'application/json'},body:JSON.stringify({attempt_id:state.data.attempt_id,answers:activeAssessmentAnswers()})});
+    const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf(),'Accept':'application/json'},body:JSON.stringify({attempt_id:state.data.attempt_id,answers:activeAssessmentAnswers(),auto_submit:!!auto})});
     const result=await response.json();
     if(!response.ok||!result.ok){throw new Error(result.message||'Assessment could not be submitted.');}
+    proctorEnd();
     localStorage.removeItem(state.storageKey);clearInterval(activeAssessmentTimer);activeAssessmentTimer=null;
     const item=(STUDENT_ASSESSMENTS||[]).find(function(a){return String(a.assignment_id)===String(state.data.assignment_id);});if(item)item.submitted=true;
     activeAssessmentSetStatus('Submitted','#15803d');showToast('Assessment submitted successfully.','success');
@@ -2014,6 +2144,11 @@ function openQuizTaker(title, type, assignmentId, assessmentId) {
       return;
     }
   }
+  // Assessment cards must use the linked, server supplied assessment attempt.
+  // Falling through to the legacy sample quiz modal can show unrelated or
+  // unformatted questions when an assignment is missing its assessment link.
+  showToast('This assessment is not available in the current assessment interface. Refresh the page or contact your teacher.','error');
+  return;
   quizAnswers = {}; quizSubmitted = false; quizAssessmentTitle = title;
   quizAssessmentKey = title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'quiz';
   quizAssessmentId = _assess ? (_assess.assessment_id||_assess.id||null) : null;
@@ -2223,6 +2358,8 @@ let proctorReturnView = 'subjects';
 var __proctorBlurPending = false;
 var __proctorHiddenPending = false;
 var __lastShotWarn = 0;
+var __lastWindowWarn = 0;
+var __lastProctorEventAt = {};
 
 function proctorCurrentView() {
   try {
@@ -2270,11 +2407,15 @@ function recordProctorViolation(kind, msg){
   try{
     if(quizAssessmentId){
       var eventType=kind==='screenshot'?'screenshot_key':(kind==='window'?'visibility_hidden':'focus_lost');
+      var now=Date.now();
+      if(now-(__lastProctorEventAt[eventType]||0)<1500)return;
+      __lastProctorEventAt[eventType]=now;
       fetch('/assessments/'+quizAssessmentId+'/proctor/',{
         method:'POST',
         credentials:'same-origin',
         headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},
-        body:JSON.stringify({event_type:eventType,metadata:{source:'student_dashboard',detail:msg}})
+        body:JSON.stringify({event_type:eventType,metadata:{source:'student_dashboard',detail:msg}}),
+        keepalive:true
       }).catch(function(){});
     }
   }catch(e){}
@@ -2282,13 +2423,17 @@ function recordProctorViolation(kind, msg){
 
 function proctorWarn(kind, msg) {
   if (!quizProctor) return;
+  if(kind==='window'){
+    var now=Date.now();
+    if(now-__lastWindowWarn<1500)return;
+    __lastWindowWarn=now;
+  }
   quizViolations++;
   try { logStudentActivity('Assessment warning (' + kind + '): ' + msg, 'visit'); } catch (e) {}
   recordProctorViolation(kind, msg);
   var titles = { screenshot: 'Screenshot Detected', back: 'Going Back Is Not Allowed', window: 'Window Switch Detected' };
   var icons = { screenshot: '📸', back: '🚫', window: '👁️' };
   showProctorModal('Warning — ' + (titles[kind] || 'Violation'), msg, icons[kind] || '⚠️');
-  showToast(msg, 'error');
 }
 
 function proctorShotWarn() {
@@ -2319,13 +2464,21 @@ window.addEventListener('beforeunload', function (e) {
 // Warn when another tab/window is opened or the student switches away.
 document.addEventListener('visibilitychange', function () {
   if (!quizProctor) return;
-  if (document.hidden) { __proctorHiddenPending = true; }
+  if (document.hidden) {
+    __proctorHiddenPending = true;
+    recordProctorViolation('window', 'Assessment tab became hidden.');
+  }
   else if (__proctorHiddenPending) {
     __proctorHiddenPending = false;
     proctorWarn('window', 'You left the assessment (another tab or window was opened). This was recorded.');
   }
 });
-window.addEventListener('blur', function () { if (quizProctor) __proctorBlurPending = true; });
+window.addEventListener('blur', function () {
+  if (quizProctor) {
+    __proctorBlurPending = true;
+    recordProctorViolation('focus', 'Assessment window lost focus.');
+  }
+});
 window.addEventListener('focus', function () {
   if (!quizProctor) return;
   if (__proctorBlurPending) {
@@ -2339,25 +2492,17 @@ document.addEventListener('keydown', function (e) {
   if (!quizProctor) return;
   var k = e.key || '';
   var macShot = e.metaKey && e.shiftKey && (k === '3' || k === '4' || k === '5' || k === '6');
-  if (k === 'PrintScreen' || k === 'Snapshot' || macShot) { e.preventDefault(); proctorShotWarn(); }
+  var printOrSave = (e.ctrlKey || e.metaKey) && (k.toLowerCase() === 'p' || k.toLowerCase() === 's');
+  if (k === 'PrintScreen' || k === 'Snapshot' || macShot || printOrSave) { e.preventDefault(); proctorShotWarn(); }
 });
 document.addEventListener('keyup', function (e) {
   if (quizProctor && (e.key || '') === 'PrintScreen') { proctorShotWarn(); }
 });
 document.addEventListener('visibilitychange', function () {
   if (!quizProctor) return;
-  if (document.hidden) { __proctorHiddenPending = true; }
-  else if (__proctorHiddenPending) {
+  if (!document.hidden && __proctorHiddenPending) {
     __proctorHiddenPending = false;
-    proctorWarn('window', 'You left the assessment (switched tab/window). This activity was recorded.');
-  }
-});
-window.addEventListener('blur', function () { if (quizProctor) __proctorBlurPending = true; });
-window.addEventListener('focus', function () {
-  if (!quizProctor) return;
-  if (__proctorBlurPending) {
-    __proctorBlurPending = false;
-    proctorWarn('window', 'You switched away from the assessment window. This activity was recorded.');
+    proctorWarn('window', 'You left the assessment tab. This activity was recorded.');
   }
 });
 
@@ -2683,6 +2828,7 @@ function sendStudentMsg() {
   const input = document.getElementById('sMsgInput');
   const text = input.value.trim();
   if (!text) return;
+  if (!sMsgRealLoaded) { showToast('Messages are still loading. Please try again in a moment.','error'); return; }
   const all = [...sClassThreads,...sTeacherThreads];
   const t = all.find(x=>x.id===sMsgActive);
   if (!t) return;
@@ -2693,19 +2839,15 @@ function sendStudentMsg() {
   t.sub = 'You: '+text.substring(0,30);
   input.value = '';
   sMsgRenderBody(t);
-  if (!sMsgRealLoaded) return;
   const payload = (t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='') ? {recipient_id:t.peer_id,body:text} : (t.classroom_id!==undefined&&t.classroom_id!==null&&t.classroom_id!=='') ? {classroom_id:t.classroom_id,body:text} : null;
   if (!payload) return;
-  const wsPayload={action:'send',kind:(t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='')?'dm':'group',body:text};
-  if(wsPayload.kind==='dm'){wsPayload.peer_id=t.peer_id;}else{wsPayload.classroom_id=t.classroom_id;}
-  if (msgSendWS(wsPayload)) return;
   msgApi('/api/messages/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)}).then(d=>{
-    if (d && d.ok) return;
+    if (d && d.ok) { const saved=d.message||{}; optimistic.time=saved.time||optimistic.time; optimistic.sender='You'; return; }
     const i = t.msgs.indexOf(optimistic);
     if (i > -1) t.msgs.splice(i,1);
     t.sub = t.sub.replace(/^You: /,'');
     if (sMsgActive===t.id) sMsgRenderBody(t);
-    showToast('Message not sent','error');
+    showToast((d&&d.message)||'Message not sent. Please try again.','error');
   });
 }
 
@@ -3117,6 +3259,89 @@ function studentStatusInfo(a){
   if(a.status==='closed') return {cls:'closed',lbl:'CLOSED'};
   return {cls:'open',lbl:'OPEN'};
 }
+function openAssessmentQuizFromCard(button){
+  openQuizTaker(
+    button.dataset.title||'',
+    'quiz',
+    Number(button.dataset.assignmentId||0),
+    Number(button.dataset.assessmentId||0)
+  );
+}
+function openAssessmentSubmitFromCard(button){
+  openSubmitModal(
+    button.dataset.title||'',
+    'document,image',
+    Number(button.dataset.assignmentId||0)
+  );
+}
+function openAssessmentResult(assessmentId){
+  assessmentId=Number(assessmentId||0);
+  if(!assessmentId){ showToast('This result is unavailable.','error'); return; }
+  var body=document.getElementById('assessmentResultBody');
+  var title=document.getElementById('assessmentResultTitle');
+  var sub=document.getElementById('assessmentResultSub');
+  if(title) title.textContent='Assessment Results';
+  if(sub) sub.textContent='Review your answers and feedback';
+  if(body) body.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;margin-bottom:10px;display:block;"></i>Loading your results&hellip;</div>';
+  openModal('assessmentResultModal');
+  fetch('/assessments/'+encodeURIComponent(assessmentId)+'/result/?format=json',{credentials:'same-origin',headers:{'Accept':'application/json'}})
+    .then(function(response){return response.json().then(function(data){return {ok:response.ok,data:data};}).catch(function(){return {ok:false,data:{}};});})
+    .then(function(result){
+      if(!result.ok||!result.data||!result.data.ok){ showToast((result.data&&result.data.message)||'Unable to load results.','error'); closeModal('assessmentResultModal'); return; }
+      renderAssessmentResult(result.data);
+    })
+    .catch(function(){ showToast('Unable to load results. Please try again.','error'); closeModal('assessmentResultModal'); });
+}
+function renderAssessmentResult(d){
+  var title=document.getElementById('assessmentResultTitle');
+  var sub=document.getElementById('assessmentResultSub');
+  var body=document.getElementById('assessmentResultBody');
+  if(!body) return;
+  if(title) title.textContent=d.title||'Assessment Results';
+  if(sub) sub.textContent=(d.subject||'')+(d.classroom?' \u00b7 '+d.classroom:'');
+  var e=function(v){ return escHtml(v==null?'':String(v)); };
+  var nl=function(v){ return e(v).replace(/\n/g,'<br>'); };
+  var html='<div class="ar-wrap">';
+  html+='<div class="ar-head"><div class="ar-eyebrow"><i class="fa-solid fa-chart-column"></i> Assessment results</div><div class="ar-title">'+e(d.title)+'</div><div class="ar-sub">Review your answers, correct responses, and feedback.</div><div class="ar-meta">';
+  if(d.subject) html+='<span class="ar-pill"><i class="fa-solid fa-book"></i> '+e(d.subject)+'</span>';
+  if(d.classroom) html+='<span class="ar-pill"><i class="fa-solid fa-users"></i> '+e(d.classroom)+'</span>';
+  if(d.submitted_at) html+='<span class="ar-pill"><i class="fa-regular fa-calendar-check"></i> Submitted '+e(d.submitted_at)+'</span>';
+  if(d.is_late) html+='<span class="ar-pill" style="background:#fee2e2;color:#b91c1c;"><i class="fa-solid fa-clock"></i> Late submission</span>';
+  html+='</div></div>';
+  html+='<div class="ar-stats">';
+  html+='<div class="ar-stat"><div class="ar-stat-val">'+e(d.score)+' / '+e(d.pts)+'</div><div class="ar-stat-lbl">Score</div></div>';
+  html+='<div class="ar-stat"><div class="ar-stat-val">'+e(d.pct)+'%</div><div class="ar-stat-lbl">Percentage</div></div>';
+  html+='<div class="ar-stat"><div class="ar-stat-val" style="font-size:15px;">'+e(d.grading_status)+'</div><div class="ar-stat-lbl">Grading status</div></div>';
+  html+='<div class="ar-stat"><div class="ar-stat-val" style="font-size:15px;">'+e(d.pass_status)+'</div><div class="ar-stat-lbl">Passing score: '+e(d.passing_score_percentage)+'%</div></div>';
+  html+='</div>';
+  if(d.teacher_remarks) html+='<div class="ar-remarks"><b><i class="fa-solid fa-comment-dots"></i> Teacher Remarks</b>'+nl(d.teacher_remarks)+'</div>';
+  var parts=d.parts||[];
+  if(!parts.length) html+='<div class="ar-part"><div style="padding:22px;text-align:center;color:var(--text-muted);">This assessment has no parts.</div></div>';
+  parts.forEach(function(part){
+    html+='<div class="ar-part"><div class="ar-part-hd"><div><div class="ar-part-title">'+e(part.title||part.type||'Part')+'</div><div class="ar-part-type">'+e(part.type||'')+'</div></div>';
+    if(part.score!=null) html+='<div class="ar-part-score">'+e(part.score)+' point'+(Number(part.score)===1?'':'s')+'</div>';
+    html+='</div>';
+    var rows=part.rows||[];
+    if(!rows.length) html+='<div style="padding:18px 16px;text-align:center;color:var(--text-muted);font-size:13px;">No items in this part.</div>';
+    rows.forEach(function(row,idx){
+      var pending=!!row.pending;
+      var status = pending
+        ? '<span class="ar-status wait"><i class="fa-regular fa-clock"></i> Pending review</span>'
+        : (row.is_correct
+          ? '<span class="ar-status ok"><i class="fa-solid fa-check"></i> Correct \u00b7 +'+e(row.score)+'/'+e(row.point)+'</span>'
+          : '<span class="ar-status bad"><i class="fa-solid fa-xmark"></i> Incorrect \u00b7 '+e(row.score)+'/'+e(row.point)+'</span>');
+      var mineCls = row.is_correct ? ' correct' : (pending ? '' : ' wrong');
+      html+='<div class="ar-q"><div class="ar-q-top"><div style="display:flex;gap:10px;flex:1;min-width:0;"><span class="ar-q-num">'+(idx+1)+'</span><div class="ar-q-text">'+e(row.question||'(No question text)')+'</div></div>'+status+'</div>';
+      html+='<div class="ar-ans-grid"><div class="ar-ans mine'+mineCls+'"><div class="ar-ans-hd"><i class="fa-solid fa-user"></i> Your answer</div><div class="ar-ans-body">'+(row.answer?nl(row.answer):'<span style="color:var(--text-muted);font-style:italic;">No answer provided</span>')+'</div></div>';
+      html+='<div class="ar-ans"><div class="ar-ans-hd"><i class="fa-solid fa-circle-check"></i> Correct answer</div><div class="ar-ans-body">'+(row.correct?nl(row.correct):'<span style="color:var(--text-muted);font-style:italic;">To be graded by teacher</span>')+'</div></div></div>';
+      if(row.feedback) html+='<div class="ar-feedback"><i class="fa-solid fa-lightbulb"></i> <strong>Feedback:</strong> '+nl(row.feedback)+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  body.innerHTML=html;
+}
 function studentHasQuizBank(a){
   if(!a||!a.title) return false;
   var k=a.title.toLowerCase().replace(/[^a-z0-9]+/g,'-');
@@ -3127,14 +3352,14 @@ function studentAssessCard(a){
   const done=a.key&&studentDoneSet()[a.key];
   const btn = done
     ? '<button class="btn btn-success btn-sm" disabled><i class="fa-solid fa-check"></i> Submitted</button>'
-      + (a.assessment_id ? ' <a class="btn btn-outline btn-sm" href="/assessments/'+a.assessment_id+'/result/"><i class="fa-solid fa-eye"></i> View Answers</a>' : '')
+      + (a.assessment_id ? ' <button class="btn btn-outline btn-sm" data-assessment-id="'+Number(a.assessment_id)+'" onclick="openAssessmentResult(this.dataset.assessmentId)"><i class="fa-solid fa-eye"></i> View Answers</button>' : '')
     : ((a.status==='scheduled')
         ? '<button class="btn btn-outline btn-sm" disabled><i class="fa-solid fa-clock"></i> Not Yet Open</button>'
         : (a.status==='overdue'||a.status==='closed')
         ? '<button class="btn btn-outline btn-sm" disabled><i class="fa-solid fa-ban"></i> Closed</button>'
         : ((a.type==='quiz'||studentHasQuizBank(a))
-        ? '<button class="btn btn-primary btn-sm" onclick="openQuizTaker(a.title,\'quiz\','+Number(a.assignment_id||0)+','+Number(a.assessment_id||0)+')"><i class="fa-solid fa-pen"></i> Take Quiz</button>'
-        : '<button class="btn btn-primary btn-sm" onclick="openSubmitModal(a.title,\'document,image\','+Number(a.assignment_id||0)+')"><i class="fa-solid fa-upload"></i> Submit Work</button>'));
+      ? '<button class="btn btn-primary btn-sm" data-title="'+escHtml(a.title||'')+'" data-assignment-id="'+Number(a.assignment_id||0)+'" data-assessment-id="'+Number(a.assessment_id||0)+'" onclick="openAssessmentQuizFromCard(this)"><i class="fa-solid fa-pen"></i> Take Quiz</button>'
+      : '<button class="btn btn-primary btn-sm" data-title="'+escHtml(a.title||'')+'" data-assignment-id="'+Number(a.assignment_id||0)+'" onclick="openAssessmentSubmitFromCard(this)"><i class="fa-solid fa-upload"></i> Submit Work</button>'));
   return '<div class="assessment-card" data-assessment="'+a.key+'" style="background:var(--white);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">'
     + '<div style="min-width:0;flex:1;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">'+escHtml(a.title)+'</div>'
     + '<div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;"><i class="fa-regular fa-calendar"></i> Due '+escHtml(a.deadline)+' &nbsp;·&nbsp; '+a.pts+' pts</div>'
@@ -3173,7 +3398,7 @@ function renderMaterials(subject){
   el.innerHTML=items.map(m=>
     '<div data-notification-record-type="resource" data-notification-record="'+escHtml(m.placement_id||'')+'" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100);">'+
     '<div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;background:'+m.color+'22;color:'+m.color+';flex-shrink:0;"><i class="fa-solid '+m.icon+'"></i></div>'+
-    '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+escHtml(m.name)+'</div><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">'+m.size+'</div></div>'+
+    '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--navy);">'+escHtml(m.name)+'</div><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">'+escHtml(resourceKindLabel(m))+(m.size?' · '+escHtml(m.size):'')+'</div></div>'+
     '<div style="display:flex;gap:8px;flex-shrink:0;">'+
     '<button class="btn btn-outline btn-sm" data-resource-name="'+escHtml(m.name)+'" data-resource-placement="'+escHtml(m.placement_id||'')+'" onclick="previewResource(this.dataset.resourceName, null, this.dataset.resourcePlacement)"><i class="fa-solid fa-eye"></i> Preview</button>'+
     '<button class="btn btn-outline btn-sm" data-resource-name="'+escHtml(m.name)+'" data-resource-placement="'+escHtml(m.placement_id||'')+'" onclick="downloadResource(this.dataset.resourceName, currentSVCId, this.dataset.resourcePlacement)"><i class="fa-solid fa-download"></i> Download</button>'+
@@ -3269,6 +3494,34 @@ function renderRecentScores(){
     '<div style="flex:1;min-width:0;"><div class="notif-text" style="font-weight:600;">'+escHtml(s.title)+'</div><div class="notif-time">'+escHtml(s.subject)+' · '+s.score+'/'+s.pts+'</div></div>'+
     '<span class="assess-status '+(s.failed?'closed':'submitted')+'">'+(s.failed?'FAILED':'PASSED')+'</span></div>').join('');
 }
+function studentCompletionInfo(a){
+  var state=a.completion_status||((a.submitted)?'submitted':(a.status==='overdue'?'overdue':(a.status==='scheduled'?'scheduled':(a.status==='closed'?'closed':'missing'))));
+  if(state==='graded')return {label:a.completion_passed?'Graded · Passed':'Graded · Not Passed',cls:a.completion_passed?'submitted':'closed'};
+  if(state==='graded_unscored')return {label:'Graded · No score scale',cls:'closed'};
+  if(state==='partially_graded')return {label:'Partially graded',cls:'grading'};
+  if(state==='submitted')return {label:'Submitted · Awaiting grade',cls:'awaiting'};
+  if(state==='overdue')return {label:'Not submitted · Overdue',cls:'overdue'};
+  if(state==='scheduled')return {label:'Not yet available',cls:'scheduled'};
+  if(state==='closed')return {label:'Closed · Not submitted',cls:'closed'};
+  return {label:'Not submitted',cls:'missing'};
+}
+function renderStudentCompletion(){
+  const wrap=document.getElementById('studentCompletionWrap');
+  if(!wrap)return;
+  const period=document.getElementById('perfPeriodFilter')?.value||'';
+  const assignments=(STUDENT_ASSESSMENTS||[]).filter(function(a){return !period||a.period===period;});
+  if(!assignments.length){wrap.innerHTML='<div style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No assessments are assigned for this period.</div>';return;}
+  var complete=0,needsWork=0,awaiting=0;
+  assignments.forEach(function(a){var info=studentCompletionInfo(a);if(info.label.indexOf('Graded')===0)complete++;else if(info.label.indexOf('Awaiting')>=0||info.label.indexOf('Partially')===0)awaiting++;else if(info.cls==='missing'||info.cls==='overdue'||info.cls==='closed')needsWork++;});
+  var rows=assignments.map(function(a){
+    var info=studentCompletionInfo(a);
+    var score='—';
+    if(a.completion_score!==null&&a.completion_score!==undefined&&a.completion_possible>0){score=String(a.completion_score)+' / '+String(a.completion_possible)+' ('+String(a.completion_percent)+'%)';}
+    else if(info.label==='Graded · No score scale')score='No points configured';
+    return '<tr><td class="name-col">'+escHtml(a.title||'Assessment')+'</td><td>'+escHtml(a.subject||'')+'</td><td>'+escHtml(a.period||'')+'</td><td>'+escHtml(a.deadline||'Open')+'</td><td><span class="assess-status '+info.cls+'">'+escHtml(info.label)+'</span>'+(a.completion_late?'<div style="font-size:10px;color:#b91c1c;margin-top:4px;">Submitted late</div>':'')+'</td><td style="text-align:center;font-weight:700;white-space:nowrap;">'+escHtml(score)+'</td></tr>';
+  }).join('');
+  wrap.innerHTML='<div style="padding:12px 16px;font-size:12px;color:var(--text-muted);">'+complete+' graded · '+awaiting+' awaiting grading · '+needsWork+' still to complete</div><table class="attend-table" style="min-width:800px;"><thead><tr><th style="text-align:left;">Assessment</th><th>Subject</th><th>Period</th><th>Due</th><th>Status</th><th>Score</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
 function renderStudentPerformance(){
   const period=document.getElementById('perfPeriodFilter')?.value||'';
   const scores=(STUDENT_SCORES||[]).filter(s=>!period||s.period===period);
@@ -3280,6 +3533,7 @@ function renderStudentPerformance(){
   setV('perfFailedVal', scores.filter(s=>s.failed).length);
   setV('perfPendingVal', pending);
   setV('perfOverdueVal', overdue);
+  renderStudentCompletion();
   const wrap=document.getElementById('perfTableWrap');
   if(wrap){
     if(!scores.length){ wrap.innerHTML='<div style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No results for this period yet.</div>'; }
@@ -4033,6 +4287,7 @@ function __spayloadSig(D){
 }
 function applyStudentPayload(D){
   if(!D) return;
+  window.__TASS_SUBJECTS__ = D.subjects || [];
   var sig = __spayloadSig(D);
   if (window.__studentSig !== undefined && sig === window.__studentSig) return;
   window.__studentSig = sig;
@@ -4284,5 +4539,8 @@ window.csrfToken = (function () {
 })();
 </script>
 <script src="{% static 'js/notifications.js' %}?v=3"></script>
+{{ menu_permission_codenames|json_script:"menu-permission-codenames" }}
+<script src="{% static 'js/menu_permissions.js' %}" defer></script>
+<script src="{% static 'js/refresh_state.js' %}?v=1"></script>
 </body>
 </html>

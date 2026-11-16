@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.urls import reverse
 
 def _notify_attendance(vc, actor):
@@ -212,7 +213,9 @@ def record_attendance(request, vc_pk):
                 )
             return redirect(reverse("attendance:session_detail", args=[session.pk]))
 
-    session_date = request.GET.get("date")
+    # Open the date picker on today by default, while keeping an explicitly
+    # selected date (including dates linked from the session list) intact.
+    session_date = request.GET.get("date") or timezone.localdate().isoformat()
     records = {}
     session = None
     if session_date:

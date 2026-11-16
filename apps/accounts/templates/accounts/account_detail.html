@@ -52,7 +52,7 @@
         <label class="form-label">Roles</label>
         <div>
           {% for assignment in assignments %}
-          <span class="pill">{{ assignment.role }} ({{ assignment.academic_year.label }})</span>
+        <span class="pill">{{ assignment.role }}</span>
           {% empty %}
           <span class="page-sub">No role assignments.</span>
           {% endfor %}

@@ -169,6 +169,14 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .classroom-header h2 { font-family:'Fraunces',serif; font-size:25px; font-weight:600; }
 .classroom-header p { opacity:.65; font-size:13px; margin-top:4px; }
 .classroom-tabs { display:flex; gap:4px; background:var(--gray-100); border-radius:12px; padding:4px; margin-bottom:24px; overflow-x:auto; }
+#view-classroom.vc-themed{position:relative;isolation:isolate;padding:16px;border-radius:18px;background-color:var(--vc-theme-tint);background-image:linear-gradient(var(--vc-theme-overlay),var(--vc-theme-overlay)),var(--vc-theme-wallpaper);background-size:cover;background-position:center;background-attachment:fixed;}
+#view-classroom.vc-themed{--vc-theme-overlay:rgba(255,255,255,.78)}
+[data-theme="dark"] #view-classroom.vc-themed{--vc-theme-overlay:rgba(15,23,42,.78)}
+#view-classroom.vc-themed .classroom-tabs{background:color-mix(in srgb,var(--vc-theme-color) 14%,var(--card-bg));border:1px solid var(--vc-theme-border)}
+#view-classroom.vc-themed .classroom-tabs .tab-btn.active{background:var(--vc-theme-color);color:#fff}
+#view-classroom.vc-themed .card{border-color:var(--vc-theme-border)}
+#view-classroom.vc-themed .card-header{background:color-mix(in srgb,var(--vc-theme-color) 5%,var(--card-bg))}
+#view-classroom.vc-themed .btn-primary{background:var(--vc-theme-color);border-color:var(--vc-theme-color)}
 .tab-btn { flex:1; padding:9px 12px; border-radius:8px; border:none; background:none; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--gray-600); transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; min-width:110px; }
 .tab-btn:hover { color:var(--navy); }
 .tab-btn.active { background:var(--card-bg); color:var(--navy); box-shadow:var(--shadow-sm); }
@@ -304,7 +312,8 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .assessment-item{padding:15px 18px;border-radius:10px;background:var(--card-bg);border:1px solid var(--card-border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s,box-shadow .15s;flex-wrap:wrap}
 .assessment-actions{display:flex;gap:6px;flex-wrap:wrap}
 .assessment-item:hover{border-color:var(--blue);box-shadow:var(--shadow-sm)}
-.assess-title{font-size:13.5px;font-weight:600;color:var(--text-primary)}
+.assessment-item,.assessment-item>div{min-width:0}
+.assess-title{font-size:13.5px;font-weight:600;color:var(--text-primary);overflow-wrap:anywhere;word-break:break-word}
 .assess-meta{font-size:11.5px;color:var(--text-muted);margin-top:2px}
 .assessment-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
 .fr-part-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:9px;border:1.5px solid var(--card-border);font-size:12px;font-weight:700;cursor:pointer;background:var(--card-bg);color:var(--gray-600);transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
@@ -402,6 +411,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 /* ANNOUNCE */
 .announce-item{padding:15px;border-radius:10px;background:var(--card-bg);border:1px solid var(--card-border);border-left-width:4px;margin-bottom:10px}
 .announce-item .title{font-size:13.5px;font-weight:700;color:var(--navy)}
+.announce-item .title,.announce-item .body{overflow-wrap:anywhere;word-break:break-word;white-space:normal}
 [data-theme="dark"] .announce-item .title{color:#d0dce8}
 .announce-item .body{font-size:12.5px;color:var(--gray-600);margin-top:5px;line-height:1.6}
 .announce-item .meta{font-size:11px;color:var(--text-muted);margin-top:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px}
@@ -417,6 +427,14 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .repository-item .repo-main{display:flex;gap:12px;align-items:center;flex:1;min-width:200px}
 .repository-item .repo-body{flex:1;min-width:0}
 .repository-item .repo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.resource-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.resource-folder{display:flex;align-items:center;gap:14px;min-height:92px;padding:16px;border:1px solid var(--card-border);border-radius:14px;background:var(--card-bg);color:var(--text-primary);text-align:left;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s;width:100%}
+.resource-folder:hover{transform:translateY(-2px);border-color:var(--blue);box-shadow:var(--shadow-sm)}
+.resource-folder-icon{width:54px;height:48px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px;background:linear-gradient(145deg,#dbeafe,#bfdbfe);color:#2563eb;font-size:25px}
+.resource-folder-copy{min-width:0;flex:1}.resource-folder-name{display:block;font-size:14px;font-weight:750;overflow-wrap:anywhere}.resource-folder-count{display:block;margin-top:4px;font-size:11px;color:var(--text-muted)}
+.resource-folder-arrow{color:var(--text-muted);font-size:12px}
+.resource-library-heading{display:flex;align-items:center;gap:12px;margin:2px 0 16px;flex-wrap:wrap}.resource-library-heading h3{margin:0;font-size:17px;color:var(--navy)}
+[data-theme="dark"] .resource-library-heading h3{color:#d0dce8}
 @media(max-width:600px){
   .repository-item{gap:10px}
   .repository-item .repo-main{min-width:100%}
@@ -461,7 +479,7 @@ body.sidebar-expanded .main { margin-left:var(--sidebar-w); }
 .upload-type-btn .ut-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .upload-type-btn .ut-label{font-size:10.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;}
 .upload-type-btn.selected .ut-label{color:var(--navy);}
-.upload-drop-zone{border:2px dashed var(--blue);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:rgba(245,158,11,0.04);transition:background .2s;}
+.upload-drop-zone{display:block;width:100%;box-sizing:border-box;border:2px dashed var(--blue);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:rgba(245,158,11,0.04);transition:background .2s;}
 .upload-drop-zone:hover{background:rgba(245,158,11,0.08);}
 .topic-materials-area{padding:14px 16px;}
 
@@ -679,6 +697,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="window.location.href='/accounts/sessions/'"><i class="fa-solid fa-laptop" style="width:16px"></i> Device Logs</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -825,7 +844,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
         <div style="flex:1;"><div class="at-risk-title">At-Risk Students — Early Intervention Recommended</div><div class="at-risk-sub">Flagged: attendance below 75% or average score below 60%:</div><div class="at-risk-chips" id="atRiskChips"></div></div>
       </div>
       <div class="analytics-row">
-        <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-calendar-check" style="color:var(--blue)"></i>Monthly Attendance Trend</div></div><div class="card-body"><div class="chart-wrap"><canvas id="attendanceTrendChart"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-calendar-check" style="color:var(--blue)"></i>Recent Attendance Trend</div></div><div class="card-body"><div class="chart-wrap"><canvas id="attendanceTrendChart"></canvas></div></div></div>
         <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--blue)"></i>Attendance Breakdown</div></div><div class="card-body"><div class="chart-wrap"><canvas id="attendanceBreakdownChart"></canvas></div></div></div>
       </div>
       <div class="analytics-row">
@@ -834,8 +853,8 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       </div>
       <div class="analytics-row three">
         <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-users" style="color:var(--blue)"></i>Per-Student Performance</div></div><div class="card-body"><div class="chart-wrap"><canvas id="studentPerfChart"></canvas></div></div></div>
-        <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-download" style="color:var(--blue)"></i>Download Activity</div></div><div class="card-body"><div class="chart-wrap"><canvas id="downloadActivityChart"></canvas></div></div></div>
-        <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i>Pass/Fail per Quiz</div></div><div class="card-body"><div class="chart-wrap"><canvas id="passFailChart"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-layer-group" style="color:var(--blue)"></i>Learning Material Placements</div></div><div class="card-body"><div class="chart-wrap"><canvas id="downloadActivityChart"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><div class="card-title"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i>Pass/Fail by Assessment</div></div><div class="card-body"><div class="chart-wrap"><canvas id="passFailChart"></canvas></div></div></div>
       </div>
       <div class="report-export-section">
         <div class="report-export-title"><i class="fa-solid fa-file-export"></i> Generate &amp; Export Reports</div>
@@ -866,6 +885,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
         <button class="tab-btn" onclick="switchTab('announcements',this)"><i class="fa-solid fa-bullhorn"></i> Announcements</button>
         <button class="tab-btn" onclick="switchTab('messages',this)"><i class="fa-solid fa-comments"></i> Messages</button>
         <button class="tab-btn" onclick="switchTab('performance',this)"><i class="fa-solid fa-chart-bar"></i> Performance</button>
+        <button class="tab-btn" onclick="switchTab('completion',this)"><i class="fa-solid fa-list-check"></i> Assessment Completion</button>
       </div>
 
       <!-- STUDENTS TAB -->
@@ -876,6 +896,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <input class="form-control" id="studentSearchInput" placeholder="Search student…" style="width:180px;" oninput="filterStudentList()">
               <select class="form-control" id="studentStatusFilter" style="width:130px;" onchange="filterStudentList()"><option value="">All Status</option><option value="Enrolled">Enrolled</option><option value="At Risk">At Risk</option></select>
+              <button class="btn btn-outline btn-sm" type="button" id="studentSexOrderToggle" onclick="toggleStudentSexOrder()">Sex order: Mixed</button>
             </div>
           </div>
           <div class="card-body" style="padding:0;overflow-x:auto;">
@@ -893,8 +914,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
           <div class="card-header">
             <div class="card-title"><i class="fa-solid fa-book-open" style="color:var(--blue)"></i>Teaching &amp; Learning Activities</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <label class="btn btn-outline btn-sm" style="cursor:pointer;"><i class="fa-solid fa-file-arrow-up"></i> Add File<input type="file" multiple style="display:none;" onchange="addGeneralFiles(this)"/></label>
-              <button class="btn btn-outline btn-sm" onclick="openResourceRepositoryModal()"><i class="fa-solid fa-layer-group"></i> Resource Repository</button> <button class="btn btn-outline btn-sm" onclick="openResourceUploadModal()"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Resource</button> <button class="btn btn-primary btn-sm" onclick="openAddTopicModal()"><i class="fa-solid fa-folder-plus"></i> Add Topic</button>
+              <button class="btn btn-outline btn-sm" onclick="openResourceRepositoryModal()"><i class="fa-solid fa-layer-group"></i> Resource Repository</button> <button class="btn btn-outline btn-sm" onclick="openResourceUploadModal()"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Material</button> <button class="btn btn-primary btn-sm" onclick="openAddTopicModal()"><i class="fa-solid fa-folder-plus"></i> Add Topic</button>
             </div>
           </div>
           <div class="card-body">
@@ -1033,6 +1053,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
             <div class="msg-layout">
               <div class="msg-sidebar">
                 <div class="msg-tab-bar"><button class="msg-tab active" id="msgTabClass" onclick="switchMsgTab('class')">Class</button><button class="msg-tab" id="msgTabPersonal" onclick="switchMsgTab('personal')">Personal</button></div>
+                <div id="msgContactSearchWrap" style="display:none;padding:9px 10px;border-bottom:1px solid var(--card-border);"><div style="position:relative;"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:10px;color:var(--text-muted);font-size:12px;"></i><input id="msgContactSearch" type="search" placeholder="Search students in this class" aria-label="Search students to message" oninput="renderMsgThreads()" style="width:100%;box-sizing:border-box;padding:8px 10px 8px 30px;border:1px solid var(--card-border);border-radius:8px;background:var(--card-bg);color:var(--text-primary);font:inherit;font-size:12px;"></div></div>
                 <div class="msg-tab-list" id="msgThreadList"></div>
               </div>
               <div class="msg-main">
@@ -1066,6 +1087,13 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
             <div style="font-size:11.5px;font-weight:700;color:var(--text-muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">Per-Student Performance</div>
             <div id="perfStudentList"></div>
           </div>
+        </div>
+      </div>
+      <!-- ASSESSMENT COMPLETION TAB -->
+      <div class="tab-pane" id="tab-completion">
+        <div class="card">
+          <div class="card-header" style="gap:12px;flex-wrap:wrap;"><div><div class="card-title"><i class="fa-solid fa-table" style="color:var(--blue)"></i>Assessment Completion</div><span style="font-size:11px;color:var(--text-muted);">Each assigned assessment has its own score column. A dash means not submitted, not yet graded, or no points are configured.</span></div><button type="button" class="btn btn-primary btn-sm" onclick="downloadOfficialClassRecord()"><i class="fa-solid fa-file-arrow-down"></i> Download Official Class Record</button></div>
+          <div class="card-body" style="padding:0;overflow-x:auto;"><table class="student-table" id="performanceMatrix"></table></div>
         </div>
       </div>
     </div>
@@ -1129,30 +1157,28 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 
     <div class="view" id="view-resourcelibrary">
       <div class="page-header">
-        <div><div class="page-title">Subject-Level Resource Repository</div><div class="page-sub">Browse shared resources from teachers handling the same subject, and link or download them for your own Virtual Classrooms</div></div>
+        <div><div class="page-title">Resource Repository</div><div class="page-sub">Browse shared learning materials across this school year, organized into a separate folder for each subject</div></div>
         <button class="btn btn-primary" onclick="openResourceUploadModal()"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Resource</button>
       </div>
       <div class="card"><div class="card-body">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <select class="form-control" id="repoSubjectPage" style="width:170px" onchange="renderResourceLibrary()"><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select>
-          <select class="form-control" id="repoGradePage" style="width:130px" onchange="renderResourceLibrary()"><option value="">All Grades</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
+          <select class="form-control" id="repoGradePage" style="width:150px" onchange="renderResourceLibrary()"><option value="">All Grades</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
           <input class="form-control" id="repoSearchPage" placeholder="Search resource..." style="flex:1;min-width:220px" oninput="renderResourceLibrary()">
           <button class="btn btn-outline" onclick="downloadResourceLibraryReport()"><i class="fa-solid fa-file-export"></i> Export List</button>
         </div>
-        <div class="repository-grid" id="resourceLibraryGrid"></div>
+        <div id="resourceLibraryGrid"></div>
         <div id="resourceLibraryStatus" class="invite-status" style="display:none;margin-top:12px"></div>
       </div></div>
     </div>
 
     <div class="view" id="view-assessmentrepo">
       <div class="page-header">
-        <div><div class="page-title">Subject-Level Assessment Repository</div><div class="page-sub">Browse assessments shared by teachers handling the same subject, and reuse or copy them into your own Virtual Classrooms</div></div>
+        <div><div class="page-title">Assessment Repository</div><div class="page-sub">Browse assessments by subject; each folder reflects a subject in your active Virtual Classrooms</div></div>
         <button class="btn btn-primary" onclick="openAssessmentUploadModal()"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Assessment</button>
       </div>
       <div class="card"><div class="card-body">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <select class="form-control" id="assessRepoSubjectPage" style="width:150px" onchange="renderAssessmentLibrary()"><option value="">All Subjects</option><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select>
-          <select class="form-control" id="assessRepoGradePage" style="width:130px" onchange="renderAssessmentLibrary()"><option value="">All Grades</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
+          <select class="form-control" id="assessRepoGradePage" style="width:130px" onchange="renderAssessmentLibrary()"><option value="">All Grades</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
           <select class="form-control" id="assessRepoTypePage" style="width:160px" onchange="renderAssessmentLibrary()"><option value="">All Types</option><option>Quiz</option><option>Seatwork</option><option>Assignment</option><option>Project</option><option>Examination</option></select>
           <input class="form-control" id="assessRepoSearchPage" placeholder="Search assessment..." style="flex:1;min-width:220px" oninput="renderAssessmentLibrary()">
           <button class="btn btn-outline" onclick="downloadAssessmentLibraryReport()"><i class="fa-solid fa-file-export"></i> Export List</button>
@@ -1241,15 +1267,16 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 <div class="modal-overlay" id="allAttendanceModal">
   <div class="modal-box" style="width:800px;">
     <div class="modal-title"><i class="fa-solid fa-calendar-days" style="color:var(--blue);margin-right:8px;"></i>Full Year Attendance Records</div>
-    <div class="modal-sub">Assigned Virtual Classroom · School Year 2025–2026</div>
+    <div class="modal-sub" id="allAttendanceSubtitle">Attendance records for the selected year and classroom.</div>
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <select class="form-control" style="width:160px;"><option>All Quarters</option><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
-      <button class="btn btn-outline btn-sm" onclick="showToast('Exported!','success')"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+      <label for="allAttendanceYear" style="align-self:center;">School year</label><select class="form-control" id="allAttendanceYear" style="width:190px;" onchange="loadAllAttendanceRecords()"></select>
+      <button class="btn btn-outline btn-sm" onclick="exportAllAttendanceRecords()"><i class="fa-solid fa-file-export"></i> Export CSV</button>
     </div>
-    <div style="overflow-x:auto;"><table class="attend-table"><thead><tr><th class="name-col">Student</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Total Present</th><th>Total Absent</th><th>Overall Rate</th></tr></thead><tbody>
-      <tr><td colspan="8" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>
+    <div id="allAttendanceStatus" role="status" style="margin-bottom:10px;color:var(--text-muted);font-size:13px;"></div>
+    <div style="overflow-x:auto;"><table class="attend-table"><thead><tr><th class="name-col">Student</th><th>Q1 Present</th><th>Q2 Present</th><th>Q3 Present</th><th>Q4 Present</th><th>Total Present</th><th>Total Absent</th><th>Overall Rate</th></tr></thead><tbody id="allAttendanceBody">
+      <tr><td colspan="8" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">Choose a classroom to view its attendance.</td></tr>
     </tbody></table></div>
-    <div class="modal-footer"><button class="btn btn-outline btn-sm" onclick="showToast('Exported!','success')"><i class="fa-solid fa-download"></i> Download</button><button class="btn btn-primary" onclick="closeModal('allAttendanceModal')">Close</button></div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('allAttendanceModal')">Close</button></div>
   </div>
 </div>
 
@@ -1257,34 +1284,22 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
 <div class="modal-overlay" id="sf2Modal">
   <div class="modal-box" style="width:940px;">
     <div class="modal-title"><i class="fa-solid fa-file-lines" style="color:var(--blue);margin-right:8px;"></i>SF2 Daily Attendance Report of Learners</div>
-    <div class="modal-sub">DepEd School Form 2 · Assigned Virtual Classroom &nbsp;<strong style="color:#dc2626;">Legend: &quot;/&quot; = Present &nbsp; &quot;-&quot; = Absent</strong></div>
+    <div class="modal-sub">The current classroom and the latest official SF2 template are selected automatically. The system fills the learner list and monthly attendance.</div>
     <div id="officialTplBadge" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:#eef4fb;border:1px solid #d6e6f7;font-size:12px;color:var(--gray-700);line-height:1.6;"></div>
-    <div style="background:#fff;border-radius:10px;border:1.5px solid #ccc;padding:14px;margin-bottom:14px;overflow-x:auto;">
-      <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;text-align:center;margin-bottom:2px;">School Form 2 (SF2) Daily Attendance Report of Learners</div>
-      <div style="font-family:Arial,sans-serif;font-size:9px;text-align:center;margin-bottom:8px;color:#444;">School Year 2025-2026 · Republic of the Philippines · Department of Education</div>
-      <div style="display:flex;gap:20px;font-size:8.5px;font-family:Arial,sans-serif;margin-bottom:8px;flex-wrap:wrap;padding-bottom:6px;border-bottom:1px solid #999;">
-        <span><strong>School:</strong> San Vicente Institute</span><span><strong>Grade:</strong> —</span><span><strong>Section:</strong> —</span><span><strong>Month:</strong> —</span><span><strong>Teacher:</strong> —</span>
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group" style="flex:2;min-width:220px;">
+        <label class="form-label">Current Virtual Classroom</label>
+        <div id="sf2CurrentClassroom" class="form-control" style="height:auto;min-height:42px;display:flex;align-items:center;background:var(--accent);">Open a classroom first</div>
       </div>
-      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:8.5px;min-width:800px;">
-        <thead><tr>
-          <th style="border:1px solid #000;padding:2px 4px;background:#e8e8e8;min-width:18px;">No.</th>
-          <th style="border:1px solid #000;padding:2px 6px;background:#e8e8e8;text-align:left;min-width:130px;">Learner's Name</th>
-          <th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">1</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">2</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">3</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">4</th><th style="border:1px solid #000;padding:2px 3px;background:#eee;color:#999;">5</th>
-          <th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">7</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">8</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">9</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">10</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">11</th>
-          <th style="border:1px solid #000;padding:2px 3px;background:#eee;color:#999;">12</th><th style="border:1px solid #000;padding:2px 3px;background:#eee;color:#999;">13</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">14</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">15</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">16</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">17</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">18</th>
-          <th style="border:1px solid #000;padding:2px 3px;background:#eee;color:#999;">19</th><th style="border:1px solid #000;padding:2px 3px;background:#eee;color:#999;">20</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">21</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">22</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">23</th><th style="border:1px solid #000;padding:2px 3px;background:#d0d8e8;">24</th>
-          <th style="border:1px solid #000;padding:2px 4px;background:#a5d6a7;font-weight:700;">/</th><th style="border:1px solid #000;padding:2px 4px;background:#ef9a9a;font-weight:700;">-</th><th style="border:1px solid #000;padding:2px 4px;background:#fff59d;font-weight:700;">L</th>
-        </tr></thead>
-        <tbody id="sf2Tbody"></tbody>
-      </table></div>
-      <div style="margin-top:10px;font-family:Arial,sans-serif;font-size:8px;color:#333;"><strong>Legend:</strong> &quot;/&quot; = Present &nbsp;|&nbsp; &quot;-&quot; = Absent &nbsp;|&nbsp; L = Late (still Present) &nbsp;|&nbsp; E = Excused &nbsp;|&nbsp; blank = Weekend / Holiday</div>
-      <div style="margin-top:10px;font-family:Arial,sans-serif;font-size:8.5px;color:#555;display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #999;flex-wrap:wrap;gap:10px;">
-        <div>Prepared by: _________________________<br>{{ user_display_name }}<br>Class Adviser</div>
-        <div>Checked by: _________________________<br>School Principal</div>
-        <div>Date: ___________________</div>
+      <div class="form-group" style="min-width:180px;">
+        <label class="form-label" for="sf2Month">Report Month</label>
+        <input id="sf2Month" type="month" class="form-control">
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="showToast('Printing...','success')"><i class="fa-solid fa-print"></i> Print</button><button class="btn btn-success" onclick="downloadOfficialTpl()" title="Downloads the official SF2 template uploaded by the administrator."><i class="fa-solid fa-file-pdf"></i> Download PDF</button><button class="btn btn-primary" onclick="closeModal('sf2Modal')">Close</button></div>
+    <div style="padding:14px;border:1px solid #d6e6f7;background:#f8fbff;border-radius:10px;color:var(--gray-700);">
+      The latest active SF2 Excel template uploaded by the System Administrator or Registrar is used automatically. Preview the filled learner list and attendance first, then upload it to school records or download the Excel file for printing.
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="previewFilledSF2()" title="Preview this classroom's filled monthly attendance before saving or printing."><i class="fa-solid fa-eye"></i> Preview</button><button class="btn btn-outline" onclick="uploadFilledSF2ToRecords()" title="Generate the filled SF2 using the official template and save it to school report records."><i class="fa-solid fa-cloud-arrow-up"></i> Upload to Records</button><button class="btn btn-success" onclick="downloadOfficialTpl()" title="Generate the filled Excel SF2 file so it can be printed."><i class="fa-solid fa-print"></i> Download to Print</button><button class="btn btn-primary" onclick="closeModal('sf2Modal')">Close</button></div>
   </div>
 </div>
 
@@ -1483,6 +1498,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <div class="form-group span2"><label>Email Address</label><input class="form-control" id="profileEmail" type="email" data-required data-email data-maxlength="100" readonly disabled></div>
       <div class="form-group"><label>Role / Position</label><input class="form-control" id="profileRole" type="text" readonly></div>
       <div class="form-group"><label>Department / Section</label><input class="form-control" id="profileDept" type="text" readonly></div>
+      <div class="form-group span2"><label>Subjects Taught</label><input class="form-control" id="profileSubjects" type="text" readonly placeholder="Assigned by the System Administrator"></div>
       <div class="form-group span2"><label>Contact Number</label><input class="form-control" id="profileContact" type="tel" inputmode="numeric" pattern="[0-9+]*" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" placeholder="e.g. 09171234567" data-phone></div>
     </div>
     <div id="profileStatus" style="display:none;margin-top:12px;color:var(--success);font-size:13px;font-weight:600;"></div>
@@ -1540,6 +1556,21 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
           <div class="form-group"><label class="form-label">Time Limit (minutes)</label><input class="form-control" type="number" id="bTime" value="60" min="1" max="300" step="1" data-num data-min="1" data-max="300"/></div>
           <div class="form-group"><label class="form-label">Passing Score (%)</label><input class="form-control" type="number" id="bPassing" value="60" min="1" max="100" step="1" data-num data-min="1" data-max="100"/></div>
         </div>
+        <div style="display:grid;gap:8px;margin-top:8px;">
+          <label><input type="checkbox" id="bAllowAttachments"> Allow students to attach files to written work</label>
+          <input class="form-control" id="bAcceptedFileFormat" placeholder="Accepted file extensions, e.g. .pdf,.docx" aria-label="Accepted file extensions">
+          <label><input type="checkbox" id="bAllowLinks"> Allow students to submit a link to written work</label>
+          <fieldset style="border:1px solid var(--card-border);border-radius:10px;padding:10px 12px;">
+            <legend style="padding:0 6px;font-size:12px;font-weight:700;color:var(--gray-600);">What students see after submitting</legend>
+            <label style="display:block;margin:6px 0;"><input type="radio" name="bRevealAnswers" id="bRevealAnswersScoreOnly" value="0" checked> Final score only</label>
+            <label style="display:block;margin:6px 0;"><input type="radio" name="bRevealAnswers" id="bRevealAnswersReview" value="1"> Final score, their answers, and the correct answers</label>
+          </fieldset>
+          <fieldset style="border:1px solid var(--card-border);border-radius:10px;padding:10px 12px;">
+            <legend style="padding:0 6px;font-size:12px;font-weight:700;color:var(--gray-600);">Assessment access</legend>
+            <label style="display:block;margin:6px 0;"><input type="radio" name="bShareRepository" id="bShareRepositoryLocal" value="0" checked> This Virtual Classroom only</label>
+            <label style="display:block;margin:6px 0;"><input type="radio" name="bShareRepository" id="bShareRepository" value="1"> Share with teachers handling this subject</label>
+          </fieldset>
+        </div>
       </div>
       <div class="builder-section">
         <div class="builder-section-title"><i class="fa-solid fa-align-left"></i> Instructions</div>
@@ -1564,6 +1595,10 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
           <div class="q-summary-chip"><div class="ic" style="background:#dcfce7;color:#16a34a;"><i class="fa-solid fa-list"></i></div><div><div class="v" id="totalQsDisplay">0</div><div class="l">Questions</div></div></div>
         </div>
       </div>
+      <label id="reopenAssessmentChoice" style="display:none;align-items:flex-start;gap:9px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--blue);border-radius:10px;background:var(--light-blue);font-size:12.5px;color:var(--text-primary);">
+        <input type="checkbox" id="bReopenAssessment" style="margin-top:2px;">
+        <span><strong>Reopen this closed assessment after saving.</strong><br><span style="color:var(--text-muted);">To accept submissions from students who have not submitted, check this option and set a future closing date in Details &amp; Schedule (Back).</span></span>
+      </label>
 
       <div class="builder-section" style="background:var(--accent);">
         <div class="builder-section-title" style="margin:0 0 12px;"><i class="fa-solid fa-layer-group" style="color:var(--blue);"></i> Assessment Parts <span style="font-weight:500;text-transform:none;color:var(--text-muted);font-size:11px;">each part has a defined type &amp; scoring config</span></div>
@@ -1623,6 +1658,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
         </div>
         <div id="qTfSection" style="display:none;"><label class="form-label">Correct Answer</label><div class="tf-options"><button class="tf-btn sel-true" id="tfTrue" onclick="selectTF('true',this)">✓ True</button><button class="tf-btn" id="tfFalse" onclick="selectTF('false',this)">✗ False</button></div></div>
         <div id="qMtSection" style="display:none;"><label class="form-label">Matching Items <span style="color:var(--text-muted);font-weight:500;">(format: Left = Right · auto-graded)</span></label><textarea class="form-control" id="mtItems" rows="3" placeholder="e.g. Photosynthesis = Process plants convert light into energy"></textarea></div>
+        <div id="qNumericSection" style="display:none;"><div class="form-row"><div class="form-group"><label class="form-label">Correct Number</label><input class="form-control" type="number" step="any" id="numericAnswer"/></div><div class="form-group"><label class="form-label">Accepted Tolerance</label><input class="form-control" type="number" min="0" step="any" value="0" id="numericTolerance"/></div></div></div>
         <div id="qIdSection" style="display:none;"><div class="form-group"><label class="form-label">Expected Answer</label><input class="form-control" id="idAnswer" placeholder="e.g. Chlorophyll"/></div></div>
         <div id="qSaSection" style="display:none;"><div class="form-group"><label class="form-label">Expected Answer</label><input class="form-control" id="saAnswer" placeholder="e.g. Photosynthesis"/></div></div>
         <div id="qEsSection" style="display:none;"><div class="form-group"><label class="form-label">Rubric / Scoring Guide</label><textarea class="form-control" id="esRubric" rows="2" placeholder="e.g. 5 pts – Complete and accurate..."></textarea><div style="margin-top:8px;padding:9px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:11.5px;color:#9a3412;"><i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>Subjective part: the teacher must <strong>manually grade</strong> this item. Its score is added to the total only after your evaluation is submitted.</div></div></div>
@@ -1633,7 +1669,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="backToBuilderStep1()"><i class="fa-solid fa-arrow-left"></i> Back</button>
         <button class="btn btn-outline" onclick="closeModal('assessBuilderModal')">Cancel</button>
-        <button class="btn btn-primary" onclick="publishAssessment()"><i class="fa-solid fa-paper-plane"></i> Publish Assessment</button>
+        <button class="btn btn-primary" id="publishAssessmentButton" onclick="publishAssessment()"><i class="fa-solid fa-paper-plane"></i> Publish Assessment</button>
       </div>
     </div>
   </div>
@@ -1646,7 +1682,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="modal-title"><i class="fa-solid fa-layer-group" style="color:var(--blue);margin-right:8px"></i>Subject-Level Resource Repository</div>
     <div class="modal-sub">Browse shared resources from teachers handling the same subject.</div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <select class="form-control" id="repoSubject" onchange="renderRepoModal()" style="width:180px"><option value="">All Subjects</option><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select>
+      <select class="form-control" id="repoSubject" onchange="renderRepoModal()" style="width:180px"><option value="">All Subjects</option></select>
       <input class="form-control" id="repoSearch" placeholder="Search resource..." style="flex:1" oninput="renderRepoModal()">
     </div>
     <div id="repoItems">
@@ -1665,16 +1701,34 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="form-group"><label class="form-label">Resource Title *</label><input class="form-control" id="feResourceTitle" placeholder="e.g. Module 4 – Genetics" data-required data-minlen="3" data-maxlength="200"></div>
     <div class="form-group"><label class="form-label">Topic</label><select class="form-control" id="feResourceTopic"><option value="">General Resources</option></select></div>
     <div class="form-group">
-      <label class="form-label">File</label><input class="form-control" type="file" id="feResourceFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.mp3,.wav,.mp4,.webm">
+      <label class="form-label">File</label><input class="form-control" type="file" id="feResourceFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.mp3,.wav,.m4a,.aac,.mp4,.mov,.avi,.mkv,.webm,.zip,.scorm">
     </div>
     <div class="form-group"><label class="form-label">External Link</label><input class="form-control" type="url" id="feResourceLink" placeholder="https://..."></div>
-    <label class="checkbox-label" style="display:flex;align-items:center;gap:10px;margin:16px 2px;cursor:pointer;">
-      <input type="checkbox" id="feResourceShare" style="width:17px;height:17px;accent-color:var(--blue);">
-      <span style="font-size:13px;color:var(--navy);font-weight:600;">Share to Learning Repository</span>
-      <span style="font-size:11px;color:var(--text-muted);">Make this resource visible to other teachers handling the same subject.</span>
-    </label>
+    <fieldset style="border:1px solid var(--card-border);border-radius:10px;padding:12px 14px;margin:16px 0;">
+      <legend style="padding:0 6px;font-size:12px;font-weight:700;color:var(--gray-600);">Where should this resource be available?</legend>
+      <label style="display:flex;align-items:flex-start;gap:9px;margin:7px 0;cursor:pointer;">
+        <input type="radio" name="feResourceShare" value="0" required style="margin-top:3px;accent-color:var(--blue);">
+        <span><strong style="font-size:13px;color:var(--navy);">This Virtual Classroom only</strong><br><small style="color:var(--text-muted);">Only students and teachers in this class can access it.</small></span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:9px;margin:7px 0;cursor:pointer;">
+        <input type="radio" name="feResourceShare" value="1" required style="margin-top:3px;accent-color:var(--blue);">
+        <span><strong style="font-size:13px;color:var(--navy);">Share with the subject repository</strong><br><small style="color:var(--text-muted);">Other teachers handling this subject can find and reuse it.</small></span>
+      </label>
+    </fieldset>
     <div id="resourceUploadStatus" class="invite-status" style="display:none"></div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('resourceUploadModal')">Cancel</button><button class="btn btn-primary" onclick="saveFrontendResource()">Upload Resource</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resourceShareChoiceModal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-title"><i class="fa-solid fa-share-nodes" style="color:var(--blue);margin-right:8px"></i>Where should this material be available?</div>
+    <div class="modal-sub">Choose before the material is uploaded.</div>
+    <div style="display:grid;gap:10px;margin:16px 0">
+      <button class="btn btn-outline" style="justify-content:flex-start;padding:13px;text-align:left" onclick="finishResourceShareChoice('0')"><i class="fa-solid fa-chalkboard" style="width:22px;color:var(--blue)"></i><span><strong>This Virtual Classroom only</strong><small style="display:block;color:var(--text-muted);margin-top:3px">Available only to this classroom.</small></span></button>
+      <button class="btn btn-outline" style="justify-content:flex-start;padding:13px;text-align:left" onclick="finishResourceShareChoice('1')"><i class="fa-solid fa-layer-group" style="width:22px;color:var(--blue)"></i><span><strong>Share to the subject repository</strong><small style="display:block;color:var(--text-muted);margin-top:3px">Available to teachers handling this subject.</small></span></button>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="finishResourceShareChoice(null)">Cancel</button></div>
   </div>
 </div>
 
@@ -1699,7 +1753,7 @@ body.sidebar-expanded .universal-footer{margin-left:var(--sidebar-w)}
     <div class="modal-sub">Share an assessment with other teachers handling the same subject.</div>
     <div class="form-group"><label class="form-label">Assessment Title</label><input class="form-control" id="feAssessTitle" placeholder="e.g. Cell Division Quiz" data-required data-minlen="3" data-maxlength="200"></div>
     <div class="fr-modal-grid">
-      <div class="form-group"><label class="form-label">Subject</label><select class="form-control" id="feAssessSubject"><option>Biology</option><option>English</option><option>Mathematics</option><option>Science</option></select></div>
+      <div class="form-group"><label class="form-label">Subject</label><select class="form-control" id="feAssessSubject" data-required><option value="">Select a subject</option></select></div>
       <div class="form-group"><label class="form-label">Assessment Type</label><select class="form-control" id="feAssessType"><option>Quiz</option><option>Seatwork</option><option>Assignment</option><option>Project</option><option>Examination</option></select></div>
     </div>
     <div class="form-group"><label class="form-label">File (optional)</label><input class="form-control" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx"></div>
@@ -1761,7 +1815,7 @@ let isDarkMode=false, sidebarExpanded=false, currentMsgTab='class';
 let selectedQType='mc', tfSelected='true';
 let builderQuestions=[], msgThreadActiveId='class';
    let builderParts=[], currentPartId=null, managedEditTitle=null;
-const QTYPE_MODE={mc:'objective',tf:'objective',mt:'objective',id:'objective',sa:'objective',es:'subjective',pp:'subjective',cs:'subjective',nr:'subjective',pt:'subjective'};
+const QTYPE_MODE={mc:'objective',tf:'objective',mt:'objective',id:'objective',sa:'objective',numeric:'objective',es:'subjective',pp:'subjective',cs:'subjective',nr:'subjective',pt:'subjective'};
 let topics=[], inviteEmails=[], selectedClassColor='linear-gradient(90deg,#f59e0b,#fbbf24)';
 let activityFeed=[];
 
@@ -1832,7 +1886,7 @@ function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.
 // classroom's messages. null while the user is outside a classroom.
 let currentVCId=null;window.currentVCId=null;
 function openClassroom(title,sub,color,vcId){currentVCId=(vcId===undefined||vcId===null||vcId==='')?null:String(vcId);window.currentVCId=currentVCId;document.getElementById('classroomTitle').textContent=title;document.getElementById('classroomSub').textContent=sub;if(color)document.getElementById('classroomHeaderEl').style.background='linear-gradient(135deg,'+color+' 0%,'+color+'bb 100%)';document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.getElementById('tab-students').classList.add('active');document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-btn')[0].classList.add('active');showView('classroom');renderCalendar();if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();renderTopics();buildSF2();if(typeof renderStudentList==='function')renderStudentList();if(typeof renderAnnouncements==='function')renderAnnouncements();if(typeof renderTeacherAssessments==='function')renderTeacherAssessments();if(typeof loadClassroomContent==='function')loadClassroomContent(vcId);}
-function switchTab(id,el){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');el.classList.add('active');if(id==='messages')initMsgTab();if(id==='attendance'){switchAttendView();renderCalendar();}if(id==='submissions'){if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();}if(id==='performance'&&typeof renderPerformance==='function')renderPerformance();if(id==='announcements'&&typeof renderAnnouncements==='function')renderAnnouncements();if(id==='assessment'&&typeof renderTeacherAssessments==='function')renderTeacherAssessments();}
+function switchTab(id,el){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');el.classList.add('active');if(id==='messages')initMsgTab();if(id==='attendance'){switchAttendView();renderCalendar();}if(id==='submissions'){if(typeof populateSubmissionSelect==='function')populateSubmissionSelect();renderSubmissionTracker();}if((id==='performance'||id==='completion')&&typeof renderPerformance==='function')renderPerformance();if(id==='announcements'&&typeof renderAnnouncements==='function')renderAnnouncements();if(id==='assessment'&&typeof renderTeacherAssessments==='function')renderTeacherAssessments();}
 
 // ── MODALS ──
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -1883,6 +1937,8 @@ function renderCalendar(){
   const total=firstDow+daysInMonth,rem=7-(total%7);
   if(rem<7)for(let i=0;i<rem;i++)html+='<div class="cal-day cal-empty"></div>';
   grid.innerHTML=html;
+  // Read this month's saved sessions back from the server (once per month).
+  if(typeof loadAttendanceMonth==='function')loadAttendanceMonth();
 }
 function switchAttendView(){const mode=document.getElementById('attendViewMode').value;const views={calendar:'attendCalendarView',month:'attendMonthView',week:'attendWeekView',day:'attendDayView'};Object.values(views).forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});const el=document.getElementById(views[mode]);if(el)el.style.display='block';renderAttendPeriodView(mode);}
 
@@ -1903,7 +1959,7 @@ function renderAttendMonthTable(){
   const {p,a,l,d}=attendCountsForMonth((calMonth||3)+1);
   if(!d){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet for this month.</td></tr>';return;}
   const tot=p+a+l;const rate=tot?Math.round(((p+l)/tot)*100)+'%':'—';
-  const rows=[{label:'Class Total ('+attendStudents.length+' students)',days:d,p:p,a:a,l:l,e:'—',rate:rate},...attendStudents.map(s=>{
+  const rows=[{label:'Class Total ('+attendStudents.length+' students)',days:d,p:p,a:a,l:l,e:'—',rate:rate},...orderedAttendStudents().map(s=>{
     const sp=Math.round(rate?p/attendStudents.length:0),sa=Math.round(a/attendStudents.length),sl=Math.round(l/attendStudents.length);
     return {label:s.name,days:d,p:sp,a:sa,l:sl,e:'—',rate:attRateForStudent(s)};
   })];
@@ -1940,7 +1996,7 @@ function renderAttendDayTable(){
   const r=calData[key];
   if(!r){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet for this day.</td></tr>';return;}
   const st=window.teacherFRState&&window.teacherFRState.attendance&&window.teacherFRState.attendance[(calYear||2026)+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0')];
-  const rows=attendStudents.map(s=>{
+  const rows=orderedAttendStudents().map(s=>{
     const rec=(st&&st[s.id]);
     const status=rec==='A'?'Absent':rec==='L'?'Late':'Present';
     const pill=status==='Absent'?'<span class="sub-status not-submitted" style="font-size:11px;"><i class="fa-solid fa-xmark"></i> Absent</span>':status==='Late'?'<span class="sub-status late" style="font-size:11px;"><i class="fa-solid fa-clock"></i> Late</span>':'<span class="sub-status submitted" style="font-size:11px;"><i class="fa-solid fa-check"></i> Present</span>';
@@ -1961,15 +2017,146 @@ function changeAttendYear(val){
   renderCalendar();
   showToast('Showing attendance for '+y,'success');
 }
-function openAllAttendanceModal(){openModal('allAttendanceModal');}
+
+// ── SERVER-SIDE ATTENDANCE ──
+// The calendar used to be painted from localStorage only, so a session saved on
+// another device — or before the browser cache was cleared — simply was not
+// there, even though the AttendanceRecord rows were in the database. Each
+// visible month is read back from /api/attendance/calendar/, which returns the
+// same {date: {studentId: 'P'|'L'|'A'}} shape this page writes when it saves.
+const attendMonthLoaded={};
+function attendMonthRange(y,m){
+  const pad=n=>String(n).padStart(2,'0');
+  const last=new Date(y,m+1,0).getDate();
+  return {from:y+'-'+pad(m+1)+'-01',to:y+'-'+pad(m+1)+'-'+pad(last)};
+}
+function loadAttendanceMonth(force){
+  const y=calYear||2026,m=calMonth||0,key=y+'-'+m;
+  if(attendMonthLoaded[key]&&!force)return;
+  attendMonthLoaded[key]=true;
+  const range=attendMonthRange(y,m);
+  fetch('/api/attendance/calendar/?from='+range.from+'&to='+range.to,{credentials:'same-origin',headers:{Accept:'application/json'}})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(!d||!d.ok||!d.calendar)return;
+      mergeAttendanceCalendar(d.calendar);
+    })
+    .catch(function(){ attendMonthLoaded[key]=false; });
+}
+function mergeAttendanceCalendar(calendar){
+  const st=(window.teacherFRState=window.teacherFRState||{});
+  st.attendance=st.attendance||{};
+  let touched=false;
+  Object.keys(calendar||{}).forEach(function(k){
+    const payload=calendar[k];
+    st.attendance[k]=payload;
+    if(String(k).indexOf('.sub')>=0)return;
+    let p=0,a=0,l=0;
+    Object.keys(payload||{}).forEach(function(sid){
+      const code=String(payload[sid]||'');
+      if(code==='A')a++;
+      else if(code==='L')l++;
+      else p++;
+    });
+    const parts=String(k).split('-');
+    calData[Number(parts[0])+'-'+Number(parts[1])+'-'+Number(parts[2])]={p:p,a:a,l:l};
+    touched=true;
+  });
+  if(!touched)return;
+  renderCalendar();
+  const mode=document.getElementById('attendViewMode');
+  if(mode&&typeof renderAttendPeriodView==='function')renderAttendPeriodView(mode.value);
+}
+function refreshAttendanceMonth(){ loadAttendanceMonth(true); }
+function openAllAttendanceModal(){
+  openModal('allAttendanceModal');
+  const year=document.getElementById('allAttendanceYear');
+  if(year&&!year.options.length){
+    const years=window.__TASS_ACADEMIC_YEARS__||[];
+    year.innerHTML=years.map(y=>'<option value="'+e(y.startDate+'|'+y.endDate+'|'+y.label)+'" '+(y.status==='Active'?'selected':'')+'>'+e(y.label)+'</option>').join('');
+    if(!years.length){const now=new Date(),start=now.getFullYear()+'-01-01',end=now.getFullYear()+'-12-31';year.innerHTML='<option value="'+start+'|'+end+'|'+now.getFullYear()+'">'+now.getFullYear()+'</option>';}
+  }
+  loadAllAttendanceRecords();
+}
+function loadAllAttendanceRecords(){
+  const body=document.getElementById('allAttendanceBody'),status=document.getElementById('allAttendanceStatus');
+  const yearEl=document.getElementById('allAttendanceYear');if(!body||!yearEl)return;
+  const bits=String(yearEl.value||'').split('|'),from=bits[0],to=bits[1],label=bits[2]||bits[0],classroomId=window.currentVCId;
+  if(!classroomId){body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;">Open a virtual classroom first.</td></tr>';status.textContent='';return;}
+  const roster=(window.__TASS_ROSTER__||(typeof attendStudents!=='undefined'?attendStudents:[])).filter(s=>String(s.classroom_id||'')===String(classroomId));
+  if(!roster.length){body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;">No enrolled students were found for this classroom.</td></tr>';status.textContent='';return;}
+  body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;">Loading saved attendance…</td></tr>';status.textContent='Loading '+label+' attendance from the server…';
+  fetch('/api/attendance/calendar/?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),{credentials:'same-origin',headers:{Accept:'application/json'}})
+    .then(r=>r.ok?r.json():Promise.reject(new Error('Could not load attendance ('+r.status+').')))
+    .then(data=>{
+      if(!data||!data.ok)throw new Error(data&&data.error||'Could not load attendance.');
+      const records=data.calendar||{},studentRows=roster.map(s=>{
+        const sid=String(s.id),q=[0,0,0,0],tot={p:0,a:0,l:0};
+        Object.keys(records).forEach(k=>{if(k.endsWith('.sub'))return;const d=new Date(k+'T00:00:00'),start=new Date(from+'T00:00:00'),end=new Date(to+'T23:59:59');if(d<start||d>end)return;const code=(records[k]||{})[sid];if(!code)return;const monthOffset=(d.getFullYear()-start.getFullYear())*12+d.getMonth()-start.getMonth();const qi=Math.min(3,Math.max(0,Math.floor(monthOffset/3)));if(code==='P'||code==='L'){q[qi]++;tot.p++;if(code==='L')tot.l++;}else if(code==='A')tot.a++;});
+        const rate=tot.p+tot.a?Math.round(tot.p/(tot.p+tot.a)*100):null;
+        return {name:s.name||((s.last||'')+', '+(s.first||'')),q:q,p:tot.p,a:tot.a,l:tot.l,rate:rate};
+      });
+      window._allAttendanceRows=studentRows;window._allAttendanceYear=label;
+      body.innerHTML=studentRows.map(s=>'<tr><td class="name-col">'+e(s.name)+'</td>'+s.q.map(n=>'<td>'+n+'</td>').join('')+'<td>'+s.p+'</td><td>'+s.a+'</td><td>'+(s.rate===null?'—':s.rate+'%')+'</td></tr>').join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;">No attendance records found.</td></tr>';
+      status.textContent='Showing '+studentRows.length+' students · '+label+' · Present includes students marked late.';
+      const sub=document.getElementById('allAttendanceSubtitle');if(sub)sub.textContent=(document.getElementById('classroomTitle')?.textContent||'Virtual Classroom')+' · '+label;
+    }).catch(err=>{body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#b91c1c;">'+e(err.message||'Unable to load attendance.')+'</td></tr>';status.textContent='Attendance could not be loaded.';});
+}
+function exportAllAttendanceRecords(){
+  const rows=window._allAttendanceRows||[];if(!rows.length){showToast('No attendance rows to export.','info');return;}
+  const data=[['Student','Q1 Present','Q2 Present','Q3 Present','Q4 Present','Total Present','Total Absent','Overall Rate'],...rows.map(s=>[s.name,...s.q,s.p,s.a,s.rate===null?'':s.rate+'%'])];
+  downloadCSV('Attendance_'+(window.currentVCId||'classroom')+'_'+String(window._allAttendanceYear||'year').replace(/[^a-z0-9]+/gi,'_')+'.csv',data);
+}
 function downloadOfficialTpl(){
-  var tpl=window.__teacherSfTemplate;
-  if(tpl&&tpl.url) window.location.href=tpl.url;
-  else showToast('No official SF2 template has been uploaded yet.','info');
+  var template=window.__teacherSfTemplate;
+  if(!template){showToast('No official SF2 Excel template has been uploaded yet.','info');return;}
+  var month=document.getElementById('sf2Month');
+  var classroomId=window.currentVCId;
+  var reportMonth=month&&month.value;
+  if(!classroomId){showToast('Open a Virtual Classroom before generating SF2.','error');return;}
+  if(!reportMonth){showToast('Select the report month first.','error');return;}
+  window.location.href="{% url 'analytics:sf2_generate' %}?classroom_id="+
+    encodeURIComponent(classroomId)+"&month="+encodeURIComponent(reportMonth);
+}
+function previewFilledSF2(){
+  var template=window.__teacherSfTemplate;
+  var month=document.getElementById('sf2Month');
+  var classroomId=window.currentVCId;
+  var reportMonth=month&&month.value;
+  if(!template){showToast('No official SF2 Excel template has been uploaded yet.','info');return;}
+  if(!classroomId){showToast('Open a Virtual Classroom before previewing SF2.','error');return;}
+  if(!reportMonth){showToast('Select the report month first.','error');return;}
+  var url="{% url 'analytics:sf2_generate' %}?classroom_id="+encodeURIComponent(classroomId)+
+    '&month='+encodeURIComponent(reportMonth)+'&preview=1';
+  window.open(url,'_blank','noopener');
+}
+function uploadFilledSF2ToRecords(){
+  var template=window.__teacherSfTemplate;
+  var classroomId=window.currentVCId;
+  var month=document.getElementById('sf2Month');
+  var reportMonth=month&&month.value;
+  if(!template){showToast('No official SF2 Excel template has been uploaded yet.','info');return;}
+  if(!classroomId){showToast('Open a Virtual Classroom before generating SF2.','error');return;}
+  if(!reportMonth){showToast('Select the report month first.','error');return;}
+  var url="{% url 'analytics:sf2_generate' %}?classroom_id="+encodeURIComponent(classroomId)+
+    '&month='+encodeURIComponent(reportMonth)+'&save_only=1';
+  fetch(url,{credentials:'same-origin',headers:{'Accept':'application/json'}})
+    .then(function(response){return response.json().catch(function(){return {};}).then(function(data){if(!response.ok||!data.ok)throw new Error(data.error||'The SF2 report could not be saved.');return data;});})
+    .then(function(data){showToast('Filled SF2 uploaded to school records.','success');})
+    .catch(function(error){showToast(error.message||'The SF2 report could not be saved.','error');});
 }
 function openSF2Modal(){
   renderSFTplBadge();
   buildSF2();
+  var currentClass=document.getElementById('sf2CurrentClassroom');
+  var title=document.getElementById('classroomTitle')?.textContent||'';
+  var section=document.getElementById('classroomSub')?.textContent||'';
+  if(currentClass)currentClass.textContent=window.currentVCId?(title+(section?' · '+section:'')):'Open a classroom first';
+  var month=document.getElementById('sf2Month');
+  if(month&&!month.value){
+    var now=new Date();
+    month.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  }
   openModal('sf2Modal');
 }
 function renderSFTplBadge(){
@@ -1998,6 +2185,7 @@ const attendStudents=[];
 // guard silently fell through to an empty array, so the tab rendered no
 // students at all even though the roster payload was loaded.
 const studentRecords=[];
+let studentSexOrder='mixed';
 let attendRecords={};
 let attendSub={};
 let attendReadonly=false;
@@ -2051,11 +2239,24 @@ function stuAvatar(s){
     '<path d="M19 74c0-14 11-21 25-21s25 7 25 21z" fill="rgba(255,255,255,.92)"/></svg>';
   return '<img src="data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'" style="width:44px;height:44px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(17,17,17,.12);" alt="'+s.name+'"/>';
 }
+function orderedAttendStudents(){
+  return attendStudents.slice().sort(function(a,b){
+    const gradeA=parseInt(String(a.grade||'').replace(/\D+/g,''),10);
+    const gradeB=parseInt(String(b.grade||'').replace(/\D+/g,''),10);
+    const byGrade=(isNaN(gradeA)?Number.MAX_SAFE_INTEGER:gradeA)-(isNaN(gradeB)?Number.MAX_SAFE_INTEGER:gradeB);
+    if(byGrade)return byGrade;
+    const surname=function(s){return String(s.last||s.last_name||s.name||'').trim();};
+    const firstName=function(s){return String(s.first||s.first_name||'').trim();};
+    const bySurname=surname(a).localeCompare(surname(b),undefined,{sensitivity:'base'});
+    return bySurname||firstName(a).localeCompare(firstName(b),undefined,{sensitivity:'base'});
+  });
+}
 function renderAttendList(){
   const list=document.getElementById('studentAttendList');
   if(!list)return;
   if(!attendStudents.length){list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';return;}
-  list.innerHTML=attendStudents.map(s=>{
+  const orderedStudents=orderedAttendStudents();
+  list.innerHTML=orderedStudents.map(s=>{
     const rec=attendRecords[s.id];
     const none=!rec;
     const btns=['P','A'].map(status=>{
@@ -2180,11 +2381,44 @@ function saveAttend(){
 const submissionData={
   quiz1:[],midterm:[],activity2:[]
 };
-function renderSubmissionTracker(){const key=document.getElementById('submissionAssessSelect')?.value||'quiz1';const data=submissionData[key]||[];const sub=data.filter(s=>s.status!=='not-submitted').length;const pct=data.length?Math.round((sub/data.length)*100):0;const pf=document.getElementById('subProgressFill');if(pf)pf.style.width=pct+'%';const pl=document.getElementById('subProgressLabel');if(pl)pl.textContent=data.length?(sub+' / '+data.length+' Submitted'):'—';const tbody=document.getElementById('submissionTbody');if(!tbody)return;if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}tbody.innerHTML=data.map(s=>{const st=s.status==='submitted'?'<span class="sub-status submitted"><i class="fa-solid fa-check"></i> Submitted</span>':s.status==='late'?'<span class="sub-status late"><i class="fa-solid fa-clock"></i> Late</span>':'<span class="sub-status not-submitted"><i class="fa-solid fa-xmark"></i> Not Submitted</span>';return'<tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="student-avatar-sm" style="background:'+s.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+s.id+'</div>'+s.name+'</div></td><td>'+st+'</td><td style="font-size:12px;color:var(--text-muted);">'+s.time+'</td><td><strong>'+s.score+'</strong></td><td>'+(s.status==='not-submitted'?'<button class="btn btn-outline btn-sm" onclick="remindStudent('+(s.studentId!=null?s.studentId:'null')+','+(s.assessId!=null?s.assessId:'null')+',this)"><i class="fa-solid fa-bell"></i> Remind</button>':(s.fileUrl?'<a class="btn btn-outline btn-sm" href="'+e(s.fileUrl)+'" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> File</a>':''))+'</td></tr>';}).join('');}
+window.openSubmissionReview=function(url){
+  if(!url)return;
+  const modal=document.getElementById('submissionReviewModal');
+  const body=document.getElementById('submissionReviewModalBody');
+  if(!modal||!body)return;
+  modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+  body.innerHTML='<div style="padding:48px 20px;text-align:center;color:#718096"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;margin-bottom:12px"></i><div>Loading student answers...</div></div>';
+  const joiner=url.indexOf('?')>=0?'&':'?';
+  fetch(url+joiner+'modal=1',{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
+    .then(function(response){if(!response.ok)throw new Error('Could not load this submission.');return response.text();})
+    .then(function(html){body.innerHTML=html;const close=document.getElementById('submissionReviewModalClose');if(close)close.focus();})
+    .catch(function(error){body.innerHTML='<div style="padding:42px 20px;text-align:center;color:#b42318">'+e(error.message||'Could not load this submission.')+'</div>';});
+};
+window.closeSubmissionReview=function(){const modal=document.getElementById('submissionReviewModal');if(!modal)return;modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.style.overflow='';};
+document.addEventListener('keydown',function(event){if(event.key==='Escape')window.closeSubmissionReview();});
+
+function renderSubmissionTracker(){const key=document.getElementById('submissionAssessSelect')?.value||'quiz1';const data=submissionData[key]||[];const sub=data.filter(s=>s.status!=='not-submitted').length;const pct=data.length?Math.round((sub/data.length)*100):0;const pf=document.getElementById('subProgressFill');if(pf)pf.style.width=pct+'%';const pl=document.getElementById('subProgressLabel');if(pl)pl.textContent=data.length?(sub+' / '+data.length+' Submitted'):'—';const tbody=document.getElementById('submissionTbody');if(!tbody)return;if(!data.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px 12px;color:var(--text-muted);font-size:13px;">No data yet.</td></tr>';return;}tbody.innerHTML=data.map(s=>{const st=s.status==='submitted'?'<span class="sub-status submitted"><i class="fa-solid fa-check"></i> Submitted</span>':s.status==='late'?'<span class="sub-status late"><i class="fa-solid fa-clock"></i> Late</span>':'<span class="sub-status not-submitted"><i class="fa-solid fa-xmark"></i> Not Submitted</span>';const actions=s.status==='not-submitted'?'<button class="btn btn-outline btn-sm" onclick="remindStudent('+(s.studentId!=null?s.studentId:'null')+','+(s.assessId!=null?s.assessId:'null')+',this)"><i class="fa-solid fa-bell"></i> Remind</button>':(s.viewUrl?'<button class="btn btn-outline btn-sm" type="button" onclick="openSubmissionReview(this.dataset.url)" data-url="'+e(s.viewUrl)+'"><i class="fa-solid fa-eye"></i> View Answers</button>':'')+(s.fileUrl?' <a class="btn btn-outline btn-sm" href="'+e(s.fileUrl)+'" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> File</a>':'');return'<tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="student-avatar-sm" style="background:'+s.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+e(s.id)+'</div>'+e(s.name)+'</div></td><td>'+st+'</td><td style="font-size:12px;color:var(--text-muted);">'+e(s.time)+'</td><td><strong>'+e(s.score)+'</strong></td><td>'+actions+'</td></tr>';}).join('');}
 
 // ── SCORES & RANKING ──
 function openScoresModal(title){document.getElementById('scoresTitle').textContent=title+' · Scores';openModal('scoresModal');}
-function openRankingModal(title){document.getElementById('rankingModalSub').textContent='Top-performing students – '+title;const sorted=(typeof studentRecords!=='undefined'?studentRecords:[]).slice().sort((a,b)=>parseInt((b.score||'0').replace('%',''),10)-parseInt((a.score||'0').replace('%',''),10));const bc=['first','second','third','other'],tr=['🥇','🥈','🥉','#'];const rl=document.getElementById('rankingList');rl.innerHTML=sorted.length?sorted.map((r,i)=>'<div class="ranking-item"><div class="rank-badge '+bc[Math.min(i,3)]+'">'+(i<3?tr[i]:i+1)+'</div><div class="student-avatar-sm" style="background:'+r.grad+';width:32px;height:32px;border-radius:8px;">'+r.initials+'</div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">'+e(r.name)+'</div><div style="font-size:11px;color:var(--text-muted);">Score: '+r.score+'</div></div><div style="font-size:17px;font-weight:800;color:var(--navy);">'+r.score+'</div></div>').join(''):'<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';openModal('rankingModal');}
+function openRankingModal(title){
+  document.getElementById('rankingModalSub').textContent='Top-performing students – '+title;
+  const sorted=(typeof studentRecords!=='undefined'?studentRecords:[]).slice().sort(function(a,b){
+    return parseFloat((b.score||'0').replace('%',''))-parseFloat((a.score||'0').replace('%',''));
+  });
+  const badgeClasses=['first','second','third','other'];
+  const medals={1:'🥇',2:'🥈',3:'🥉'};
+  let previousScore=null, rank=0;
+  const rl=document.getElementById('rankingList');
+  rl.innerHTML=sorted.length?sorted.map(function(r,i){
+    const score=parseFloat((r.score||'0').replace('%',''))||0;
+    if(previousScore===null||score!==previousScore) rank=i+1;
+    previousScore=score;
+    const badge=medals[rank]||String(rank);
+    return '<div class="ranking-item"><div class="rank-badge '+badgeClasses[Math.min(rank-1,3)]+'">'+badge+'</div><div class="student-avatar-sm" style="background:'+r.grad+';width:32px;height:32px;border-radius:8px;">'+r.initials+'</div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;">'+e(r.name)+'</div><div style="font-size:11px;color:var(--text-muted);">Score: '+r.score+'</div></div><div style="font-size:17px;font-weight:800;color:var(--navy);">'+r.score+'</div></div>';
+  }).join(''):'<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.5;"></i>No data yet.</div>';
+  openModal('rankingModal');
+}
 function renderPerformance(){
   const grid=document.getElementById('perfAssessGrid');
   if(grid){
@@ -2316,6 +2550,27 @@ function sendMissedReminders(name){
 }
 
 // ── STUDENT LIST (search + filter) ──
+function sortTeacherStudentRecords(){
+  const sexRank=function(s){return s==='M'?0:(s==='F'?1:2);};
+  studentRecords.sort(function(a,b){
+    const ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10);
+    const gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);
+    const gradeA=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;
+    const gradeB=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;
+    if(gradeA!==gradeB)return gradeA-gradeB;
+    if(studentSexOrder==='grouped'&&sexRank(a.sex)!==sexRank(b.sex))return sexRank(a.sex)-sexRank(b.sex);
+    const surname=String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'});
+    if(surname)return surname;
+    return String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});
+  });
+}
+function toggleStudentSexOrder(){
+  studentSexOrder=studentSexOrder==='grouped'?'mixed':'grouped';
+  const button=document.getElementById('studentSexOrderToggle');
+  if(button)button.textContent='Sex order: '+(studentSexOrder==='grouped'?'Divided':'Mixed');
+  sortTeacherStudentRecords();
+  renderStudentList();
+}
 function renderStudentList(){
   const tb=document.getElementById('studentsTbody');if(!tb)return;
   tb.innerHTML=(typeof studentRecords!=='undefined'?studentRecords:[]).map((r,i)=>{
@@ -2448,11 +2703,31 @@ async function postAnnouncement(){
   const vc=window.currentVCId;
   if(!title||!body){showToast('Please fill in all fields','error');return;}
   if(!vc){showToast('Open a virtual classroom before posting an announcement.','error');return;}
-  const token=window.csrfToken||((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
+  const cookieToken=()=>{const match=document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);return match?decodeURIComponent(match[1]):'';};
+  let token=window.csrfToken||cookieToken();
   try{
-    const response=await fetch('/api/class-announcements/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':decodeURIComponent(token)},body:JSON.stringify({virtual_classroom_id:vc,title:title,content:body,target_role:'all'})});
-    const result=await response.json();
-    if(!response.ok||!result||result.ok===false)throw new Error((result&&result.error)||'Could not post the announcement. Please try again.');
+    if(!token){
+      await fetch('/api/csrf/',{credentials:'same-origin',headers:{'Accept':'application/json'}});
+      token=cookieToken();
+    }
+    const send=()=>fetch('/api/class-announcements/',{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRFToken':token},body:JSON.stringify({virtual_classroom_id:vc,title:title,content:body,target_role:'all'})});
+    const read=async response=>{const raw=await response.text();let result=null;try{result=raw?JSON.parse(raw):null;}catch(parseError){}return {response:response,result:result};};
+    let parsed=await read(await send());
+    // A stale CSRF cookie can produce Django's HTML 403 page. Refresh the
+    // cookie once and retry; application permission errors remain JSON.
+    if(parsed.response.status===403&&!parsed.result){
+      await fetch('/api/csrf/',{credentials:'same-origin',headers:{'Accept':'application/json'}});
+      token=cookieToken();
+      parsed=await read(await send());
+    }
+    const response=parsed.response;
+    const result=parsed.result;
+    if(!result||typeof result!=='object'){
+      if(response.redirected&&/login/i.test(response.url))throw new Error('Your session expired. Sign in again, then retry posting the announcement.');
+      if(response.status===403)throw new Error('The request was blocked (403). Refresh the page and check that you have permission to post in this class.');
+      throw new Error('The server returned an unexpected response (HTTP '+response.status+'). Please retry, and contact support if it continues.');
+    }
+    if(!response.ok||result.ok===false)throw new Error(result.message||result.error||'Could not post the announcement. Please try again.');
     const saved=result.announcement||{id:null,announcement_id:null,classroomId:vc,title:title,body:body,createdAt:new Date().toISOString(),archived:false};
     const state=window.teacherFRState;
     if(state){state.announcements=state.announcements||[];if(!state.announcements.some(function(a){return saved.id&&String(a.id||a.announcement_id)===String(saved.id);}))state.announcements.unshift(Object.assign({kind:'class'},saved));}
@@ -2732,11 +3007,15 @@ function openPersonalMessageForStudent(index){
 // typing, it goes to that person.
 function msgPersonalRows(){
   const seen={},withThread=[],fresh=[];
+  const scopedContacts=msgScopedContacts();
+  const scopedIds={};
+  scopedContacts.forEach(function(c){scopedIds[String(c.id)]=true;});
   personalThreads.forEach(function(t){
+    if(currentVCId&&t.peer_id!==undefined&&t.peer_id!==null&&!scopedIds[String(t.peer_id)])return;
     if(t.peer_id===undefined||t.peer_id===null||t.peer_id===''){withThread.push({kind:'thread',t:t});return;}
     const key='p-'+t.peer_id;if(seen[key])return;seen[key]=1;withThread.push({kind:'thread',t:t});
   });
-  msgScopedContacts().forEach(function(c){
+  scopedContacts.forEach(function(c){
     const key='p-'+c.id;if(seen[key])return;seen[key]=1;fresh.push({kind:'contact',c:c});
   });
   withThread.sort(function(a,b){return (b.t._at||0)-(a.t._at||0);});
@@ -2744,7 +3023,13 @@ function msgPersonalRows(){
   return withThread.concat(fresh);
 }
 function msgRenderPersonalRows(list){
-  const rows=msgPersonalRows();
+  const search=document.getElementById('msgContactSearch');
+  const term=search?search.value.trim().toLocaleLowerCase():'';
+  const rows=msgPersonalRows().filter(function(r){
+    if(!term)return true;
+    const name=r.kind==='thread'?r.t.name:r.c.name;
+    return String(name||'').toLocaleLowerCase().includes(term);
+  });
   if(!rows.length){list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--text-muted);">'+(currentVCId?'No students in this class yet.':'No contacts yet. Classmates and teachers you share a class with will appear here.')+'</div>';return;}
   rows.forEach(function(r){
     if(r.kind==='thread'){
@@ -2776,6 +3061,7 @@ function openMsgRow(el){
 }
 function renderMsgThreads(){
   const list=document.getElementById('msgThreadList');if(!list)return;list.innerHTML='';
+  const searchWrap=document.getElementById('msgContactSearchWrap');if(searchWrap)searchWrap.style.display=currentMsgTab==='personal'&&msgRealLoaded?'block':'none';
   if(msgRealLoaded&&currentMsgTab==='personal'){msgRenderPersonalRows(list);return;}
   const threads=msgSortThreads(msgScopedThreads(currentMsgTab==='personal'?personalThreads:classThreads));
   if(!threads.length){list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--text-muted);">'+(currentMsgTab==='personal'?'No private conversations yet.':'No class threads yet.')+'</div>';return;}
@@ -2801,6 +3087,7 @@ function switchMsgTab(tab){
 }
 function sendMsg(){
   const inp=document.getElementById('msgInput');const text=inp.value.trim();if(!text)return;
+  if(!msgRealLoaded){showToast('Messages are still loading. Please try again in a moment.','error');return;}
   const all=[...classThreads,...personalThreads];const t=all.find(x=>x.id===msgThreadActiveId);
   if(!t)return;
   const now=new Date();const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
@@ -2808,18 +3095,14 @@ function sendMsg(){
   t.msgs.push(optimistic);t.unread=0;t.sub='You: '+text.substring(0,30);inp.value='';inp.style.height='auto';
   msgTouchThread(t);
   renderMsgThreadContent(t);renderMsgThreads();
-  if(!msgRealLoaded)return;
   const payload=(t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='')?{recipient_id:t.peer_id,body:text}:(t.classroom_id!==undefined&&t.classroom_id!==null&&t.classroom_id!=='')?{classroom_id:t.classroom_id,body:text}:null;
   if(!payload)return;
-  const wsPayload={action:'send',kind:(t.peer_id!==undefined&&t.peer_id!==null&&t.peer_id!=='')?'dm':'group',body:text};
-  if(wsPayload.kind==='dm'){wsPayload.peer_id=t.peer_id;}else{wsPayload.classroom_id=t.classroom_id;}
-  if(msgSendWS(wsPayload))return;
   msgApi('/api/messages/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)}).then(d=>{
-    if(d&&d.ok)return;
+    if(d&&d.ok){const saved=d.message||{};optimistic.time=saved.time||optimistic.time;optimistic.sender='You';return;}
     const i=t.msgs.indexOf(optimistic);if(i>-1)t.msgs.splice(i,1);t.sub=t.sub.replace(/^You: /,'');
     if(msgThreadActiveId===t.id)renderMsgThreadContent(t);
     renderMsgThreads();
-    showToast('Message not sent','error');
+    showToast((d&&d.message)||'Message not sent. Please try again.','error');
   });
 }
 function pollMsgActive(){
@@ -2900,7 +3183,8 @@ const uploadTypes=[
   {key:'ppt',label:'Presentations',icon:'fa-file-powerpoint',bg:'#fdf2e7',color:'#ea580c',accept:'.ppt,.pptx'},
   {key:'img',label:'Images',icon:'fa-image',bg:'#e7fbf3',color:'#16a34a',accept:'.png,.jpg,.jpeg,.gif,.webp'},
   {key:'vid',label:'Videos',icon:'fa-film',bg:'#f1eafd',color:'#7c3aed',accept:'.mp4,.mov,.avi,.mkv,.webm'},
-  {key:'aud',label:'Audio',icon:'fa-headphones',bg:'#fff7de',color:'#9333ea',accept:'.mp3,.wav,.m4a,.aac'}
+  {key:'aud',label:'Audio',icon:'fa-headphones',bg:'#fff7de',color:'#9333ea',accept:'.mp3,.wav,.m4a,.aac'},
+  {key:'scorm',label:'SCORM Package',icon:'fa-box-archive',bg:'#eef2ff',color:'#4f46e5',accept:'.zip,.scorm'}
 ];
 
 function tassApiPost(url, formData){
@@ -2952,12 +3236,12 @@ function saveLink(){
   if(!title||!url){showToast('Please enter a title and URL','error');return;}
   const topicIdx=document.getElementById('linkTopicSelect').value;
   const topicName=topicIdx!==''&&topics[parseInt(topicIdx)]?topics[parseInt(topicIdx)].title:'';
-  saveResourceLink(title,url,topicName,function(){closeModal('addLinkModal');});
+  chooseResourceShare().then(function(share){if(share===null)return;saveResourceLink(title,url,topicName,function(){closeModal('addLinkModal');},share);});
 }
-function saveResourceLink(title,url,topicName,onSaved){
+function saveResourceLink(title,url,topicName,onSaved,share){
   const vcId=window.currentVCId;
   if(!vcId){showToast('Open a Virtual Classroom before adding a resource link.','error');return;}
-  const fd=new FormData();fd.append('action','resource');fd.append('type','link');fd.append('title',title);fd.append('url',url);fd.append('virtual_classroom_id',vcId);
+  const fd=new FormData();fd.append('action','resource');fd.append('type','link');fd.append('title',title);fd.append('url',url);fd.append('share',share==null?'0':share);fd.append('virtual_classroom_id',vcId);
   if(topicName)fd.append('topic',topicName);
   tassApiPost('/api/teacher-content/',fd).then(function(r){
     if(!r||!r.resource_id)throw new Error('The server did not save the resource link.');
@@ -2971,7 +3255,39 @@ function addMaterialToList(item){const icons={pdf:'fa-file-pdf',vid:'fa-film',do
 function fmt(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
 
 function openAddTopicModal(){document.getElementById('topicTitleInput').value='';document.getElementById('topicDescInput').value='';openModal('addTopicModal');}
-function saveNewTopic(){if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('addTopicModal')))return;const title=document.getElementById('topicTitleInput').value.trim();if(!title){showToast('Please enter a topic title','error');return;}topics.push({title,desc:document.getElementById('topicDescInput').value.trim(),materials:[],open:false,showUploadSelector:false,selectedUploadType:null});closeModal('addTopicModal');renderTopics();showToast('Topic added!','success');}
+function saveNewTopic(){
+  if(typeof tassValidate==="function"&&!tassValidate(document.getElementById('addTopicModal')))return;
+  const title=document.getElementById('topicTitleInput').value.trim();
+  const desc=document.getElementById('topicDescInput').value.trim();
+  if(!title){showToast('Please enter a topic title','error');return;}
+  const vcId=window.currentVCId;
+  if(!vcId){showToast('Open a Virtual Classroom before adding a topic.','error');return;}
+  // Paint the new topic straight away — the accordion is what the teacher is
+  // looking at, so it must not wait for a network round trip — then persist it
+  // to the Topic row the classroom payload is built from. Without the POST the
+  // topic lived only in this browser's list: re-opening the classroom rebuilt
+  // the accordion from the server and the "new" topic was gone.
+  const pending={title,desc,materials:[],open:false,showUploadSelector:false,selectedUploadType:null};
+  topics.push(pending);
+  closeModal('addTopicModal');
+  renderTopics();
+  const fd=new FormData();
+  fd.append('action','topic');
+  fd.append('name',title);
+  fd.append('virtual_classroom_id',vcId);
+  tassApiPost('/api/teacher-content/',fd).then(function(r){
+    if(!r||!r.topic_id)throw new Error('The server did not save the topic.');
+    showToast('Topic added!','success');
+    // Re-read the classroom so the row carries the server's Topic id (uploads
+    // attach to that id) without the teacher having to refresh the page.
+    if(typeof loadClassroomContent==='function')loadClassroomContent(vcId);
+  }).catch(function(err){
+    const at=topics.indexOf(pending);
+    if(at>=0)topics.splice(at,1);
+    renderTopics();
+    showToast((err&&err.message)||'Could not save the topic. Please try again.','error');
+  });
+}
 
 function renderTopics(){
   const c=document.getElementById('topicAccordion');if(!c)return;
@@ -2984,7 +3300,7 @@ function renderTopics(){
     const utBtns=uploadTypes.map(ut=>'<button class="upload-type-btn'+(t.selectedUploadType===ut.key?' selected':'')+'" onclick="selectUploadType('+i+',\''+ut.key+'\')" type="button"><div class="ut-icon" style="background:'+ut.bg+';color:'+ut.color+';"><i class="fa-solid '+ut.icon+'"></i></div><div class="ut-label">'+ut.label+'</div></button>').join('');
 
     const selectedUT=uploadTypes.find(u=>u.key===t.selectedUploadType);
-    const dropZone=t.selectedUploadType?'<div style="margin-top:12px;"><label class="upload-drop-zone" style="cursor:pointer;"><input type="file" style="display:none;" accept="'+(selectedUT?selectedUT.accept:'*')+'" multiple onchange="uploadToTopicTyped(this,'+i+',\''+t.selectedUploadType+'\')"/><i class="fa-solid '+selectedUT.icon+'" style="font-size:22px;color:'+selectedUT.color+';margin-bottom:8px;display:block;"></i><div style="font-size:13px;font-weight:600;color:var(--text-primary);">Click to upload '+selectedUT.label+' file(s)</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">or drag and drop here</div></label></div>':'';
+    const dropZone=t.selectedUploadType?'<div style="margin-top:12px;"><label class="upload-drop-zone" style="cursor:pointer;" ondragover="event.preventDefault();this.style.background=\'rgba(245,158,11,0.12)\'" ondragleave="this.style.background=\'rgba(245,158,11,0.04)\'" ondrop="uploadTopicDrop(event,'+i+',\''+t.selectedUploadType+'\',this)"><input type="file" style="display:none;" accept="'+(selectedUT?selectedUT.accept:'*')+'" multiple onchange="uploadToTopicTyped(this,'+i+',\''+t.selectedUploadType+'\')"/><i class="fa-solid '+selectedUT.icon+'" style="font-size:22px;color:'+selectedUT.color+';margin-bottom:8px;display:block;"></i><div style="font-size:13px;font-weight:600;color:var(--text-primary);">Click to upload '+selectedUT.label+' file(s)</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">or drag and drop here</div></label></div>':'';
 
     const uploadSelectorPanel=t.showUploadSelector?
       '<div class="upload-type-selector">'+
@@ -3023,10 +3339,27 @@ function hideUploadSelector(i){topics[i].showUploadSelector=false;topics[i].sele
 function selectUploadType(i,type){topics[i].selectedUploadType=type;renderTopics();}
 function removeMaterial(topicIdx,name){topics[topicIdx].materials=topics[topicIdx].materials.filter(m=>m.name!==name);renderTopics();showToast('Material removed','success');}
 
+function uploadTopicDrop(event,idx,type,zone){
+  event.preventDefault();
+  if(zone)zone.style.background='rgba(245,158,11,0.04)';
+  const input=zone&&zone.querySelector('input[type="file"]');
+  const droppedFiles=event.dataTransfer&&event.dataTransfer.files;
+  if(!input||!droppedFiles||!droppedFiles.length)return;
+  const transfer=new DataTransfer();
+  Array.from(droppedFiles).forEach(function(file){transfer.items.add(file);});
+  input.files=transfer.files;
+  uploadToTopicTyped(input,idx,type);
+}
 function uploadToTopicTyped(input,idx,type){
-  const files=Array.from(input.files);if(!files.length)return;
+  const files=Array.from((input&&input.files)||[]);if(!files.length)return;
+  const selectedType=uploadTypes.find(function(item){return item.key===type;});
+  const allowed=(selectedType&&selectedType.accept||'').split(',').map(function(ext){return ext.trim().toLowerCase();}).filter(Boolean);
+  const invalid=files.filter(function(file){return !allowed.includes('.'+((file.name.split('.').pop()||'').toLowerCase()));});
+  if(invalid.length){showToast('Choose only '+(selectedType?selectedType.label:'supported')+' file(s).','error');if(input)input.value='';return;}
   const topic=topics[idx];
   const resetInput=function(){if(input)input.value='';topic.showUploadSelector=false;topic.selectedUploadType=null;renderTopics();};
+  chooseResourceShare().then(function(share){
+  if(share===null){resetInput();return;}
   const sync=new FormData();
   sync.append('action','topic');
   sync.append('name',topic.title||'General Resources');
@@ -3036,19 +3369,21 @@ function uploadToTopicTyped(input,idx,type){
     const up=new FormData();
     up.append('action','file');
     up.append('type',type);
+    up.append('share',share);
     up.append('topic_id',topicId);
     if(window.currentVCId)up.append('virtual_classroom_id',window.currentVCId);
     files.forEach(f=>up.append('file',f));
     tassApiPost('/api/teacher-content/',up).then(function(){
       files.forEach(f=>{topic.materials.push({type:type,name:f.name,meta:type.toUpperCase()+' \u00b7 '+fmt(f.size)});});
-      resetInput();showToast(files.length+' file(s) uploaded to topic!','success');
+      resetInput();if(typeof loadClassroomContent==='function')loadClassroomContent(window.currentVCId);if(typeof loadResourceLibrary==='function')loadResourceLibrary();showToast(files.length+' file(s) uploaded to topic!','success');
     }).catch(function(err){resetInput();showToast((err&&err.message)||'Upload failed. Please try again.','error');});
   }).catch(function(){resetInput();showToast('Could not sync the topic. Please try again.','error');});
+  });
 }
-function addLinkToTopic(idx){const title=prompt('Link Title:');const url=prompt('URL:');if(title&&url){const topicName=topics[idx]&&topics[idx].title||'';saveResourceLink(title,url,topicName,function(){topics[idx].open=true;topics[idx].showUploadSelector=false;renderTopics();});}}
+function addLinkToTopic(idx){const title=prompt('Link Title:');const url=prompt('URL:');if(title&&url){const topicName=topics[idx]&&topics[idx].title||'';chooseResourceShare().then(function(share){if(share===null)return;saveResourceLink(title,url,topicName,function(){topics[idx].open=true;topics[idx].showUploadSelector=false;renderTopics();},share);});}}
 
 // ── ASSESSMENT BUILDER (2-step enforced) ──
-const BUILDER_QTYPE={mc:'Multiple Choice',tf:'True / False',mt:'Matching Type',id:'Identification',sa:'Short Answer',es:'Essay',pp:'Position Paper',cs:'Case Study',nr:'Narrative Report',pt:'Performance-Based Task'};
+const BUILDER_QTYPE={mc:'Multiple Choice',tf:'True / False',mt:'Matching Type',id:'Identification',sa:'Short Answer',numeric:'Numeric',es:'Essay',pp:'Position Paper',cs:'Case Study',nr:'Narrative Report',pt:'Performance-Based Task'};
 function partTypeName(p){return p?(p.qtype?BUILDER_QTYPE[p.qtype]:null)||(p.mode==='subjective'?'Essay':'Objective'):'';}
 function resetBuilderParts(){builderParts=[];currentPartId=null;renderBuilderParts();renderBuilderQs();syncBuilderForm();}
 function renderBuilderParts(){
@@ -3070,10 +3405,10 @@ function addBuilderPart(mode,qtype){
   renderBuilderParts();renderBuilderQs();syncBuilderForm();closeBuilderPartMenu();
   showToast(partTypeName({qtype})+' part added ('+grad+')','success');
 }
-function removeBuilderPart(id){if(builderParts.length<=1){showToast('An assessment requires at least one part','error');return;}builderParts=builderParts.filter(p=>p.id!==id);if(currentPartId===id)currentPartId=builderParts[0].id;renderBuilderParts();renderBuilderQs();syncBuilderForm();}
+function removeBuilderPart(id){if(builderParts.length<=1){showToast('An assessment requires at least one part','error');return;}const questionCount=builderQuestions.filter(q=>q.partId===id).length;if(questionCount&&!confirm('Remove this part and its '+questionCount+' question(s)?'))return;builderParts=builderParts.filter(p=>p.id!==id);builderQuestions=builderQuestions.filter(q=>q.partId!==id);if(currentPartId===id)currentPartId=builderParts[0].id;renderBuilderParts();renderBuilderQs();syncBuilderForm();}
 function partEditMenuHTML(id){
   const groups=[
-    {mode:'objective',label:'Objective (Auto-Graded)',color:'#16a34a',list:[['mc','Multiple Choice','fa-list-check'],['tf','True / False','fa-toggle-on'],['mt','Matching Type','fa-table-columns'],['id','Identification','fa-pen'],['sa','Short Answer','fa-keyboard']]},
+    {mode:'objective',label:'Objective (Auto-Graded)',color:'#16a34a',list:[['mc','Multiple Choice','fa-list-check'],['tf','True / False','fa-toggle-on'],['mt','Matching Type','fa-table-columns'],['id','Identification','fa-pen'],['sa','Short Answer','fa-keyboard'],['numeric','Numeric','fa-calculator']]},
     {mode:'subjective',label:'Subjective (Manual Grading)',color:'#ea580c',list:[['es','Essay','fa-feather'],['pp','Position Paper','fa-scale-balanced'],['cs','Case Study','fa-magnifying-glass-chart'],['nr','Narrative Report','fa-book-open'],['pt','Performance-Based Task','fa-folder-open']]}
   ];
   let h='<div style="font-size:10.5px;font-weight:800;letter-spacing:.4px;padding:4px 8px;color:var(--navy);">Change Part Type</div>';
@@ -3105,13 +3440,13 @@ function syncBuilderForm(){
   let t=cur?cur.qtype:(selectedQType||'mc');
   if(['pp','cs','nr','pt'].includes(t))t='es';
   selectedQType=t;
-  ['mc','tf','mt','id','sa','es'].forEach(k=>{const el=document.getElementById('q'+k.charAt(0).toUpperCase()+k.slice(1)+'Section');if(el)el.style.display=k===t?'block':'none';});
+  ['mc','tf','mt','id','sa','numeric','es'].forEach(k=>{const el=document.getElementById('q'+k.charAt(0).toUpperCase()+k.slice(1)+'Section');if(el)el.style.display=k===t?'block':'none';});
 }
 function toggleBuilderPartMenu(ev){ev.stopPropagation();const m=document.getElementById('builderPartMenu');if(m)m.style.display=m.style.display==='none'?'block':'none';}
 function closeBuilderPartMenu(){const m=document.getElementById('builderPartMenu');if(m)m.style.display='none';document.querySelectorAll('.part-edit-menu').forEach(x=>x.style.display='none');}
 document.addEventListener('click',closeBuilderPartMenu);
 window.addBuilderPart=addBuilderPart;window.setCurrentPart=setCurrentPart;window.removeBuilderPart=removeBuilderPart;window.togglePartEditMenu=togglePartEditMenu;window.changePartType=changePartType;window.toggleBuilderPartMenu=toggleBuilderPartMenu;window.closeBuilderPartMenu=closeBuilderPartMenu;
-function openAssessmentBuilder(){builderQuestions=[];resetBuilderParts();window.managedEditOriginal=null;window.managedEditTitle=null;window.managedEditAssessmentId=null;window.managedEditClassroomId=null;document.getElementById('builderStep1').style.display='block';document.getElementById('builderStep2').style.display='none';document.getElementById('bTitle').value='';document.getElementById('bOpenDate').value='';document.getElementById('bDeadline').value='';// Reset step indicators
+function openAssessmentBuilder(){builderQuestions=[];resetBuilderParts();window.managedEditOriginal=null;window.managedEditTitle=null;window.managedEditAssessmentId=null;window.managedEditClassroomId=null;document.getElementById('builderStep1').style.display='block';document.getElementById('builderStep2').style.display='none';document.getElementById('bTitle').value='';document.getElementById('bOpenDate').value='';document.getElementById('bDeadline').value='';document.getElementById('bTime').value='60';document.getElementById('bPassing').value='60';document.getElementById('bInstructions').value='';document.getElementById('bAllowAttachments').checked=false;document.getElementById('bAcceptedFileFormat').value='';document.getElementById('bAllowLinks').checked=false;document.getElementById('bRevealAnswersScoreOnly').checked=true;document.getElementById('bRevealAnswersReview').checked=false;document.getElementById('bShareRepositoryLocal').checked=true;const reopenChoice=document.getElementById('reopenAssessmentChoice');const reopenCheckbox=document.getElementById('bReopenAssessment');if(reopenChoice)reopenChoice.style.display='none';if(reopenCheckbox)reopenCheckbox.checked=false;const saveButton=document.getElementById('publishAssessmentButton');if(saveButton)saveButton.innerHTML='<i class="fa-solid fa-paper-plane"></i> Publish Assessment';// Reset step indicators
 document.getElementById('bstep1').className='builder-step active';document.getElementById('bstep2').className='builder-step';renderBuilderQs();openModal('assessBuilderModal');}
 
 function goToBuilderStep2(){
@@ -3142,9 +3477,9 @@ function attachQMedia(input,kind){if(!input.files[0])return;const f=input.files[
 function attachOptImg(input,letter){if(!input.files[0])return;const f=input.files[0];const wrap=input.closest('.mc-opt-input');const old=wrap.querySelector('.opt-img-thumb');if(old)old.remove();optImgLoading[letter]=true;compressAssessmentImage(f).then(function(data){optImgAttached[letter]=data;optImgLoading[letter]=false;const img=document.createElement('img');img.src=data;img.className='opt-img-thumb';img.title=f.name;wrap.appendChild(img);mcChoiceGuard();showToast('Image added to choice '+letter,'success');}).catch(function(error){optImgLoading[letter]=false;delete optImgAttached[letter];showToast(error.message||'Could not load that choice image.','error');});}
 let editingQuestionIdx=null;
 function mcChoiceGuard(){const letters=['A','B','C','D'];const filled=i=>{const el=document.getElementById('optText'+letters[i]);return !!((el&&el.value.trim())||optImgAttached[letters[i]]);};const radios=document.querySelectorAll('input[name="mcCorrect"]');let idx=-1;for(let i=0;i<radios.length;i++)if(radios[i].checked){idx=i;break;}if(idx>=0&&filled(idx))return;for(let i=0;i<radios.length;i++){if(filled(i)){radios[i].checked=true;return;}}if(radios[0])radios[0].checked=true;}
-function addQuestion(){if(qMediaLoading||Object.keys(optImgLoading).some(function(k){return optImgLoading[k];})){showToast('Wait for the selected image to finish preparing.','error');return;}const text=document.getElementById('qText').value.trim();const pts=Math.min(Math.max(parseInt(document.getElementById('qPoints').value)||2,1),100);if(!text){showToast('Please enter a question','error');return;}const cur=builderParts.find(p=>p.id===currentPartId);if(!cur){showToast('Please add a part first','error');return;}const qtype=cur.qtype||'mc';const mode=QTYPE_MODE[qtype]==='subjective'?'manual':'auto';selectedQType=qtype;const data={type:qtype,mode,partId:cur.id,text,points:pts,media:qMediaAttached,optImgs:Object.assign({},optImgAttached)};if(qtype==='mc'){const letters=['A','B','C','D'];const options=letters.map(L=>{const el=document.getElementById('optText'+L);return el?el.value.trim():'';});const filledIdx=letters.map((L,i)=>(options[i]||optImgAttached[L])?i:-1).filter(i=>i>=0);if(filledIdx.length<2){showToast('Please fill in at least two choices','error');return;}const radios=document.getElementsByName('mcCorrect');let correct=0;for(let i=0;i<radios.length;i++){if(radios[i].checked){correct=i;break;}}if(!(options[correct]||optImgAttached[letters[correct]])){correct=filledIdx[0];if(radios[correct])radios[correct].checked=true;}data.options=options;data.correct=correct;}else if(qtype==='tf'){data.tf=tfSelected==='true';}else if(qtype==='mt'){data.match=document.getElementById('mtItems').value.trim();if(!data.match){showToast('Please enter the matching pairs','error');return;}}else if(qtype==='id'){data.idAns=document.getElementById('idAnswer').value.trim();if(!data.idAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='sa'){data.saAns=document.getElementById('saAnswer').value.trim();if(!data.saAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='es'||qtype==='pp'||qtype==='cs'||qtype==='nr'||qtype==='pt'){data.rubric=document.getElementById('esRubric').value.trim();}if(editingQuestionIdx!==null){const found=builderQuestions[editingQuestionIdx];if(found){Object.assign(found,data,{partId:found.partId});}editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question Successfully Updated.','success');return;}builderQuestions.push(data);resetQuestionForm();renderBuilderQs();showToast('Question added!'+(mode==='manual'?' Manual grading required for this item.':''),'success');}
-function resetQuestionForm(){document.getElementById('qText').value='';const pts=document.getElementById('qPoints');if(pts)pts.value='2';document.getElementById('qMediaPreview').innerHTML='';qMediaAttached=null;qMediaLoading=false;optImgAttached={};optImgLoading={};document.querySelectorAll('.opt-img-thumb').forEach(t=>t.remove());document.querySelectorAll('.opt-field').forEach(f=>f.value='');document.querySelectorAll('input[name="mcCorrect"]').forEach((r,i)=>r.checked=i===0);tfSelected='true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn sel-true';if(tF)tF.className='tf-btn';const mi=document.getElementById('mtItems');if(mi)mi.value='';const ia=document.getElementById('idAnswer');if(ia)ia.value='';const sa=document.getElementById('saAnswer');if(sa)sa.value='';const er=document.getElementById('esRubric');if(er)er.value='';const ab=document.getElementById('qAddBtn');if(ab)ab.innerHTML='<i class="fa-solid fa-plus"></i> Add Question';const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='none';}
-function editQuestion(idx){const q=builderQuestions[idx];if(!q)return;document.getElementById('qText').value=q.text||'';const pts=document.getElementById('qPoints');if(pts)pts.value=q.points||2;if(builderParts.length){const p=builderParts.find(x=>x.id===q.partId);if(p){currentPartId=p.id;selectedQType=p.qtype||'mc';}}syncBuilderForm();if(q.type==='mc'){const opts=(q.options&&q.options.length)?q.options:['','','',''];['A','B','C','D'].forEach((L,i)=>{const el=document.getElementById('optText'+L);if(el)el.value=opts[i]||'';});optImgAttached={};if(q.optImgs){['A','B','C','D'].forEach(L=>{if(q.optImgs[L])optImgAttached[L]=q.optImgs[L];});}const radios=document.getElementsByName('mcCorrect');const ci=(typeof q.correct==='number')?q.correct:0;for(let i=0;i<radios.length;i++)radios[i].checked=i===ci;mcChoiceGuard();}else if(q.type==='tf'){tfSelected=q.tf===false?'false':'true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn'+(tfSelected==='true'?' sel-true':'');if(tF)tF.className='tf-btn'+(tfSelected==='false'?' sel-false':'');}else if(q.type==='mt'){const mi=document.getElementById('mtItems');if(mi)mi.value=q.match||'';}else if(q.type==='id'){const ia=document.getElementById('idAnswer');if(ia)ia.value=q.idAns||'';}else if(q.type==='sa'){const sa=document.getElementById('saAnswer');if(sa)sa.value=q.saAns||'';}else if(q.type==='es'||['pp','cs','nr','pt'].includes(q.type)){const er=document.getElementById('esRubric');if(er)er.value=q.rubric||'';}if(q.media)qMediaAttached=q.media;editingQuestionIdx=idx;const ab=document.getElementById('qAddBtn');if(ab){ab.innerHTML='<i class="fa-solid fa-pen"></i> Update Question';const form=ab.closest('.q-form');if(form)form.scrollIntoView({behavior:'smooth',block:'center'});}const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='inline-flex';showToast('Editing question '+(idx+1)+' — update the fields then click Save.','info');}
+function addQuestion(){if(qMediaLoading||Object.keys(optImgLoading).some(function(k){return optImgLoading[k];})){showToast('Wait for the selected image to finish preparing.','error');return;}const text=document.getElementById('qText').value.trim();const pts=Math.min(Math.max(parseInt(document.getElementById('qPoints').value)||2,1),100);if(!text){showToast('Please enter a question','error');return;}const cur=builderParts.find(p=>p.id===currentPartId);if(!cur){showToast('Please add a part first','error');return;}const qtype=cur.qtype||'mc';const mode=QTYPE_MODE[qtype]==='subjective'?'manual':'auto';selectedQType=qtype;const data={type:qtype,mode,partId:cur.id,text,points:pts,media:qMediaAttached,optImgs:Object.assign({},optImgAttached)};if(qtype==='mc'){const letters=['A','B','C','D'];const options=letters.map(L=>{const el=document.getElementById('optText'+L);return el?el.value.trim():'';});const filledIdx=letters.map((L,i)=>(options[i]||optImgAttached[L])?i:-1).filter(i=>i>=0);if(filledIdx.length<2){showToast('Please fill in at least two choices','error');return;}const radios=document.getElementsByName('mcCorrect');let correct=0;for(let i=0;i<radios.length;i++){if(radios[i].checked){correct=i;break;}}if(!(options[correct]||optImgAttached[letters[correct]])){correct=filledIdx[0];if(radios[correct])radios[correct].checked=true;}data.options=options;data.correct=correct;}else if(qtype==='tf'){data.tf=tfSelected==='true';}else if(qtype==='mt'){data.match=document.getElementById('mtItems').value.trim();if(!data.match){showToast('Please enter the matching pairs','error');return;}}else if(qtype==='numeric'){const answer=document.getElementById('numericAnswer').value;const tolerance=document.getElementById('numericTolerance').value;if(answer===''||tolerance===''||!Number.isFinite(Number(answer))||!Number.isFinite(Number(tolerance))||Number(tolerance)<0){showToast('Enter a valid correct number and non-negative tolerance.','error');return;}data.answer=answer;data.tolerance=tolerance;}else if(qtype==='id'){data.idAns=document.getElementById('idAnswer').value.trim();if(!data.idAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='sa'){data.saAns=document.getElementById('saAnswer').value.trim();if(!data.saAns){showToast('Please enter the expected answer','error');return;}}else if(qtype==='es'||qtype==='pp'||qtype==='cs'||qtype==='nr'||qtype==='pt'){data.rubric=document.getElementById('esRubric').value.trim();}if(editingQuestionIdx!==null){const found=builderQuestions[editingQuestionIdx];if(found){Object.assign(found,data,{partId:found.partId});}editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question Successfully Updated.','success');return;}builderQuestions.push(data);resetQuestionForm();renderBuilderQs();showToast('Question added!'+(mode==='manual'?' Manual grading required for this item.':''),'success');}
+function resetQuestionForm(){document.getElementById('qText').value='';const pts=document.getElementById('qPoints');if(pts)pts.value='2';document.getElementById('qMediaPreview').innerHTML='';qMediaAttached=null;qMediaLoading=false;optImgAttached={};optImgLoading={};document.querySelectorAll('.opt-img-thumb').forEach(t=>t.remove());document.querySelectorAll('.opt-field').forEach(f=>f.value='');document.querySelectorAll('input[name="mcCorrect"]').forEach((r,i)=>r.checked=i===0);tfSelected='true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn sel-true';if(tF)tF.className='tf-btn';const mi=document.getElementById('mtItems');if(mi)mi.value='';const ia=document.getElementById('idAnswer');if(ia)ia.value='';const sa=document.getElementById('saAnswer');if(sa)sa.value='';const na=document.getElementById('numericAnswer'),nt=document.getElementById('numericTolerance');if(na)na.value='';if(nt)nt.value='0';const er=document.getElementById('esRubric');if(er)er.value='';const ab=document.getElementById('qAddBtn');if(ab)ab.innerHTML='<i class="fa-solid fa-plus"></i> Add Question';const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='none';}
+function editQuestion(idx){const q=builderQuestions[idx];if(!q)return;document.getElementById('qText').value=q.text||'';const pts=document.getElementById('qPoints');if(pts)pts.value=q.points||2;if(builderParts.length){const p=builderParts.find(x=>x.id===q.partId);if(p){currentPartId=p.id;selectedQType=p.qtype||'mc';}}syncBuilderForm();if(q.type==='mc'){const opts=(q.options&&q.options.length)?q.options:['','','',''];['A','B','C','D'].forEach((L,i)=>{const el=document.getElementById('optText'+L);if(el)el.value=opts[i]||'';});optImgAttached={};if(q.optImgs){['A','B','C','D'].forEach(L=>{if(q.optImgs[L])optImgAttached[L]=q.optImgs[L];});}const radios=document.getElementsByName('mcCorrect');const ci=(typeof q.correct==='number')?q.correct:0;for(let i=0;i<radios.length;i++)radios[i].checked=i===ci;mcChoiceGuard();}else if(q.type==='tf'){tfSelected=q.tf===false?'false':'true';const tT=document.getElementById('tfTrue'),tF=document.getElementById('tfFalse');if(tT)tT.className='tf-btn'+(tfSelected==='true'?' sel-true':'');if(tF)tF.className='tf-btn'+(tfSelected==='false'?' sel-false':'');}else if(q.type==='mt'){const mi=document.getElementById('mtItems');if(mi)mi.value=q.match||'';}else if(q.type==='numeric'){const na=document.getElementById('numericAnswer'),nt=document.getElementById('numericTolerance');if(na)na.value=q.answer||'';if(nt)nt.value=q.tolerance||0;}else if(q.type==='id'){const ia=document.getElementById('idAnswer');if(ia)ia.value=q.idAns||'';}else if(q.type==='sa'){const sa=document.getElementById('saAnswer');if(sa)sa.value=q.saAns||'';}else if(q.type==='es'||['pp','cs','nr','pt'].includes(q.type)){const er=document.getElementById('esRubric');if(er)er.value=q.rubric||'';}if(q.media)qMediaAttached=q.media;editingQuestionIdx=idx;const ab=document.getElementById('qAddBtn');if(ab){ab.innerHTML='<i class="fa-solid fa-pen"></i> Update Question';const form=ab.closest('.q-form');if(form)form.scrollIntoView({behavior:'smooth',block:'center'});}const cb=document.getElementById('qCancelEditBtn');if(cb)cb.style.display='inline-flex';showToast('Editing question '+(idx+1)+' — update the fields then click Save.','info');}
 function cancelEditQuestion(){editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Question edit cancelled.','info');}
 function deleteQ(idx){builderQuestions.splice(idx,1);if(editingQuestionIdx===idx)editingQuestionIdx=null;resetQuestionForm();renderBuilderQs();showToast('Removed','success');}
 function publishAssessment(){if(builderQuestions.length===0){showToast('Add at least one question first','error');return;}const nq=builderQuestions.length;closeModal('assessBuilderModal');builderQuestions=[];showToast('Assessment published successfully!','success');if(typeof logActivity==='function')logActivity('Created and published an assessment with '+nq+' question(s) in the Builder.','fa-file-pen','#fef3c7','#7c3aed');}
@@ -3163,6 +3498,7 @@ function analyticsBucket(f,period,year){
   const base=String(f||'all');
   const scoped=period?base+'.'+period:base;
   const keyed=year?scoped+'|'+year:scoped;
+  if(period||year)return analyticsData[keyed]||emptyAnalyticsBucket();
   return analyticsData[keyed]||analyticsData[scoped]||analyticsData[base]||analyticsData.all;
 }
 // Stable key for a Virtual Classroom row, used to build the class filter and to
@@ -3225,12 +3561,12 @@ function initAnalyticsCharts(){
     const ctx=el.getContext('2d');
     if(ctx)charts[id]=new Chart(ctx,cfg);
   };
-  mk('attendanceTrendChart',{type:'line',data:{labels:d.attL,datasets:[{label:'Attendance %',data:d.attV,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#f59e0b',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:70,max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.attendance_trend');
+  mk('attendanceTrendChart',{type:'line',data:{labels:d.attL,datasets:[{label:'Attendance %',data:d.attV,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#f59e0b',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.attendance_trend');
   mk('attendanceBreakdownChart',{type:'doughnut',data:{labels:d.brL,datasets:[{data:d.brV,backgroundColor:['#22a877','#d94f4f','#e99b2a','#fbbf24']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}},(d.brL||[]).join('|')||'analytics.attendance_breakdown');
   mk('scoreDistChart',{type:'bar',data:{labels:d.sdL,datasets:[{data:d.sdV,backgroundColor:['#d94f4f','#f97316','#e99b2a','#fbbf24','#22a877'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}},'analytics.score_distribution');
   mk('submissionRateChart',{type:'bar',data:{labels:d.srL,datasets:[{label:'%',data:d.srV,backgroundColor:'#22a877',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.submission_rate');
   mk('studentPerfChart',{type:'bar',data:{labels:d.spL,datasets:[{data:d.spV,backgroundColor:['#fbbf24','#7c3aed','#ea580c','#16a34a'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}}}}},'analytics.student_performance');
-  mk('downloadActivityChart',{type:'line',data:{labels:d.dlL,datasets:[{data:d.dlV,borderColor:'#e99b2a',backgroundColor:'rgba(233,155,42,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#e99b2a',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}},'analytics.download_activity');
+  mk('downloadActivityChart',{type:'line',data:{labels:d.dlL,datasets:[{label:'Material placements',data:d.dlV,borderColor:'#e99b2a',backgroundColor:'rgba(233,155,42,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#e99b2a',pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}},'analytics.material_placements');
   mk('passFailChart',{type:'bar',data:{labels:d.pfL,datasets:[{label:'Passed',data:d.pfP,backgroundColor:'#22a877',borderRadius:6},{label:'Failed',data:d.pfF,backgroundColor:'#d94f4f',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}}}},'analytics.pass_fail');
 }
 
@@ -3262,6 +3598,7 @@ document.addEventListener('click',function(ev){if(!ev.target.closest('.icon-btn'
 const RESOURCE_LIBRARY_PAGE=[];
 const REAL_RESOURCES=[];
 const REAL_VCS=[];
+const REAL_REPO_SUBJECTS=[];
 // ASSESSMENT_LIBRARY_PAGE was referenced by renderAssessmentLibrary() but never
 // declared, so clicking "Assessment Repository" threw
 // ReferenceError: ASSESSMENT_LIBRARY_PAGE is not defined, which pilot_guard.js
@@ -3269,17 +3606,19 @@ const REAL_VCS=[];
 // pattern: a demo seed plus a real-data buffer that wins when populated.
 const ASSESSMENT_LIBRARY_PAGE=[];
 const REAL_ASSESSMENTS=[];
+const REAL_ASSESSMENT_SUBJECTS=[];
 // Assessments added through "Upload Assessment to Repository" live apart from
 // REAL_ASSESSMENTS because the real-time poll refills REAL_ASSESSMENTS from the
 // backend every few seconds — anything pushed there would vanish instantly.
 // This array is never cleared, so a session upload stays visible until reload.
 const REAL_ASSESSMENTS_EXTRA=[];
-function assessmentSource(){const base=REAL_ASSESSMENTS.length?REAL_ASSESSMENTS:ASSESSMENT_LIBRARY_PAGE;return base.concat(REAL_ASSESSMENTS_EXTRA);}
+function assessmentSource(){const base=(!window.__TASS_REAL__&&!REAL_ASSESSMENTS.length)?ASSESSMENT_LIBRARY_PAGE:REAL_ASSESSMENTS;return base.concat(REAL_ASSESSMENTS_EXTRA);}
 // Real per-student metrics from teacher_context().report_data. The six
 // Analytics & Reports tiles read these; `studentRecords` is enriched from them
 // so the student list, ranking and at-risk banner agree with the reports.
 const REPORT_STUDENTS=[];
 const REPORT_ASSESSMENTS=[];
+let REPORT_MATRIX=[];
 const REPORT_CLASSROOMS=[];
 let REPORT_UNSCORED_ASSESSMENTS=0;
 function buildClassCard(c){
@@ -3287,6 +3626,8 @@ function buildClassCard(c){
   const card=document.createElement('div');
   card.className='class-card';
   if(c.id!==undefined&&c.id!==null)card.setAttribute('data-vc-id',c.id);
+  card.setAttribute('data-theme-color',c.color||'#f59e0b');
+  card.setAttribute('data-theme-background',c.background||'');
   card.setAttribute('data-grade',c.grade||'');
   card.setAttribute('data-subject',c.subject||'');
   card.setAttribute('data-section',c.section||'');
@@ -3575,8 +3916,12 @@ function materialTypeForResource(r){
   return 'doc';
 }
 function materialMetaForResource(r){
-  const src=(r&&(r.externalLink||r.fileUrl))||'';
-  return ((r&&r.typeLabel)||'Document')+(src?' · '+src:'');
+  // Type plus the size of the stored file ("PDF · 2.4 MB"). The file URL used
+  // to be shown here, which told the reader nothing about the download and
+  // overflowed the row on narrow screens.
+  const label=(r&&r.typeLabel)||'Document';
+  const size=(r&&r.sizeLabel)||'';
+  return size?label+' · '+size:label;
 }
 function hydrateTopicsFromClassroom(d){
   if(typeof topics==='undefined')return;
@@ -3605,7 +3950,7 @@ function hydrateSubmissionsFromClassroom(d){
       const nm=s.name||'Student';
       const initials=nm.split(/\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
       const st=(s.status==='submitted'||s.status==='late')?s.status:'not-submitted';
-      return {id:initials,name:nm,grad:'linear-gradient(135deg,#f59e0b,#fbbf24)',status:st,time:(s.time||'—'),score:(s.score==null||s.score==='')?'—':String(s.score),fileUrl:s.fileUrl||'',fileName:s.fileName||'',studentId:(s.studentId!=null?s.studentId:null),assessId:a.id};
+      return {id:initials,name:nm,grad:'linear-gradient(135deg,#f59e0b,#fbbf24)',status:st,time:(s.time||'—'),score:(s.score==null||s.score==='')?'—':String(s.score),fileUrl:s.fileUrl||'',fileName:s.fileName||'',viewUrl:s.viewUrl||'',submissionId:s.submissionId||null,studentId:(s.studentId!=null?s.studentId:null),assessId:a.id};
     });
   });
   window.__classroomAssessments=(d.assessments||[]).slice();
@@ -3670,8 +4015,10 @@ function feNotice(id, message, kind='sent'){
   el.style.display='block';
   el.innerHTML='<i class="fa-solid fa-check-circle"></i> '+message;
 }
-function openResourceRepositoryModal(){ renderRepoModal(); openModal('resourceRepositoryModal'); }
-function openResourceUploadModal(){ openModal('resourceUploadModal'); }
+function openResourceRepositoryModal(){ renderRepoModal(); openModal('resourceRepositoryModal'); if(!REAL_RESOURCES.length)loadResourceLibrary(); }
+function openResourceUploadModal(){ document.querySelectorAll('input[name="feResourceShare"]').forEach(function(input){input.checked=false;});const status=document.getElementById('resourceUploadStatus');if(status)status.style.display='none';openModal('resourceUploadModal'); }
+function chooseResourceShare(){return new Promise(function(resolve){window.__resourceShareResolver=resolve;openModal('resourceShareChoiceModal');});}
+window.finishResourceShareChoice=function(value){closeModal('resourceShareChoiceModal');const resolve=window.__resourceShareResolver;window.__resourceShareResolver=null;if(resolve)resolve(value);};
 function renderRepoModal(){
   const box=document.getElementById('repoItems');
   if(!box)return;
@@ -3697,7 +4044,8 @@ function teacherClassOptions(){
   document.querySelectorAll('#classGrid .class-card').forEach(card=>{
     const title=(card.querySelector('.class-subject')?.textContent||'').trim();
     const section=(card.querySelector('.class-section')?.textContent||'').trim();
-    if(title) list.push({title:String(title).replace(/'/g,"\\'"),section:String(section).replace(/'/g,"\\'")});
+    const subject=title.split(/[–—-]/).pop().trim();
+    if(title) list.push({title:String(title).replace(/'/g,"\\'"),section:String(section).replace(/'/g,"\\'"),subject:subject});
   });
   if(!list.length) list.push({title:'Grade 9 \\u2013 Science',section:'Section C'});
   return list;
@@ -3746,33 +4094,58 @@ function downloadSharedResource(name){
   if(url){ window.open(url,'_blank','noopener'); return; }
   showToast('No file is attached to “'+name+'”.','error');
 }
-function resourceGradeOf(subject){const m={'Biology':'Grade 11','English':'Grade 10','Mathematics':'Grade 8','Science':'Grade 9'};return m[subject]||'Grade 9';}
-function resourceSource(){return REAL_RESOURCES.length?REAL_RESOURCES:RESOURCE_LIBRARY_PAGE;}
+function resourceGradeOf(resource){return resource&&resource.grade_level?'Grade '+resource.grade_level:'';}
+function resourceSource(){return window.__TASS_REAL__?REAL_RESOURCES:RESOURCE_LIBRARY_PAGE;}
+var resourceRepositorySubject='';
+function resourceSubjectLabel(subject, allSubjects){
+  const duplicateName=(allSubjects||[]).filter(function(row){return row.name===subject.name;}).length>1;
+  return subject.name+(duplicateName?' · Grade '+subject.grade_level:'')+(subject.grading_period?' · '+subject.grading_period:'');
+}
 function loadResourceLibrary(){
-  fetch('/api/learning-resources/',{credentials:'same-origin'}).then(r=>r.json()).then(function(d){
+  return fetch('/api/learning-resources/',{credentials:'same-origin'}).then(r=>r.json()).then(function(d){
     if(d&&d.ok&&Array.isArray(d.resources)){REAL_RESOURCES.length=0;d.resources.forEach(function(x){REAL_RESOURCES.push(x);});}
     if(d&&d.ok&&Array.isArray(d.virtual_classrooms)){REAL_VCS.length=0;d.virtual_classrooms.forEach(function(x){REAL_VCS.push(x);});}
+    if(d&&d.ok&&Array.isArray(d.repository_subjects)){REAL_REPO_SUBJECTS.length=0;d.repository_subjects.forEach(function(x){REAL_REPO_SUBJECTS.push(x);});}
     populateRepoSubjects();
     renderResourceLibrary();
+    if(document.getElementById('resourceRepositoryModal')?.classList.contains('open'))renderRepoModal();
   }).catch(function(){renderResourceLibrary();});
 }
 function populateRepoSubjects(){
-  const sel=document.getElementById('repoSubjectPage');
-  if(!sel)return;
   const subs=[...new Set(resourceSource().map(r=>r.subject).filter(Boolean))].sort();
-  const cur=sel.value;
-  sel.innerHTML='<option value="">All Subjects</option>'+subs.map(s=>'<option>'+e(s)+'</option>').join('');
-  if(subs.indexOf(cur)>=0)sel.value=cur;
+  ['repoSubject'].forEach(function(id){
+    const sel=document.getElementById(id);if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">All Subjects</option>'+subs.map(s=>'<option>'+e(s)+'</option>').join('');
+    if(subs.indexOf(cur)>=0)sel.value=cur;
+  });
 }
 function renderResourceLibrary(){
   const grid=document.getElementById('resourceLibraryGrid');
   if(!grid) return;
   const q=(document.getElementById('repoSearchPage')?.value||'').toLowerCase();
-  const subject=document.getElementById('repoSubjectPage')?.value||'';
   const grade=document.getElementById('repoGradePage')?.value||'';
-  const items=resourceSource().filter(r=>(!subject||r.subject===subject)&&(!grade||resourceGradeOf(r.subject)===grade)&&(!q||(r.title+' '+r.topic+' '+r.subject+' '+r.meta).toLowerCase().includes(q)));
-  if(!items.length){ grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No resources found.</div>'; return; }
-  const subjectName=subject||'All Subjects';
+  const allItems=resourceSource().filter(r=>(!grade||resourceGradeOf(r)===grade)&&(!q||(r.title+' '+r.topic+' '+r.subject+' '+r.meta).toLowerCase().includes(q)));
+  const subjects=window.__TASS_REAL__?REAL_REPO_SUBJECTS:[...new Set(resourceSource().map(r=>r.subject).filter(Boolean))].map(function(name){return {id:name,name:name};});
+  if(!resourceRepositorySubject){
+    const folders=subjects.filter(function(subject){
+      if(grade&&('Grade '+subject.grade_level)!==grade)return false;
+      return !q||String(subject.name).toLowerCase().includes(q)||allItems.some(function(r){return String(r.subject_id)===String(subject.id);});
+    }).slice().sort(function(a,b){return Number(a.grade_level||0)-Number(b.grade_level||0)||String(a.name).localeCompare(String(b.name),undefined,{numeric:true,sensitivity:'base'})||Number(a.id)-Number(b.id);});
+    if(!folders.length){grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No subject folders found.</div>';return;}
+    grid.innerHTML='<div class="resource-folder-grid">'+folders.map(function(subject){
+      const count=allItems.filter(function(r){return String(r.subject_id)===String(subject.id);}).length;
+      const displayName=resourceSubjectLabel(subject,subjects);
+      return '<button type="button" class="resource-folder" data-subject="'+e(subject.id)+'" onclick="openResourceSubject(this.dataset.subject)" aria-label="Open '+e(displayName)+' folder, '+count+' learning materials">'+
+        '<span class="resource-folder-icon"><i class="fa-solid fa-folder-open"></i></span><span class="resource-folder-copy"><span class="resource-folder-name">'+e(displayName)+'</span><span class="resource-folder-count">'+count+' material'+(count===1?'':'s')+'</span></span><i class="fa-solid fa-chevron-right resource-folder-arrow" aria-hidden="true"></i></button>';
+    }).join('')+'</div>';
+    return;
+  }
+  const subject=subjects.find(function(row){return String(row.id)===String(resourceRepositorySubject);});
+  if(!subject){resourceRepositorySubject='';renderResourceLibrary();return;}
+  const items=allItems.filter(function(r){return String(r.subject_id)===String(subject.id);});
+  const subjectName=resourceSubjectLabel(subject,subjects);
+  if(!items.length){ grid.innerHTML='<div class="resource-library-heading"><button class="btn btn-outline btn-sm" onclick="closeResourceSubject()"><i class="fa-solid fa-arrow-left"></i> All subjects</button><span>'+e(subjectName)+'</span></div><div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No learning materials found.</div>'; return; }
   grid.innerHTML='<h4 style="margin:0 0 10px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px"><i class="fa-solid fa-book-open" style="color:var(--blue)"></i> '+e(subjectName)+' – Resources</h4>'+items.map(r=>`
     <div class="repository-item">
       <div class="repo-main">
@@ -3784,12 +4157,17 @@ function renderResourceLibrary(){
       ${resourceDownloadBtn(r)}
       </div>
     </div>`).join('');
+  grid.insertAdjacentHTML('afterbegin','<div class="resource-library-heading"><button class="btn btn-outline btn-sm" onclick="closeResourceSubject()"><i class="fa-solid fa-arrow-left"></i> All subjects</button><span style="font-size:12px;color:var(--text-muted)">'+items.length+' material'+(items.length===1?'':'s')+'</span></div>');
 }
+function openResourceSubject(subject){resourceRepositorySubject=String(subject||'');renderResourceLibrary();}
+function closeResourceSubject(){resourceRepositorySubject='';renderResourceLibrary();}
 function copyResourceToBuilder(id){
   const r=resourceSource().find(x=>String(x.id)===String(id));
   if(!r){ showToast('This resource is not available to copy.','error'); return; }
+  if(!REAL_VCS.length){ loadResourceLibrary().then(function(){if(!REAL_VCS.length)showToast('No current-year virtual classrooms are available.','error');else copyResourceToBuilder(id);}); return; }
+  const compatible=REAL_VCS.filter(v=>v.subject===r.subject&&Number(v.grade_level)===Number(r.grade_level));
   const listHtml=REAL_VCS.length
-    ? REAL_VCS.map(v=>'<label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;"><input type="checkbox" value="'+v.id+'"> <span style="font-size:13px;color:var(--navy);">'+e(v.name)+'</span></label>').join('')
+    ? (compatible.length?compatible.map(v=>'<label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;"><input type="checkbox" value="'+v.id+'"> <span style="font-size:13px;color:var(--navy);">'+e(v.name)+'</span></label>').join(''):'<div style="padding:10px;color:var(--text-muted);font-size:13px;">No current-year classroom matches this subject and grade.</div>')
     : '<div style="padding:10px;color:var(--text-muted);font-size:13px;">No virtual classrooms found.</div>';
   const html='<div class="modal-overlay open" id="tempCopyResource" onclick="if(event.target===this)document.getElementById(\'tempCopyResource\').remove()"><div class="modal-box">'+
     '<div class="modal-title"><i class="fa-solid fa-copy" style="color:var(--blue);margin-right:8px"></i>Copy to Classroom</div>'+
@@ -3802,7 +4180,7 @@ function copyResourceToBuilder(id){
     '<div id="copyDestList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;border:1px solid var(--card-border);border-radius:10px;padding:10px;">'+listHtml+'</div>'+
     '<div class="modal-footer">'+
       '<button class="btn btn-outline" onclick="document.getElementById(\'tempCopyResource\').remove()">Cancel</button>'+
-      '<button class="btn btn-primary" onclick="confirmCopyResource('+r.id+')"><i class="fa-solid fa-copy"></i> Copy Resource</button>'+
+      '<button class="btn btn-primary" '+(compatible.length?'':'disabled')+' onclick="confirmCopyResource('+r.id+')"><i class="fa-solid fa-copy"></i> Reuse Resource</button>'+
     '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
 }
@@ -3838,16 +4216,52 @@ const ASSESS_TYPE_ICONS={
   'Quiz':'fa-clipboard-question','Seatwork':'fa-pen-to-square','Assignment':'fa-file-signature','Project':'fa-folder-tree','Examination':'fa-file-circle-question'
 };
 function assessTypeColor(t){const m={'Quiz':'#f59e0b','Seatwork':'#16a34a','Assignment':'#f59e0b','Project':'#7c3aed','Examination':'#e11d48'};return m[t]||'var(--blue)';}
+var assessmentRepositorySubject='';
+function refreshAssessmentSubjectFilter(){
+  const assigned=[...new Set(teacherClassOptions().map(function(c){return c.subject;}).filter(Boolean))].sort();
+  const subjects=assigned.length?assigned:[...new Set(assessmentSource().map(a=>a.subject).filter(Boolean))].sort();
+  const sel=document.getElementById('feAssessSubject');if(!sel)return;
+  const current=sel.value;
+  sel.innerHTML='<option value="">Select a subject</option>'+subjects.map(function(s){return '<option value="'+e(s)+'">'+e(s)+'</option>';}).join('');
+  sel.value=subjects.indexOf(current)>=0?current:'';
+}
 function renderAssessmentLibrary(){
   const grid=document.getElementById('assessmentLibraryGrid');
   if(!grid) return;
+  refreshAssessmentSubjectFilter();
   const q=(document.getElementById('assessRepoSearchPage')?.value||'').toLowerCase();
-  const subject=document.getElementById('assessRepoSubjectPage')?.value||'';
   const type=document.getElementById('assessRepoTypePage')?.value||'';
   const grade=document.getElementById('assessRepoGradePage')?.value||'';
-  const items=assessmentSource().filter(a=>(!subject||a.subject===subject)&&(!type||a.type===type)&&(!grade||resourceGradeOf(a.subject)===grade)&&(!q||(a.title+' '+a.type+' '+a.subject+' '+a.meta).toLowerCase().includes(q)));
-  if(!items.length){ grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-file-circle-question" style="font-size:34px;margin-bottom:10px;display:block"></i>No assessments found. Adjust your filters or upload a new assessment.</div>'; return; }
-  grid.innerHTML=items.map(a=>{
+  const subjects=window.__TASS_REAL__?REAL_ASSESSMENT_SUBJECTS:[...new Set(assessmentSource().map(a=>a.subject).filter(Boolean))].map(function(name){return {id:name,name:name};});
+  function subjectForAssessment(a){return subjects.find(function(subject){return (a.subjectId&&String(a.subjectId)===String(subject.id))||(!a.subjectId&&a.subject===subject.name);});}
+  const items=assessmentSource().filter(function(a){
+    const subject=subjectForAssessment(a);
+    const rowGrade=a.gradeLevel||(subject&&subject.gradeLevel);
+    return (!type||a.type===type)&&(!grade||('Grade '+rowGrade)===grade)&&(!q||(a.title+' '+a.type+' '+a.subject+' '+a.meta).toLowerCase().includes(q));
+  });
+  if(!assessmentRepositorySubject){
+    const folders=subjects.filter(function(subject){
+      if(grade&&('Grade '+subject.gradeLevel)!==grade)return false;
+      return !q||String(subject.name).toLowerCase().includes(q)||items.some(function(a){const row=subjectForAssessment(a);return row&&String(row.id)===String(subject.id);});
+    }).slice().sort(function(a,b){return Number(a.gradeLevel||0)-Number(b.gradeLevel||0)||String(a.name).localeCompare(String(b.name),undefined,{numeric:true,sensitivity:'base'})||Number(a.id)-Number(b.id);});
+    if(!folders.length){grid.innerHTML='<div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-folder-open" style="font-size:34px;margin-bottom:10px;display:block"></i>No subject folders found.</div>';return;}
+    grid.innerHTML='<div class="resource-folder-grid">'+folders.map(function(subject){
+      const count=items.filter(function(a){const row=subjectForAssessment(a);return row&&String(row.id)===String(subject.id);}).length;
+      const duplicateName=subjects.filter(function(row){return row.name===subject.name;}).length>1;
+      const label=subject.name+(duplicateName?' · Grade '+subject.gradeLevel:'')+(subject.gradingPeriod?' · '+subject.gradingPeriod:'');
+      return '<button type="button" class="resource-folder" data-subject="'+e(subject.id)+'" onclick="openAssessmentSubject(this.dataset.subject)" aria-label="Open '+e(label)+' folder, '+count+' assessments">'+
+        '<span class="resource-folder-icon"><i class="fa-solid fa-folder-open"></i></span><span class="resource-folder-copy"><span class="resource-folder-name">'+e(label)+'</span><span class="resource-folder-count">'+count+' assessment'+(count===1?'':'s')+'</span></span><i class="fa-solid fa-chevron-right resource-folder-arrow" aria-hidden="true"></i></button>';
+    }).join('')+'</div>';
+    return;
+  }
+  const selectedSubject=subjects.find(function(subject){return String(subject.id)===String(assessmentRepositorySubject);});
+  if(!selectedSubject){assessmentRepositorySubject='';renderAssessmentLibrary();return;}
+  const itemsForSubject=items.filter(function(a){const row=subjectForAssessment(a);return row&&String(row.id)===String(selectedSubject.id);});
+  const duplicateName=subjects.filter(function(row){return row.name===selectedSubject.name;}).length>1;
+  const subjectLabel=selectedSubject.name+(duplicateName?' · Grade '+selectedSubject.gradeLevel:'')+(selectedSubject.gradingPeriod?' · '+selectedSubject.gradingPeriod:'');
+  if(!itemsForSubject.length){grid.innerHTML='<div class="resource-library-heading"><button class="btn btn-outline btn-sm" onclick="closeAssessmentSubject()"><i class="fa-solid fa-arrow-left"></i> All subjects</button><span>'+e(subjectLabel)+'</span></div><div class="empty-block" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-file-circle-question" style="font-size:34px;margin-bottom:10px;display:block"></i>No assessments in this subject yet.</div>';return;}
+  grid.innerHTML='<div class="resource-library-heading"><button class="btn btn-outline btn-sm" onclick="closeAssessmentSubject()"><i class="fa-solid fa-arrow-left"></i> All subjects</button><h3><i class="fa-solid fa-folder-open" style="color:var(--blue);margin-right:6px"></i>'+e(subjectLabel)+'</h3><span style="font-size:12px;color:var(--text-muted)">'+itemsForSubject.length+' assessment'+(itemsForSubject.length===1?'':'s')+'</span></div>'+itemsForSubject.map(a=>{
+
     const escT=a.title.replace(/'/g,"\\'");
     return '<div class="repository-item">'+
       '<div class="repo-main">'+
@@ -3855,12 +4269,15 @@ function renderAssessmentLibrary(){
       '<div class="repo-body"><strong>'+e(a.title)+'</strong><div style="font-size:11px;color:var(--text-muted)">'+e(a.subject)+' · '+e(a.type)+' · '+e(a.items)+' questions · '+e(a.meta)+'</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="fa-solid fa-share-nodes"></i> Assigned to '+e(a.shares)+' classroom(s) · Updated '+e(a.updated)+'</div></div>'+
       '</div>'+
       '<div class="repo-actions">'+
-      '<button class="btn btn-outline btn-sm" onclick="copyAssessmentToBuilder(\''+escT+'\')"><i class="fa-solid fa-copy"></i> Copy to Classroom</button>'+
+      '<button class="btn btn-outline btn-sm" onclick="copyAssessmentToBuilder('+Number(a.id||0)+')"><i class="fa-solid fa-copy"></i> Copy to Classroom</button>'+
       '<button class="btn btn-outline btn-sm" onclick="viewTeacherAssessment(\''+escT+'\','+Number(a.id||0)+')"><i class="fa-solid fa-eye"></i> View</button>'+
       '</div></div>';
   }).join('');
 }
+function openAssessmentSubject(subject){assessmentRepositorySubject=String(subject||'');renderAssessmentLibrary();}
+function closeAssessmentSubject(){assessmentRepositorySubject='';renderAssessmentLibrary();}
 function openAssessmentUploadModal(){
+  refreshAssessmentSubjectFilter();
   openModal('assessmentLibraryUploadModal');
 }
 function saveFrontendAssessmentUpload(){
@@ -3868,6 +4285,8 @@ function saveFrontendAssessmentUpload(){
   const title=document.getElementById('feAssessTitle')?.value.trim();
   if(!title){ showToast('Please enter an assessment title.','error'); return; }
   const subject=document.getElementById('feAssessSubject')?.value||'';
+  const allowedSubjects=new Set(teacherClassOptions().map(function(c){return c.subject;}).filter(Boolean));
+  if(!subject||!allowedSubjects.has(subject)){showToast('Select a subject assigned to your classrooms.','error');return;}
   const type=document.getElementById('feAssessType')?.value||'Quiz';
   const fileInput=document.querySelector('#assessmentLibraryUploadModal input[type=file]');
   const fname=(fileInput&&fileInput.files&&fileInput.files[0])?fileInput.files[0].name:'';
@@ -3882,35 +4301,44 @@ function saveFrontendAssessmentUpload(){
   renderAssessmentLibrary();
   showToast('Assessment uploaded to repository!','success');
   if(typeof logActivity==='function')logActivity('Uploaded assessment "'+title+'" to the Subject-Level Assessment Repository.','fa-cloud-arrow-up','#fef3c7','#7c3aed');}
-function copyAssessmentToBuilder(name){
-  const a=(assessmentSource()||[]).find(x=>x.title===name)||{title:name,subject:'',type:'',items:'',meta:'',shares:'',updated:''};
-  const escName=String(a.title).replace(/'/g,"\\'");
-  const classes=teacherClassOptions();
+function copyAssessmentToBuilder(id){
+  if(!REAL_VCS.length){ loadResourceLibrary().then(function(){if(!REAL_VCS.length)showToast('No current-year virtual classrooms are available.','error');else copyAssessmentToBuilder(id);}); return; }
+  const a=(assessmentSource()||[]).find(x=>String(x.id)===String(id));
+  if(!a){showToast('This archived assessment is no longer available.','error');return;}
+  const classes=REAL_VCS.filter(function(c){return c.subject===a.subject&&Number(c.grade_level)===Number(a.gradeLevel);});
   const html='<div class="modal-overlay open" id="tempCopyAssessment" onclick="if(event.target===this)document.getElementById(\'tempCopyAssessment\').remove()"><div class="modal-box">'+
-    '<div class="modal-title"><i class="fa-solid fa-copy" style="color:var(--blue);margin-right:8px"></i>Copy Assessment to Builder</div>'+
-    '<div class="modal-sub">Choose the Virtual Classroom(s) to copy this assessment into your Assessment Builder.</div>'+
+    '<div class="modal-title"><i class="fa-solid fa-copy" style="color:var(--blue);margin-right:8px"></i>Reuse Assessment in This School Year</div>'+
+    '<div class="modal-sub">The archived original stays in the repository. Choose matching current-year classrooms to create editable copies.</div>'+
     '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin-bottom:6px;">'+
       '<i class="fa-solid '+(ASSESS_TYPE_ICONS[a.type]||'fa-clipboard-list')+'" style="font-size:20px;color:'+assessTypeColor(a.type)+'"></i>'+
       '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">'+e(a.title)+'</div>'+
-      '<div style="font-size:11px;color:var(--text-muted);">'+e(a.subject)+' · '+e(a.type)+' · '+e(a.items)+' · '+e(a.meta)+'</div></div></div>'+
+      '<div style="font-size:11px;color:var(--text-muted);">'+e(a.subject)+' ? '+e(a.type)+' ? '+e(a.items)+' ? '+e(a.meta)+'</div></div></div>'+
     '<div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Destination Classes</div>'+
     '<div id="copyDestList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;border:1px solid var(--card-border);border-radius:10px;padding:10px;">'+
-      classes.map(c=>'<label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;"><input type="checkbox" value="'+c.title+'"> <span style="font-size:13px;color:var(--navy);">'+e(c.title)+'</span><span style="font-size:11px;color:var(--text-muted);margin-left:auto;">'+e(c.section)+'</span></label>').join('')+
+      (classes.length?classes.map(c=>'<label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;"><input type="checkbox" value="'+c.id+'"> <span style="font-size:13px;color:var(--navy);">'+e(c.name)+'</span><span style="font-size:11px;color:var(--text-muted);margin-left:auto;">'+e(c.academic_year||'Current school year')+'</span></label>').join(''):'<div style="padding:10px;color:var(--text-muted);font-size:13px;">No current-year classroom matches this subject and grade.</div>')+
     '</div>'+
     '<div class="modal-footer">'+
       '<button class="btn btn-outline" onclick="document.getElementById(\'tempCopyAssessment\').remove()">Cancel</button>'+
-      '<button class="btn btn-primary" onclick="confirmCopyAssessmentToBuilder(\''+escName+'\')"><i class="fa-solid fa-copy"></i> Copy to Classroom</button>'+
+      '<button class="btn btn-primary" '+(classes.length?'':'disabled')+' onclick="confirmCopyAssessmentToBuilder('+Number(a.id)+')"><i class="fa-solid fa-copy"></i> Reuse in Classroom</button>'+
     '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
 }
-function confirmCopyAssessmentToBuilder(name){
+function confirmCopyAssessmentToBuilder(id){
   const sel=[...document.querySelectorAll('#copyDestList input:checked')].map(i=>i.value);
-  document.getElementById('tempCopyAssessment')?.remove();
-  if(!sel.length){ showToast('Select at least one destination class.','error'); copyAssessmentToBuilder(name); return; }
-  const list=sel.map(s=>e(s)).join(', ');
-  feNotice('assessmentLibraryStatus','“'+name+'” copied to your assessment builder for: '+list+'.');
-  feNotice('assessmentRepoStatus','“'+name+'” copied to your assessment builder for: '+list+'.');
-  showToast('Assessment copied to builder — ready to customise!','success');
+  if(!sel.length){ showToast('Select at least one destination class.','error'); return; }
+  const fd=new FormData();
+  fd.append('assessment_id',id);
+  fd.append('virtual_classroom_ids',JSON.stringify(sel));
+  const button=document.querySelector('#tempCopyAssessment .btn-primary');
+  if(button){button.disabled=true;button.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Reusing...';}
+  tassApiPost('/api/assessments/repository/copy/',fd).then(function(result){
+    document.getElementById('tempCopyAssessment')?.remove();
+    showToast('Assessment reused in '+result.copied_classrooms+' classroom(s).','success');
+    if(result.assessment_url)window.location.href=result.assessment_url;
+  }).catch(function(error){
+    if(button){button.disabled=false;button.innerHTML='<i class="fa-solid fa-copy"></i> Reuse in Classroom';}
+    showToast(error&&error.error?error.error:'Could not reuse this assessment.','error');
+  });
 }
 function downloadSharedAssessment(name){
   showToast('Download preview started for '+name+'.','success');
@@ -3930,6 +4358,8 @@ function saveFrontendResource(){
   const file=fileInput&&fileInput.files&&fileInput.files[0];
   const link=(document.getElementById('feResourceLink')?.value||'').trim();
   if(!file&&!link){ showToast('Please choose a file or enter an external link.','error'); return; }
+  const shareChoice=document.querySelector('input[name=\"feResourceShare\"]:checked');
+  if(!shareChoice){feNotice('resourceUploadStatus','Choose where this material should be available before uploading.');showToast('Choose classroom-only or share to the subject repository.','error');return;}
 
   const typeMap={pdf:'pdf',ppt:'ppt',pptx:'ppt',png:'img',jpg:'img',jpeg:'img',gif:'img',webp:'img',mp4:'vid',mov:'vid',avi:'vid',mkv:'vid',mp3:'aud',wav:'aud',m4a:'aud',aac:'aud'};
   const topic=(document.getElementById('feResourceTopic')?.value||'').trim();
@@ -3947,7 +4377,7 @@ function saveFrontendResource(){
     fd.append('url',link);
   }
   if(topic)fd.append('topic',topic);
-  if(document.getElementById('feResourceShare')?.checked)fd.append('share','1');
+  fd.append('share',shareChoice.value);
 
   feNotice('resourceUploadStatus','Uploading...');
   tassApiPost('/api/teacher-content/',fd).then(function(r){
@@ -3961,7 +4391,7 @@ function saveFrontendResource(){
     if(typeof logActivity==='function')logActivity('Uploaded resource "'+title+'" to your Virtual Classroom Library.','fa-cloud-arrow-up','#dcfce7','#16a34a');
     const t=document.getElementById('feResourceTitle');if(t)t.value='';
     if(fileInput)fileInput.value='';
-    const l=document.getElementById('feResourceLink');if(l)l.value='';
+    const l=document.getElementById('feResourceLink');if(l)l.value='';document.querySelectorAll('input[name=\"feResourceShare\"]').forEach(function(input){input.checked=false;});
     closeModal('resourceUploadModal');
     if(typeof loadResourceLibrary==='function')loadResourceLibrary();
     if(window.currentVCId&&typeof loadClassroomContent==='function')loadClassroomContent(window.currentVCId);
@@ -4131,20 +4561,39 @@ function showMessageAttachment(input){
       const saved=state.personalizations[title+'|'+section];
       const banner=card.querySelector('.class-banner');
       if(!banner||!saved)return;
-      if(saved.color)banner.style.background=saved.color;
-      if(saved.backgroundUrl){banner.style.backgroundImage='url(\''+saved.backgroundUrl+'\')';banner.style.backgroundSize='cover';banner.style.backgroundPosition='center';}
+      const color=card.getAttribute('data-theme-color')||saved.color;
+      const background=card.getAttribute('data-theme-background')||saved.backgroundUrl;
+      if(color)banner.style.background=color;
+      if(background){banner.style.backgroundImage='url(\''+background+'\')';banner.style.backgroundSize='cover';banner.style.backgroundPosition='center';}
     });
   }
   window.applyPersonalizations=applyPersonalizations;
+  function applyFullClassTheme(color,background){
+    const root=document.getElementById('view-classroom');
+    const header=document.getElementById('classroomHeaderEl');
+    if(!root)return;
+    const theme=/^#[0-9a-f]{6}$/i.test(String(color||''))?String(color):'#4F46E5';
+    const image=String(background||'');
+    root.classList.add('vc-themed');
+    root.style.setProperty('--vc-theme-color',theme);
+    root.style.setProperty('--vc-theme-tint','color-mix(in srgb,'+theme+' 10%,var(--body-bg))');
+    root.style.setProperty('--vc-theme-border','color-mix(in srgb,'+theme+' 35%,var(--card-border))');
+    root.style.setProperty('--vc-theme-wallpaper',image?'url('+JSON.stringify(image)+')':'linear-gradient(135deg,'+theme+'2b,'+theme+'12)');
+    if(header){
+      header.style.background=image
+        ?'linear-gradient(135deg,rgba(0,0,0,.28),rgba(0,0,0,.12)),url('+JSON.stringify(image)+') center/cover no-repeat'
+        :'linear-gradient(135deg,'+theme+' 0%,'+theme+'bb 100%)';
+    }
+  }
+  window.applyVirtualClassroomTheme=applyFullClassTheme;
   const _origOpenClassroom=window.openClassroom;
   window.openClassroom=function(title,sub,color,vcId){
     if(typeof _origOpenClassroom==='function')_origOpenClassroom(title,sub,color,vcId);
     const saved=state.personalizations[title+'|'+(sub||'')];
-    const el=document.getElementById('classroomHeaderEl');
-    if(el&&saved){
-      if(saved.color)el.style.background=saved.color;
-      if(saved.backgroundUrl){el.style.backgroundImage='url(\''+saved.backgroundUrl+'\')';el.style.backgroundSize='cover';el.style.backgroundPosition='center';}
-    }
+    const card=vcId?document.querySelector('#classGrid .class-card[data-vc-id="'+String(vcId)+'"]'):null;
+    const themeColor=(card&&card.getAttribute('data-theme-color'))||(saved&&saved.color)||color||'#4F46E5';
+    const background=card?card.getAttribute('data-theme-background'):((saved&&saved.backgroundUrl)||'');
+    applyFullClassTheme(themeColor,background);
   };
   const FR_PALETTE=['#f59e0b','#d97706','#fbbf24','#0891b2','#0d9488','#16a34a','#22a877','#65a30d','#ca8a04','#d97706','#ea580c','#dc2626','#e11d48','#db2777','#c026d3','#9333ea','#7c3aed','#4f46e5','#4338ca','#475569','#0f172a','#78350f','#be123c','#047857'];
   window.previewFRBg=function(inp){
@@ -4183,6 +4632,7 @@ function showMessageAttachment(input){
     const file=(bgFile&&bgFile.files&&bgFile.files[0])||null;
     const existing=state.personalizations[key]||{};
     state.personalizations[key]={color:color,backgroundName:file?file.name:(existing.backgroundName||''),backgroundUrl:existing.backgroundUrl||''};
+    if(String(window.currentVCId||'')===String(window._frPcId||''))applyFullClassTheme(color,existing.backgroundUrl||'');
     persist();applyPersonalizations();closeModal('personalizeClassModal');
     showToast('Virtual Classroom personalization saved.','success');
     try{
@@ -4197,6 +4647,9 @@ function showMessageAttachment(input){
         .then(function(d){
           if(!d||!d.ok)return;
           state.personalizations[key]={color:d.color||color,backgroundName:(file?file.name:''),backgroundUrl:d.background||''};
+          const card=window._frPcId?document.querySelector('#classGrid .class-card[data-vc-id="'+String(window._frPcId)+'"]'):null;
+          if(card){card.setAttribute('data-theme-color',d.color||color);card.setAttribute('data-theme-background',d.background||'');}
+          if(String(window.currentVCId||'')===String(window._frPcId||''))applyFullClassTheme(d.color||color,d.background||'');
           persist();applyPersonalizations();
         }).catch(function(){});
     }catch(e){}
@@ -4280,7 +4733,7 @@ function showMessageAttachment(input){
       const partsTxt=(a.parts&&a.parts.length?a.parts.length+' part(s) · ':'')+(manual?manual+' subjective item(s) need manual grading · ':'all objective · auto-graded · ')+totalPts+' pts';
       const meta=[a.type||'Assessment',a.openDate?'Opens '+String(a.openDate).replace('T',' '):'No schedule',a.deadline?'Closes '+String(a.deadline).replace('T',' '):''];
       const escT=String(a.title||'Assessment').replace(/'/g,"\\'");
-      let btns='<button class="btn btn-outline btn-sm fr-assessment-view" onclick="event.stopPropagation();viewTeacherAssessment(\''+escT+'\')"><i class="fa-solid fa-eye"></i> View Assessment</button><button class="btn btn-outline btn-sm fr-manage-assessment" onclick="event.stopPropagation();openAssessmentBuilderForEdit(\''+escT+'\')"><i class="fa-solid fa-pen"></i> Edit</button>';
+      let btns='<button class="btn btn-outline btn-sm fr-assessment-view" onclick="event.stopPropagation();viewTeacherAssessment(\''+escT+'\','+Number(a.id||0)+')"><i class="fa-solid fa-eye"></i> View Assessment</button><button class="btn btn-outline btn-sm fr-manage-assessment" onclick="event.stopPropagation();openAssessmentBuilderForEdit(\''+escT+'\','+Number(a.id||0)+')"><i class="fa-solid fa-pen"></i> Edit</button>';
       if(a.hasManual&&lc.label!=='Completed')btns+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openManualGrade(\''+escT+'\')"><i class="fa-solid fa-user-pen"></i> Grade Subjective</button>';
       if(lc.label==='Awaiting Grading'||lc.label==='Grading in Progress')btns+='<button class="btn btn-success btn-sm" onclick="event.stopPropagation();markAssessmentCompleted(\''+escT+'\')"><i class="fa-solid fa-check-double"></i> Mark Completed</button>';
       return '<div class="assessment-item" data-notification-record-type="assessment" data-notification-record="'+e(a.id||'')+'" onclick="viewTeacherAssessment(\''+escT+'\')">'+
@@ -4304,9 +4757,10 @@ function showMessageAttachment(input){
       if(!item.querySelector('.fr-manage-assessment')){const edit=document.createElement('button');edit.className='btn btn-outline btn-sm fr-manage-assessment';edit.innerHTML='<i class="fa-solid fa-pen"></i> Edit';edit.onclick=(ev)=>{ev.stopPropagation();openAssessmentManager(title)};wrap.appendChild(edit);}
     });
   }
-  window.openAssessmentBuilderForEdit=function(title){
-    const found=(state.assessments||[]).find(a=>a.title===title);
+  window.openAssessmentBuilderForEdit=function(title,assessmentId){
+    const found=(state.assessments||[]).find(a=>(assessmentId&&String(a.id)===String(assessmentId))||(!assessmentId&&a.title===title));
     if(!found){showToast('Assessment not found','error');return;}
+    const localDateTime=function(value){if(!value)return'';const d=new Date(value);if(isNaN(d.getTime()))return String(value).replace(' ','T').slice(0,16);const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());};
     if(!Array.isArray(found.parts))found.parts=[];if(!Array.isArray(found.questions))found.questions=[];
     openAssessmentBuilder();
     builderParts=JSON.parse(JSON.stringify(found.parts));
@@ -4316,10 +4770,25 @@ function showMessageAttachment(input){
     window.managedEditAssessmentId=found.id||null;
     window.managedEditClassroomId=found.classroomId||window.currentVCId||null;
     try{document.getElementById('bTitle').value=found.title||''}catch(e){}
-    try{document.getElementById('bOpenDate').value=found.openDate||''}catch(e){}
-    try{document.getElementById('bDeadline').value=found.deadline||''}catch(e){}
+    try{document.getElementById('bOpenDate').value=localDateTime(found.openDate)}catch(e){}
+    try{document.getElementById('bDeadline').value=localDateTime(found.deadline)}catch(e){}
+    try{document.getElementById('bTime').value=found.timeLimit||60}catch(e){}
+    try{document.getElementById('bPassing').value=found.passingScore||60}catch(e){}
+    const reopenChoice=document.getElementById('reopenAssessmentChoice');
+    const reopenCheckbox=document.getElementById('bReopenAssessment');
+    const parsedDeadline=found.deadline?Date.parse(String(found.deadline).replace(' ','T')):NaN;
+    const isClosed=found.isClosed===true||(!Number.isNaN(parsedDeadline)&&parsedDeadline<=Date.now());
+    if(reopenChoice)reopenChoice.style.display=isClosed?'flex':'none';
+    if(reopenCheckbox)reopenCheckbox.checked=false;
+    const saveButton=document.getElementById('publishAssessmentButton');
+    if(saveButton)saveButton.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Save Changes';
     try{document.getElementById('bType').value=found.type||'mc'}catch(e){}
     try{document.getElementById('bInstructions').value=found.instructions||''}catch(e){}
+    document.getElementById('bAllowAttachments').checked=found.allowSubmissionAttachments===true;
+    document.getElementById('bAcceptedFileFormat').value=found.acceptedFileFormat||'';
+    document.getElementById('bAllowLinks').checked=found.allowSubmissionLinks===true;
+    document.getElementById('bRevealAnswersReview').checked=found.revealCorrectAnswers!==false;document.getElementById('bRevealAnswersScoreOnly').checked=found.revealCorrectAnswers===false;
+    document.getElementById('bShareRepository').checked=found.shareToRepository===true;document.getElementById('bShareRepositoryLocal').checked=found.shareToRepository!==true;
     renderBuilderParts();renderBuilderQs();
     goToBuilderStep2();
   };
@@ -4351,7 +4820,7 @@ function showMessageAttachment(input){
       '<div style="font-size:11.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Assessment Parts</div>'+
       partsHtml+
       '<div style="margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--card-border);"><div style="font-size:11.5px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Submission Status</div>'+subStatus+'</div>'+
-      '<div class="modal-footer"><button class="btn btn-outline" onclick="document.getElementById(\'tempViewAssessment\').remove()">Close</button>'+(a.canEdit?'<button class="btn btn-primary" onclick="document.getElementById(\'tempViewAssessment\').remove();openAssessmentBuilderForEdit(\''+escTitle+'\')"><i class="fa-solid fa-pen"></i> Edit Assessment</button>':'')+'</div>'+
+      '<div class="modal-footer"><button class="btn btn-outline" onclick="document.getElementById(\'tempViewAssessment\').remove()">Close</button>'+(a.canEdit?'<button class="btn btn-primary" onclick="document.getElementById(\'tempViewAssessment\').remove();openAssessmentBuilderForEdit(\''+escTitle+'\','+Number(a.id||0)+')"><i class="fa-solid fa-pen"></i> Edit Assessment</button>':'')+'</div>'+
     '</div></div>';
     document.body.insertAdjacentHTML('beforeend',html);
   };
@@ -4367,8 +4836,9 @@ function showMessageAttachment(input){
     const title=document.getElementById('bTitle')?.value.trim();
     const openDate=document.getElementById('bOpenDate')?.value||'';
     const deadline=document.getElementById('bDeadline')?.value||'';
-    const parts=JSON.parse(JSON.stringify(builderParts||[]));
-    const questions=JSON.parse(JSON.stringify(builderQuestions||[]));
+    const questions=JSON.parse(JSON.stringify(builderQuestions||[])).filter(function(q){return q&&String(q.text||'').trim();});
+    const usedPartIds=new Set(questions.map(function(q){return String(q.partId||'');}));
+    const parts=JSON.parse(JSON.stringify(builderParts||[])).filter(function(p){return p&&usedPartIds.has(String(p.id));});
     const imagePayloadSize=questions.reduce(function(total,q){let size=0;if(q&&q.media){size+=String(q.media.data||'').length;}Object.keys((q&&q.optImgs)||{}).forEach(function(key){size+=String(q.optImgs[key]||'').length;});return total+size;},0);
     if(imagePayloadSize>1800000){showToast('Assessment images are too large to save together. Use fewer or smaller pictures.','error');return;}
     const hasManual=questions.some(q=>q.mode==='manual');
@@ -4382,10 +4852,11 @@ function showMessageAttachment(input){
     // background bridge can retry later, but it must not be the only save path.
     if(!window.__assessmentSaveConfirmed){
       if(window.__assessmentSavePending)return;
-      const saveClassroomId=vcId||window.managedEditClassroomId;
+      const saveClassroomId=isEdit?(window.managedEditClassroomId||vcId):vcId;
       if(!saveClassroomId){showToast('Open the assessment classroom before saving.','error');return;}
-      const savePayload={virtual_classroom_id:saveClassroomId,title,type:document.getElementById('bType')?.value||'Quiz',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',questions:questions.filter(q=>q&&q.text)};
+      const savePayload={virtual_classroom_id:saveClassroomId,title,type:document.getElementById('bType')?.value||'Quiz',openDate,deadline,timeLimit:document.getElementById('bTime')?.value||60,passingScore:document.getElementById('bPassing')?.value||60,instructions:document.getElementById('bInstructions')?.value||'',allowSubmissionAttachments:document.getElementById('bAllowAttachments').checked,acceptedFileFormat:document.getElementById('bAcceptedFileFormat').value.trim(),allowSubmissionLinks:document.getElementById('bAllowLinks').checked,revealCorrectAnswers:document.getElementById('bRevealAnswersReview').checked,shareToRepository:document.getElementById('bShareRepository').checked,parts:parts,questions:questions.filter(q=>q&&q.text)};
       if(isEdit&&window.managedEditAssessmentId)savePayload.assessment_id=window.managedEditAssessmentId;
+      if(isEdit)savePayload.reopen=!!document.getElementById('bReopenAssessment')?.checked;
       window.__assessmentSavePending=true;
       fetch('/api/assessments/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(savePayload)})
         .then(r=>r.json().then(data=>({response:r,data:data})))
@@ -4402,12 +4873,12 @@ function showMessageAttachment(input){
     if(typeof oldPublish==='function')oldPublish();
     if(title){
       if(isEdit){
-        const i=state.assessments.findIndex(x=>x.title===editKey);
+        const i=state.assessments.findIndex(x=>(window.managedEditAssessmentId&&String(x.id)===String(window.managedEditAssessmentId))||x.title===editKey);
         if(i>=0){
           const prev=state.assessments[i];
-          state.assessments[i]={...prev,title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||prev.instructions||'',parts,questions,hasManual,lifecycle:prev.lifecycle||'scheduled',classroomId:prev.classroomId||vcId,classroomLabel:prev.classroomLabel||vcLabel};
+          state.assessments[i]={...prev,title,type:document.getElementById('bType')?.value||'',openDate,deadline,timeLimit:Number(document.getElementById('bTime')?.value)||60,passingScore:Number(document.getElementById('bPassing')?.value)||60,instructions:document.getElementById('bInstructions')?.value||prev.instructions||'',allowSubmissionAttachments:document.getElementById('bAllowAttachments').checked,acceptedFileFormat:document.getElementById('bAcceptedFileFormat').value.trim(),allowSubmissionLinks:document.getElementById('bAllowLinks').checked,revealCorrectAnswers:document.getElementById('bRevealAnswersReview').checked,shareToRepository:document.getElementById('bShareRepository').checked,parts,questions,hasManual,lifecycle:prev.lifecycle||'scheduled',classroomId:prev.classroomId||vcId,classroomLabel:prev.classroomLabel||vcLabel};
         }else{
-          state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
+          state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,timeLimit:Number(document.getElementById('bTime')?.value)||60,passingScore:Number(document.getElementById('bPassing')?.value)||60,instructions:document.getElementById('bInstructions')?.value||'',allowSubmissionAttachments:document.getElementById('bAllowAttachments').checked,acceptedFileFormat:document.getElementById('bAcceptedFileFormat').value.trim(),allowSubmissionLinks:document.getElementById('bAllowLinks').checked,revealCorrectAnswers:document.getElementById('bRevealAnswersReview').checked,shareToRepository:document.getElementById('bShareRepository').checked,parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
         }
         window.managedEditOriginal=null;
         window.managedEditAssessmentId=null;
@@ -4416,7 +4887,7 @@ function showMessageAttachment(input){
         state.notifications.unshift({id:'upd_'+Date.now(),type:'assessment_updated',title:title,msg:'"'+title+'" was updated. Changes are reflected in the selected Virtual Classroom.',createdAt:new Date().toISOString()});
         showToast('Assessment Successfully Updated.','success');
       }else{
-        state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,instructions:document.getElementById('bInstructions')?.value||'',parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
+        state.assessments.push({title,type:document.getElementById('bType')?.value||'',openDate,deadline,timeLimit:Number(document.getElementById('bTime')?.value)||60,passingScore:Number(document.getElementById('bPassing')?.value)||60,instructions:document.getElementById('bInstructions')?.value||'',allowSubmissionAttachments:document.getElementById('bAllowAttachments').checked,acceptedFileFormat:document.getElementById('bAcceptedFileFormat').value.trim(),allowSubmissionLinks:document.getElementById('bAllowLinks').checked,revealCorrectAnswers:document.getElementById('bRevealAnswersReview').checked,shareToRepository:document.getElementById('bShareRepository').checked,parts,questions,hasManual,lifecycle:'scheduled',createdAt:new Date().toISOString(),notifications:[],classroomId:vcId,classroomLabel:vcLabel});
       }
       persist();renderTeacherAssessments();updateAssessmentStats();
     }
@@ -4473,7 +4944,9 @@ function showMessageAttachment(input){
       Object.keys(byClass).forEach(function(cid){
         const payload={date:stamp,records:byClass[cid]};
         if(cid)payload.virtual_classroom_id=cid;
-        fetch('/api/attendance/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)}).catch(function(){});
+        fetch('/api/attendance/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':msgCsrf()},body:JSON.stringify(payload)})
+          .then(function(r){ if(r&&r.ok&&typeof refreshAttendanceMonth==='function')refreshAttendanceMonth(); })
+          .catch(function(){});
       });
     }catch(e){}
     if(typeof oldSaveAttend==='function')oldSaveAttend();
@@ -4547,7 +5020,6 @@ function showMessageAttachment(input){
   function wireModalExports(){
     const wire=(modalId,pairs)=>{const m=document.getElementById(modalId);if(!m)return;m.querySelectorAll('button').forEach(b=>{const txt=b.textContent.trim().toLowerCase();for(let i=0;i<pairs.length;i++){if(txt.includes(pairs[i][0])){b.onclick=pairs[i][1];break;}}});};
     wire('allAttendanceModal',[['export',()=>exportTeacherReport('Attendance Summary Report')],['download',()=>exportTeacherReport('Attendance Summary Report')]]);
-    wire('sf2Modal',[['print',()=>printModal('sf2Modal')],['download',()=>printModal('sf2Modal')]]);
     wire('reportPreviewModal',[['print',()=>printModal('reportPreviewModal')],['download',()=>exportTeacherReport(currentReportName())]]);
     wire('scoresModal',[['export',()=>exportTeacherReport('Assessment Score Report')]]);
     wire('rankingModal',[['export',()=>exportTeacherReport('Class Ranking Report')]]);
@@ -4889,6 +5361,21 @@ function showMessageAttachment(input){
   // Performance tab respects the selected quarter.
   window.renderPerformance=function(){
     renderPerfSubmissionTracker();
+    const matrix=document.getElementById('performanceMatrix');
+    if(matrix){
+      const openClassroomId=window.currentVCId;
+      const matrixRows=openClassroomId?REPORT_MATRIX.filter(function(row){return String(row.classroom_id)===String(openClassroomId);}):[];
+      const matrixAssessments=openClassroomId?REPORT_ASSESSMENTS.filter(function(a){return String(a.classroom_id)===String(openClassroomId);}):[];
+      if(!openClassroomId){
+        matrix.innerHTML='<tbody><tr><td style="padding:18px;text-align:center;color:var(--text-muted);">Open a virtual classroom to view its assessment completion.</td></tr></tbody>';
+      }else if(!matrixRows.length){
+        matrix.innerHTML='<tbody><tr><td style="padding:18px;text-align:center;color:var(--text-muted);">Assessment status will appear after students and assessments are assigned to this classroom.</td></tr></tbody>';
+      }else if(!matrixAssessments.length){
+        matrix.innerHTML='<tbody><tr><td style="padding:18px;text-align:center;color:var(--text-muted);">No assessments have been assigned to this classroom yet.</td></tr></tbody>';
+      }else{
+        matrix.innerHTML='<thead><tr><th>Student</th><th>Subject</th>'+matrixAssessments.map(function(a){return '<th title="'+e(a.title)+'" style="min-width:130px;">'+e(a.title)+'</th>';}).join('')+'</tr></thead><tbody>'+matrixRows.map(function(row){return '<tr><td>'+e(row.student)+'</td><td>'+e(row.subject)+'</td>'+matrixAssessments.map(function(a){return '<td style="text-align:center;font-weight:700;">'+e((row.values||{})[String(a.id)]||'-')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
+      }
+    }
     const sel=document.getElementById('perfGradingSelect');
     const q=sel?sel.value:'Quarter 1';
     // Quarter -> assessment mapping is no longer hardcoded to four invented quiz titles.
@@ -4916,6 +5403,28 @@ function showMessageAttachment(input){
       const barColor=shown>=90?'#22a877':shown>=75?'#f59e0b':shown>=60?'#e99b2a':'#d94f4f';
       return '<div style="margin-bottom:12px;">'+'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div class="student-avatar-sm" style="background:'+r.grad+';width:28px;height:28px;border-radius:7px;font-size:11px;">'+r.initials+'</div><div style="flex:1;font-weight:600;font-size:13px;color:var(--navy);min-width:0;">'+e(r.name)+'<div style="font-size:11px;color:var(--text-muted);font-weight:400;">'+e(target.label)+' \u00b7 Overall '+e(r.score)+'</div></div><div style="font-size:13px;font-weight:800;color:'+barColor+';">'+(pct===null?'\u2014':shown+'%')+'</div></div>'+'<div style="background:var(--gray-100);border-radius:8px;height:8px;overflow:hidden;"><div style="width:'+shown+'%;height:100%;background:'+barColor+';border-radius:8px;"></div></div></div>';
     }).join('');
+  };
+
+  window.downloadOfficialClassRecord=function(){
+    var classroomId=window.currentVCId;
+    if(!classroomId){showToast('Open a classroom first.','error');return;}
+    var url="{% url 'analytics:assessment_completion_generate' %}?classroom_id="+encodeURIComponent(classroomId);
+    fetch(url,{credentials:'same-origin'})
+      .then(function(response){
+        if(!response.ok)return response.text().then(function(message){throw new Error(message||'Could not generate the official class record.');});
+        var disposition=response.headers.get('Content-Disposition')||'';
+        var match=disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+        var filename=match?decodeURIComponent(match[1]||match[2]):'official_class_record.xlsx';
+        return response.blob().then(function(blob){return {blob:blob,filename:filename};});
+      })
+      .then(function(result){
+        var link=document.createElement('a');
+        link.href=URL.createObjectURL(result.blob);
+        link.download=result.filename;
+        document.body.appendChild(link);link.click();link.remove();
+        setTimeout(function(){URL.revokeObjectURL(link.href);},1000);
+      })
+      .catch(function(error){showToast((error&&error.message||'Class record download failed.').slice(0,220),'error');});
   };
 
   // Live class announcements: edit + archive.
@@ -5570,7 +6079,7 @@ canvas{ max-width:100% !important; }
 // ── My Profile (avatar + contact info, per-dashboard storage) ──
 const PROFILE_KEY='tass_profile_teacher';
 const PROFILE_MODAL_ID='teacherProfileModal';
-const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Teacher" }}',dept:window.__TASS_REAL__?'':'Science Department',contact:'',avatar:'{{ user_avatar_url|default:"" }}'};
+const PROFILE_DEFAULTS={name:'{{ user_display_name|default:"" }}',email:'{{ user_email|default:"" }}',role:'{{ user_role_label|default:"Teacher" }}',dept:window.__TASS_REAL__?'':'Science Department',contact:'',subjects:'',avatar:'{{ user_avatar_url|default:"" }}'};
 let profileAvatarData=""
 let profilePhotoFile=null;
 let profileBusy=false;
@@ -5581,7 +6090,7 @@ function getProfile(){
   // rename the signed-in user. Only the optional extras persist locally.
   const d=JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
   const srv=window.__TASS_PROFILE__;
-  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;}
+  if(srv){if(srv.name)d.name=srv.name;if(srv.email)d.email=srv.email;if(srv.role)d.role=srv.role;if(srv.avatar)d.avatar=srv.avatar;if(srv.contact)d.contact=srv.contact||d.contact;if(srv.subjects)d.subjects=Array.isArray(srv.subjects)?srv.subjects.join(', '):srv.subjects;}
   try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");
     if(p){if(p.dept!=null)d.dept=p.dept;if(p.contact!=null)d.contact=p.contact;if(p.avatar&&!((srv&&srv.avatar)||PROFILE_DEFAULTS.avatar))d.avatar=p.avatar;}
   }catch(e){}
@@ -5589,7 +6098,7 @@ function getProfile(){
 }
 function profileSet(id,v){const el=document.getElementById(id);if(el)el.value=(v==null?"":String(v));}
 function renderProfileAvatar(){const img=document.getElementById("profileAvatarImg");const sp=document.getElementById("profileAvatarText");if(profileAvatarData){if(sp)sp.style.display="none";if(img){img.src=profileAvatarData;img.style.display="block";}}else{if(img)img.style.display="none";const nm=document.getElementById("profileName");if(sp){sp.style.display="";sp.textContent=profil_initials(nm&&nm.value?nm.value:"");}}}function applyHeaderPhoto(src){const hp=document.getElementById("headerProfileImg");if(src){if(hp)hp.src=src;}else if(hp){hp.src=initialsAvatar(40,16);}const imgs=document.querySelectorAll(".profile-img-lg");for(let k=0;k<imgs.length;k++){if(src){imgs[k].src=src;}else{imgs[k].src=initialsAvatar(80,30);}}const pa=document.querySelector(".profile-panel-avatar");if(!pa)return;let i=pa.querySelector(".profile-panel-img");if(src){if(!i){i=document.createElement("img");i.className="profile-panel-img";i.style.cssText="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:inherit;";pa.style.position="relative";pa.appendChild(i);}i.src=src;}else if(i){i.remove();}}
-function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
+function openProfile(){const p=getProfile();profileSet("profileName",p.name);profileSet("profileEmail",p.email);profileSet("profileRole",p.role);profileSet("profileDept",p.dept);profileSet("profileSubjects",p.subjects||"");profileSet("profileContact",p.contact||"");profileAvatarData=p.avatar||"";if(document.getElementById("profileStatus"))document.getElementById("profileStatus").style.display="none";renderProfileAvatar();if(typeof openModal==="function")openModal(PROFILE_MODAL_ID);}
 function closeProfile(){if(typeof closeModal==="function")closeModal(PROFILE_MODAL_ID);}
 function changeProfilePhoto(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;profilePhotoFile=f;if(!/^image\//.test(f.type)){if(typeof showToast==="function")showToast("Please choose an image file.","error");return;}const rd=new FileReader();rd.onload=function(e){profileAvatarData=String(e.target.result);renderProfileAvatar();applyHeaderPhoto(profileAvatarData);if(typeof showToast==="function")showToast("Photo preview ready — click Save to keep it.","success");};rd.readAsDataURL(f);}
 function saveProfile(){
@@ -5838,9 +6347,11 @@ function __tpayloadSig(D){
 }
 function applyTeacherPayload(D) {
   if (!D) return;
+  window.__TASS_CLASSES__ = D.classes || [];
   var sig = __tpayloadSig(D);
   if (window.__teacherSig !== undefined && sig === window.__teacherSig) return;
   window.__teacherSig = sig;
+  window.__TASS_ROSTER__ = D.roster || [];
 
   // Age/Sex panel for this teacher's own learners.
   if (window.TASS && TASS.demo && D.demographics) { TASS.demo.setRows(D.demographics.rows); }
@@ -5848,6 +6359,20 @@ function applyTeacherPayload(D) {
   // Official SF template (e.g. SF2) uploaded by the administrator. The SF2
   // modal surfaces this so teachers always build against the current form.
   window.__teacherSfTemplate = (D && D.sfTemplate) || null;
+  var sf2Classroom = document.getElementById('sf2Classroom');
+  if (sf2Classroom) {
+    var selectedClassroom = sf2Classroom.value || String(window.currentVCId || '');
+    sf2Classroom.innerHTML = '<option value="">Select a classroom</option>';
+    (D.classes || []).forEach(function (c) {
+      if (c.id === undefined || c.id === null) return;
+      var option = document.createElement('option');
+      option.value = String(c.id);
+      option.textContent = (c.grade ? c.grade + ' – ' : '') +
+        (c.subject || '') + (c.section ? ' · ' + c.section : '');
+      sf2Classroom.appendChild(option);
+    });
+    if (selectedClassroom) sf2Classroom.value = selectedClassroom;
+  }
 
   // The signed-in user's own record, straight from the server.
   window.__TASS_PROFILE__ = (D && D.profile) || null;
@@ -5919,7 +6444,7 @@ function applyTeacherPayload(D) {
     attendStudents.forEach(function (s) { haveIds[s.id] = true; });
     D.roster.forEach(function (s) {
       if (haveIds[s.id]) return;
-      attendStudents.push({ id: s.id, lrn: s.lrn, name: s.name, classroom_id: s.classroom_id, classroom: s.classroom, grad: 'linear-gradient(135deg,#f59e0b,#fbbf24)' });
+      attendStudents.push({ id: s.id, lrn: s.lrn, name: s.name, first: s.first, last: s.last, grade: s.grade, classroom_id: s.classroom_id, classroom: s.classroom, grad: 'linear-gradient(135deg,#f59e0b,#fbbf24)' });
     });
     if (typeof renderAttendList === 'function') { try { renderAttendList(); } catch (e) {} }
   }
@@ -5929,6 +6454,7 @@ function applyTeacherPayload(D) {
     (D.report_data.students || []).forEach(function (s) { REPORT_STUDENTS.push(s); });
     REPORT_ASSESSMENTS.length = 0;
     (D.report_data.assessments || []).forEach(function (a) { REPORT_ASSESSMENTS.push(a); });
+    REPORT_MATRIX = Array.isArray(D.report_data.assessment_matrix) ? D.report_data.assessment_matrix.slice() : [];
     REPORT_UNSCORED_ASSESSMENTS = D.report_data.unscored_assignments || 0;
     REPORT_CLASSROOMS.length = 0;
     (D.report_data.classrooms || []).forEach(function (c) { REPORT_CLASSROOMS.push(c); });
@@ -5968,26 +6494,25 @@ function applyTeacherPayload(D) {
         report: rep || null
       });
     });
-    realRecs.sort(function(a,b){
-      var ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10);var gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);
-      ga=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;gb=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;
-      if(ga!==gb)return ga-gb;
-      var rank=function(x){return x.sex==='M'?0:(x.sex==='F'?1:2);};if(rank(a)!==rank(b))return rank(a)-rank(b);
-      var surname=String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'});if(surname)return surname;
-      return String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});
-    });
     studentRecords.length = 0;
     realRecs.forEach(function (r) { studentRecords.push(r); });
+    sortTeacherStudentRecords();
     if (typeof renderStudentList === 'function') { try { renderStudentList(); } catch (e) {} }
   }
 
   if (window.__TASS_REAL__ && typeof assessmentSource === 'function') {
     REAL_ASSESSMENTS.length = 0;
-    (D.assessment_repository || D.assessments || []).forEach(function (a) {
+    REAL_ASSESSMENT_SUBJECTS.length = 0;
+    (D.assessment_repository_subjects || []).forEach(function (subject) {
+      REAL_ASSESSMENT_SUBJECTS.push(subject);
+    });
+    (D.assessment_repository || []).forEach(function (a) {
       REAL_ASSESSMENTS.push({
         id: a.id || null,
         title: a.title || 'Untitled Assessment',
         subject: a.subject || '',
+        subjectId: a.subjectId || null,
+        gradeLevel: a.gradeLevel || null,
         type: a.type || '',
         items: a.items != null ? a.items : (a.cls || ''),
         meta: a.deadline || '',
@@ -6174,6 +6699,7 @@ function teacherBackendBridge() {
   var D;
   try { D = JSON.parse(el.textContent); } catch (e) { return; }
   if (!D) return;
+  window.__TASS_ACADEMIC_YEARS__ = D.academicYears || [];
   applyTeacherPayload(D);
   restoreTeacherNotificationTarget(D);
 }
@@ -6234,10 +6760,29 @@ window.csrfToken = (function () {
 })();
 </script>
 
+<div class="submission-review-overlay" id="submissionReviewModal" role="dialog" aria-modal="true" aria-label="Student submission answers" aria-hidden="true" onclick="if(event.target===this)closeSubmissionReview()">
+  <section class="submission-review-dialog">
+    <button type="button" class="submission-review-close" id="submissionReviewModalClose" onclick="closeSubmissionReview()" aria-label="Close submission review"><i class="fa-solid fa-xmark"></i></button>
+    <div id="submissionReviewModalBody"></div>
+  </section>
+</div>
+<style>
+  .submission-review-overlay{display:none;position:fixed;inset:0;z-index:10000;background:rgba(11,18,32,.66);backdrop-filter:blur(4px);padding:4vh 20px;align-items:center;justify-content:center}
+  .submission-review-overlay.open{display:flex}
+  .submission-review-dialog{position:relative;width:min(1120px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(0,0,0,.32);animation:submissionReviewIn .18s ease-out}
+  .submission-review-close{position:sticky;float:right;top:12px;margin:12px 12px -52px 0;z-index:2;width:36px;height:36px;border:1px solid #e1e6ed;border-radius:10px;background:#fff;color:#526174;font-size:16px;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.08)}
+  .submission-review-close:hover{background:#fff6e8;color:#a4530a}
+  @keyframes submissionReviewIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media(max-width:600px){.submission-review-overlay{padding:10px}.submission-review-dialog{max-height:95vh;border-radius:13px}.submission-review-close{margin:8px 8px -46px 0}}
+</style>
+
 <script src="/static/js/profile_bridge.js?v=4"></script>
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="{% static 'js/tass_poll.js' %}"></script>
 <script src="/static/js/pilot_guard.js"></script>
 <script src="{% static 'js/notifications.js' %}?v=3"></script>
+{{ menu_permission_codenames|json_script:"menu-permission-codenames" }}
+<script src="{% static 'js/menu_permissions.js' %}" defer></script>
+<script src="{% static 'js/refresh_state.js' %}?v=1"></script>
 </body>
 </html> 

@@ -180,20 +180,68 @@ class RoleAssignment(models.Model):
     academic_year = models.ForeignKey(
         "academic_structure.AcademicYear",
         on_delete=models.PROTECT,
-        related_name="role_assignments"
+        related_name="role_assignments",
+        null=True,
+        blank=True,
     )
     date_assigned = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "role", "academic_year"],
-                name="unique_user_role_per_academic_year",
+                fields=["user", "role"],
+                name="unique_user_role_globally",
             )
         ]
 
     def __str__(self):
-        return f"{self.user} - {self.role} ({self.academic_year})"
+        return f"{self.user} - {self.role}"
+
+
+class TeacherSubject(models.Model):
+    """A subject recorded on a teacher's account profile.
+
+    This profile metadata does not grant teaching access to assessments;
+    subject-scoped assessment access comes from active Virtual Classrooms.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="teacher_subjects",
+    )
+    subject = models.ForeignKey(
+        "academic_structure.Subject",
+        on_delete=models.CASCADE,
+        related_name="teacher_assignments",
+    )
+    date_assigned = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "subject"],
+                name="unique_teacher_subject",
+            )
+        ]
+        ordering = ["subject__grade_level", "subject__name"]
+
+    def __str__(self):
+        return f"{self.user} - {self.subject}"
+
+
+def teacher_subject_ids(user):
+    """Subjects taught in the teacher's active Virtual Classrooms this year."""
+    from apps.academic_structure.models import Subject
+
+    if not user or not getattr(user, "pk", None):
+        return set()
+    via_classrooms = Subject.objects.filter(
+        virtual_classrooms__teacher_id=user.pk,
+        virtual_classrooms__status="active",
+        virtual_classrooms__academic_year__status="ACTIVE",
+    ).values_list("id", flat=True)
+    return set(via_classrooms)
 
 
 # ----------------------------------------
@@ -296,12 +344,19 @@ class StudentProfile(models.Model):
     @property
     def section_display(self):
         """Return current enrolled section label (with grade level), or None."""
-        enrollment = (
-            self.enrollments.filter(status="ENROLLED")
-            .select_related("section__academic_year")
-            .order_by("-academic_year__start_date")
-            .first()
-        )
+        # A list view can prefetch the current enrollments into
+        # ``current_enrollments``; use it so a roster does not run one query per
+        # learner. Fall back to the query for every other caller.
+        prefetched = getattr(self, "current_enrollments", None)
+        if prefetched is not None:
+            enrollment = prefetched[0] if prefetched else None
+        else:
+            enrollment = (
+                self.enrollments.filter(status="ENROLLED")
+                .select_related("section__academic_year")
+                .order_by("-academic_year__start_date")
+                .first()
+            )
         if enrollment and enrollment.section:
             section = enrollment.section
             return f"Grade {section.grade_level} - {section.name}"
@@ -352,6 +407,7 @@ class ActivityLog(models.Model):
     action = models.CharField(max_length=100)
     related_entity_type = models.CharField(max_length=100, blank=True)
     related_entity_id = models.PositiveIntegerField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -367,15 +423,9 @@ from django.contrib.auth.models import Group
 
 
 def _sync_user_groups(user):
-    from apps.academic_structure.models import AcademicYear
-
-    active_year = AcademicYear.objects.filter(status="ACTIVE").first()
-    if not active_year:
-        return
-
     current_role_codes = set(
         RoleAssignment.objects
-        .filter(user=user, academic_year=active_year)
+        .filter(user=user)
         .values_list("role__code", flat=True)
     )
 

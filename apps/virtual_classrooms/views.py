@@ -5,7 +5,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.accounts.decorators import perm_required, role_required
+from apps.academic_structure.models import Section, Subject
+from apps.accounts.decorators import perm_required
 from apps.accounts.models import StudentProfile
 from apps.accounts.ordering import order_students
 from apps.accounts.campus import scoped_classrooms, user_can_read_grade
@@ -87,6 +88,8 @@ def _session_stats(session):
 @perm_required("view_virtual_classroom")
 def classroom_list(request):
     q = request.GET.get("q", "").strip()
+    subject_type = request.GET.get("subject_type", "").strip()
+    grade_level = request.GET.get("grade_level", "").strip()
     classrooms = _classrooms_for_user(request.user).select_related(
         "subject", "section", "academic_year", "teacher", "teacher__employee_profile"
     )
@@ -100,17 +103,52 @@ def classroom_list(request):
             | Q(teacher__employee_profile__last_name__icontains=q)
             | Q(grading_period__icontains=q)
         )
+    if subject_type in dict(Subject.SUBJECT_TYPE_CHOICES):
+        classrooms = classrooms.filter(subject__subject_type=subject_type)
+    else:
+        subject_type = ""
+    try:
+        grade_value = int(grade_level)
+    except (TypeError, ValueError):
+        grade_value = None
+    valid_grades = {value for value, _label in Section.GRADE_LEVEL_CHOICES}
+    if grade_value in valid_grades:
+        classrooms = classrooms.filter(section__grade_level=grade_value)
+        grade_level = str(grade_value)
+    else:
+        grade_level = ""
     classrooms = classrooms.order_by("section__grade_level", "subject__name", "section__name")
-    return render(request, "virtual_classrooms/classroom_list.html", {"classrooms": classrooms, "q": q})
+    return render(
+        request,
+        "virtual_classrooms/classroom_list.html",
+        {
+            "classrooms": classrooms,
+            "q": q,
+            "subject_type": subject_type,
+            "subject_types": Subject.SUBJECT_TYPE_CHOICES,
+            "grade_level": grade_level,
+            "grade_levels": Section.GRADE_LEVEL_CHOICES,
+        },
+    )
 
 
-@role_required("registrar", "assistant_principal")
 @perm_required("create_virtual_classroom")
 def classroom_add(request):
+    # Any holder of `create_virtual_classroom` may create a classroom here --
+    # including a teacher who was granted the permission -- rather than being
+    # limited to the registrar/coordinator role groups.
     form = VirtualClassroomForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         try:
-            classroom = form.save()
+            classroom = form.save(commit=False)
+            if classroom.teacher_id is None:
+                from .services import pick_section_teacher
+
+                classroom.teacher = pick_section_teacher(
+                    classroom.section,
+                    preferred=getattr(classroom.section, "adviser", None),
+                )
+            classroom.save()
         except IntegrityError:
             messages.error(request, "A classroom for this subject, section, year and grading period already exists.")
             return render(
@@ -121,6 +159,12 @@ def classroom_add(request):
         from .services import populate_classroom_defaults
 
         populate_classroom_defaults(classroom)
+        try:
+            from apps.communication.notifications import notify_teacher_classroom_assignment
+
+            notify_teacher_classroom_assignment(classroom, assigned_by=request.user)
+        except Exception:
+            pass
         messages.success(request, "Virtual classroom created successfully.")
         return redirect(reverse("classrooms:classroom_detail", args=[classroom.pk]))
     return render(
@@ -288,10 +332,11 @@ def classroom_detail(request, pk):
 @perm_required("update_virtual_classroom")
 def classroom_update(request, pk):
     classroom = get_object_or_404(VirtualClassroom, pk=pk)
+    old_teacher_id = classroom.teacher_id
     form = VirtualClassroomForm(request.POST or None, request.FILES or None, instance=classroom)
     if request.method == "POST" and form.is_valid():
         try:
-            form.save()
+            updated_classroom = form.save()
         except IntegrityError:
             messages.error(request, "A classroom for this subject, section, year and grading period already exists.")
             return render(
@@ -299,6 +344,13 @@ def classroom_update(request, pk):
                 "virtual_classrooms/classroom_form.html",
                 {"form": form, "classroom": classroom, "title": "Update Virtual Classroom"},
             )
+        if updated_classroom.teacher_id and updated_classroom.teacher_id != old_teacher_id:
+            try:
+                from apps.communication.notifications import notify_teacher_classroom_assignment
+
+                notify_teacher_classroom_assignment(updated_classroom, assigned_by=request.user)
+            except Exception:
+                pass
         messages.success(request, "Virtual classroom updated successfully.")
         return redirect(reverse("classrooms:classroom_detail", args=[classroom.pk]))
     return render(
@@ -359,8 +411,8 @@ def classroom_add_student(request, pk):
         status=VirtualClassroomEnrollment.STATUS_ACTIVE
     ).values_list("student_id", flat=True)
     form = AddStudentForm(request.POST or None)
-    form.fields["student"].queryset = StudentProfile.objects.order_by("lrn").exclude(
-        id__in=active_ids
+    form.fields["student"].queryset = order_students(
+        StudentProfile.objects.exclude(id__in=active_ids)
     )
     if request.method == "POST" and form.is_valid():
         try:
@@ -394,4 +446,3 @@ def classroom_remove_student(request, pk, enrollment_pk):
         enrollment.save()
         messages.success(request, "Student removed from the classroom.")
     return redirect(reverse("classrooms:classroom_detail", args=[pk]))
-

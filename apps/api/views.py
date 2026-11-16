@@ -25,6 +25,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.http import FileResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -42,11 +43,18 @@ from apps.accounts.models import (
     SexChoices,
     StudentProfile,
     SuffixChoices,
+    TeacherSubject,
     User,
     _sync_user_groups,
 )
 from apps.academic_structure.models import AcademicStructureVersion, AcademicYear, Section, StudentEnrollment, Subject
-from apps.assessments.models import Assessment, AssessmentAssignment, AssessmentPart, Submission
+from apps.assessments.models import (
+    Assessment,
+    AssessmentAssignment,
+    AssessmentAttempt,
+    AssessmentPart,
+    Submission,
+)
 from apps.attendance.models import AttendanceRecord, AttendanceSession
 from apps.communication.models import (
     ClassAnnouncement,
@@ -63,8 +71,19 @@ from apps.communication import notifications as notif_service
 from apps.governance.models import RoleAccessReview
 from apps.system_settings.models import BackupRecord, PasswordPolicy, SystemConfiguration
 from apps.teaching_learning.models import LearningResource, LearningResourcePlacement, Topic, TopicTemplate
+from apps.teaching_learning.utils import (
+    human_size,
+    resource_size_bytes,
+    resource_size_label,
+)
 from apps.virtual_classrooms.models import VirtualClassroom, VirtualClassroomEnrollment
-from apps.virtual_classrooms.services import pick_section_teacher
+from apps.virtual_classrooms.services import (
+    create_virtual_classroom,
+    normalize_grading_period,
+    pick_section_teacher,
+    resolve_section,
+    resolve_subject,
+)
 
 STATUS_ACTIVE = "active"
 
@@ -150,6 +169,7 @@ from apps.accounts.campus import (
     campus_label_for,
     campus_scope_for,
     can_post_to_campus,
+    role_codes_for,
     user_can_read_grade,
 )
 from apps.accounts.account_admin import (
@@ -160,7 +180,7 @@ from apps.accounts.account_admin import (
     serialize_locked_account,
     unlock_user_account,
 )
-from apps.accounts.decorators import has_permission
+from apps.accounts.decorators import has_permission, has_role
 from apps.accounts.ordering import order_students
 
 
@@ -179,7 +199,7 @@ def api_role_required(*roles):
                 return _err("Authentication required.", 401)
             if user.is_superuser:
                 return view_func(request, *args, **kwargs)
-            if user.groups.filter(name__in=roles).exists():
+            if has_role(user, *roles):
                 return view_func(request, *args, **kwargs)
             _log(user, f"api_denied:{view_func.__name__}")
             return _err(
@@ -211,7 +231,7 @@ def _visible_target_roles(user):
     roles = [TARGET_ALL]
     if user.is_superuser or user.is_staff:
         return [value for value, _label in TARGET_ROLE_CHOICES]
-    if user.groups.filter(name="teacher").exists():
+    if has_role(user, "teacher"):
         roles.append("teachers")
     elif getattr(user, "student_profile", None) is not None:
         roles.append("students")
@@ -223,10 +243,10 @@ def _visible_target_roles(user):
 def _is_staff_admin(user):
     if user.is_superuser:
         return True
-    return user.groups.filter(name__in=ADMIN_ROLES).exists()
+    return has_role(user, *ADMIN_ROLES)
 
 
-def api_perm_required(*codenames):
+def api_perm_required(*codenames, allow_teacher=False):
     """Restrict a JSON write endpoint to holders of any of the given permissions.
 
     Falls back to the same superuser / group-permission resolution the page
@@ -239,7 +259,8 @@ def api_perm_required(*codenames):
             user = request.user
             if not user.is_authenticated:
                 return _err("Authentication required.", 401)
-            if any(has_permission(user, c) for c in codenames):
+            is_teacher = allow_teacher and "teacher" in role_codes_for(user)
+            if any(has_permission(user, c) for c in codenames) or is_teacher:
                 return view_func(request, *args, **kwargs)
             _log(user, f"api_denied:{view_func.__name__}")
             return _err(
@@ -494,9 +515,6 @@ def csrf(request):
 @require_POST
 @api_role_required(*ADMIN_ROLES)
 def accounts(request):
-    year = _active_year()
-    if not year:
-        return _err("No active academic year configured yet.", 409)
     data = _payload(request)
     incoming = data.get("accounts") or data.get("items") or []
     if not isinstance(incoming, list):
@@ -590,7 +608,7 @@ def accounts(request):
             role = Role.objects.filter(code=code).first()
             if role:
                 RoleAssignment.objects.get_or_create(
-                    user=user, role=role, academic_year=year
+                    user=user, role=role, academic_year=None
                 )
 
         revoked = row.get("revoked_roles")
@@ -602,9 +620,7 @@ def accounts(request):
                         ROLE_CODE_BY_LABEL.get(item.strip()) or item.strip()
                     )
             for code in dict.fromkeys(c for c in revoke_codes if c):
-                Role.objects.filter(code=code).filter(
-                    assignments__user=user, assignments__academic_year=year
-                ).delete()
+                RoleAssignment.objects.filter(user=user, role__code=code).delete()
 
         _log(request.user, f"account_saved:{email}", entity_type="User", entity_id=user.pk)
         if temp_password:
@@ -627,7 +643,7 @@ def accounts(request):
             if user.email not in seen and user.status != User.Status.ARCHIVED:
                 user.status = User.Status.ARCHIVED
                 user.save(update_fields=["status", "is_active"])
-                RoleAssignment.objects.filter(user=user, academic_year=year).delete()
+                RoleAssignment.objects.filter(user=user).delete()
                 _log(request.user, f"account_archived:{user.email}", entity_type="User", entity_id=user.pk)
 
     if email_failed:
@@ -718,8 +734,6 @@ def account_create(request):
     transaction so a rejected field cannot leave a user with no profile.
     """
     year = _active_year()
-    if not year:
-        return _err("No active academic year configured yet.", 409)
 
     data = _payload(request)
     email = (data.get("email") or data.get("acctUsername") or "").strip().lower()
@@ -786,6 +800,29 @@ def account_create(request):
             errors["role"] = f"Unknown role '{code}'."
             break
 
+    # Optional teacher subjects. Accept IDs from the active year only: a stale
+    # subject from an archived year must not silently grant repository access.
+    subject_ids = []
+    raw_subjects = data.get("subjects")
+    if isinstance(raw_subjects, list):
+        for item in raw_subjects:
+            value = item.get("id") if isinstance(item, dict) else item
+            try:
+                sid = int(value)
+            except (TypeError, ValueError):
+                continue
+            if sid not in subject_ids:
+                subject_ids.append(sid)
+    valid_subject_ids = set()
+    if year:
+        valid_subject_ids = set(
+            Subject.objects.filter(pk__in=subject_ids, academic_year=year).values_list(
+                "id", flat=True
+            )
+        )
+    if subject_ids and len(valid_subject_ids) != len(subject_ids):
+        errors["subjects"] = "Select subjects from the active academic year."
+
     if errors:
         return JsonResponse(
             {
@@ -819,9 +856,14 @@ def account_create(request):
                 role = Role.objects.filter(code=code).first()
                 if role:
                     RoleAssignment.objects.get_or_create(
-                        user=user, role=role, academic_year=year
+                        user=user, role=role, academic_year=None
                     )
                     assigned.append(role.code)
+            if "teacher" in assigned:
+                for sid in valid_subject_ids:
+                    TeacherSubject.objects.get_or_create(
+                        user=user, subject_id=sid
+                    )
             _log(
                 request.user,
                 f"account_created:{email}",
@@ -846,6 +888,7 @@ def account_create(request):
         "email": email,
         "employee_number": emp_no,
         "roles": assigned,
+        "subjects": sorted(valid_subject_ids),
         # Only ever echoed back to the admin who just created the account, so
         # a broken mail transport does not strand the employee with a password
         # nobody knows. It is never stored in plaintext.
@@ -934,10 +977,6 @@ def student_create(request):
     account starts PENDING_VERIFICATION and the generated temporary password
     is echoed back to the creating administrator, exactly like an employee.
     """
-    year = _active_year()
-    if not year:
-        return _err("No active academic year configured yet.", 409)
-
     data = _payload(request)
     email = (data.get("email") or data.get("acctUsername") or "").strip().lower()
     first, mi, last = _parse_name(
@@ -1022,7 +1061,7 @@ def student_create(request):
             role = Role.objects.filter(code=Role.Code.STUDENT).first()
             if role:
                 RoleAssignment.objects.get_or_create(
-                    user=user, role=role, academic_year=year
+                    user=user, role=role, academic_year=None
                 )
             _log(
                 request.user,
@@ -1234,13 +1273,97 @@ def account_resend_verification(request):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/user-roles/  — set one user's role set for the active year
+# POST /api/accounts/subjects/  — set one teacher's subjects for the active year
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+@api_role_required("system_admin")
+def account_subjects(request):
+    """Replace the subjects recorded on a teacher's account profile.
+
+    ``subject_ids`` is the complete desired set, so unchecking a subject in the
+    Edit Account modal removes it. Teaching access to subject-scoped assessment
+    features is determined by the teacher's active Virtual Classrooms.
+    """
+    from django.db import transaction
+
+    data = _payload(request)
+    user_pk = data.get("user_id") or data.get("id")
+    target = None
+    if user_pk:
+        target = (
+            User.objects.filter(pk=user_pk).first()
+            if str(user_pk).isdigit()
+            else None
+        )
+    if target is None:
+        email = (data.get("email") or "").strip().lower()
+        target = User.objects.filter(email=email).first()
+    if target is None:
+        return _err("That user could not be found.", 404)
+
+    year = _active_year()
+    if not year:
+        return _err("No active academic year configured yet.", 409)
+
+    raw = data.get("subject_ids")
+    if raw is None:
+        raw = data.get("subjects")
+    if not isinstance(raw, list):
+        return _err("Expected a list of subject IDs under 'subject_ids'.")
+
+    subject_ids = []
+    for item in raw:
+        value = item.get("id") if isinstance(item, dict) else item
+        try:
+            sid = int(value)
+        except (TypeError, ValueError):
+            continue
+        if sid not in subject_ids:
+            subject_ids.append(sid)
+
+    subjects = list(
+        Subject.objects.filter(pk__in=subject_ids, academic_year=year).order_by(
+            "grade_level", "name"
+        )
+    )
+    if len(subjects) != len(subject_ids):
+        return _err(
+            "One or more selected subjects are not in the active academic year.",
+            400,
+        )
+
+    with transaction.atomic():
+        TeacherSubject.objects.filter(user=target).exclude(
+            subject_id__in=subject_ids
+        ).delete()
+        for subject in subjects:
+            TeacherSubject.objects.get_or_create(user=target, subject=subject)
+    _log(
+        request.user,
+        f"teacher_subjects_updated:{target.email}",
+        entity_type="User",
+        entity_id=target.pk,
+    )
+    return _ok(
+        user_id=target.pk,
+        email=target.email,
+        subjects=[
+            {"id": subject.id, "name": subject.name, "gradeLevel": subject.grade_level}
+            for subject in subjects
+        ],
+        message="Subjects updated.",
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/user-roles/  — set one user's persistent role set
 # ---------------------------------------------------------------------------
 @login_required
 @require_POST
 @api_role_required(*ADMIN_ROLES)
 def user_roles(request):
-    """Replace a single user's active-year role set and nothing else.
+    """Replace a single user's persistent role set and nothing else.
 
     The role manager in the dashboard edits one person at a time, so it posts
     here rather than resending the whole account roster. That matters: the
@@ -1252,10 +1375,6 @@ def user_roles(request):
     RoleAssignment post_save signal keeps the matching Django Groups in step,
     which is what the page views and API guards check.
     """
-    year = _active_year()
-    if not year:
-        return _err("No active academic year configured yet.", 409)
-
     data = _payload(request)
     user_pk = data.get("user_id") or data.get("id")
     target = None
@@ -1293,19 +1412,19 @@ def user_roles(request):
         return _err("You cannot remove your own System Administrator role.", 400)
 
     before = sorted(
-        target.role_assignments.filter(academic_year=year)
+        target.role_assignments.all()
         .values_list("role__code", flat=True)
     )
 
     keep_ids = list(
         Role.objects.filter(code__in=wanted).values_list("id", flat=True)
     )
-    RoleAssignment.objects.filter(user=target, academic_year=year).exclude(
+    RoleAssignment.objects.filter(user=target).exclude(
         role_id__in=keep_ids
     ).delete()
     for role in Role.objects.filter(code__in=wanted):
         RoleAssignment.objects.get_or_create(
-            user=target, role=role, academic_year=year
+            user=target, role=role, academic_year=None
         )
 
     # The signal syncs groups per-assignment; re-sync once for the removals so
@@ -1313,7 +1432,7 @@ def user_roles(request):
     _sync_user_groups(target)
 
     after = sorted(
-        target.role_assignments.filter(academic_year=year)
+        target.role_assignments.all()
         .values_list("role__code", flat=True)
     )
     if before != after:
@@ -1341,9 +1460,6 @@ def user_roles(request):
 @require_POST
 @api_role_required(*REGISTRAR_ROLES)
 def students(request):
-    year = _active_year()
-    if not year:
-        return _err("No active academic year configured yet.", 409)
     data = _payload(request)
     incoming = data.get("students") or data.get("items") or []
     if not isinstance(incoming, list):
@@ -1503,9 +1619,9 @@ def academic_structure(request):
         grade = _grade_number(row.get("grade"))
         if not name:
             continue
-        period = (row.get("period") or row.get("grading_period") or "").strip()
-        if period in ("Whole Academic Year", "Whole Year", "Quarter", "Semester", "1st Quarter"):
-            period = ""
+        period = normalize_grading_period(
+            row.get("period") or row.get("grading_period") or ""
+        )
         active = (row.get("status") or "Active") in ("active", "Active")
         subj = Subject.objects.filter(academic_year=year, name=name, grade_level=grade).first()
         if subj is None:
@@ -1542,41 +1658,35 @@ def academic_structure(request):
             continue
         subject_name = (row.get("subject") or "").strip()
         section_name = (row.get("section") or "").strip()
-        grade = _grade_number(row.get("grade"))
+        raw_grade = row.get("grade")
+        grade = _grade_number(raw_grade) if raw_grade not in (None, "") else None
         if not subject_name or not section_name:
             result["vcs_skipped"] += 1
             result["vcs_errors"].append(
                 "A virtual classroom needs both a subject and a section."
             )
             continue
-        subj = Subject.objects.filter(academic_year=year, name=subject_name, grade_level=grade).first()
-        # The section is looked up by its own id when one is supplied, and
-        # otherwise by name within the active year -- *not* by the subject's
-        # grade level. It used to be filtered on `grade_level=grade` (the grade
-        # of the chosen subject), so picking a subject and a section from
-        # different grade levels resolved to nothing and the classroom was
-        # silently skipped. The grade check below now reports that as an error
-        # the dashboard can show, instead of failing invisibly.
-        sec = None
-        section_id = row.get("section_id") or row.get("sectionId")
-        if section_id not in (None, ""):
-            try:
-                sec = Section.objects.filter(
-                    pk=int(section_id), academic_year=year
-                ).first()
-            except (TypeError, ValueError):
-                sec = None
-        if sec is None:
-            sec = (
-                Section.objects.filter(academic_year=year, name=section_name)
-                .order_by("-grade_level")
-                .first()
-            )
+        subj = resolve_subject(
+            year,
+            subject_id=row.get("subject_id") or row.get("subjectId"),
+            name=subject_name,
+            grade=grade,
+        )
+        # Resolve the section by id when supplied, otherwise by name (and the
+        # grade the dashboard sent). Matching on name alone could pick a
+        # same-named section from another grade; the grade check below then
+        # reported a mismatch and the classroom was skipped.
+        sec = resolve_section(
+            year,
+            section_id=row.get("section_id") or row.get("sectionId"),
+            name=section_name,
+            grade=grade,
+        )
         if subj is None:
             result["vcs_skipped"] += 1
             result["vcs_errors"].append(
-                "Subject '{}' (Grade {}) does not exist for {}.".format(
-                    subject_name, grade, year.label
+                "Subject '{}' does not exist for {}.".format(
+                    subject_name, year.label
                 )
             )
             continue
@@ -1594,9 +1704,9 @@ def academic_structure(request):
                 )
             )
             continue
-        period = (row.get("gradingPeriod") or row.get("grading_period") or "").strip()
-        if period in ("Trimester 1", "Trimester 2", "Trimester 3", "Quarter 1"):
-            period = ""
+        period = normalize_grading_period(
+            row.get("gradingPeriod") or row.get("grading_period") or ""
+        )
         vc = VirtualClassroom.objects.filter(subject=subj, section=sec, academic_year=year, grading_period=period).first()
         teacher = _resolve_teacher(row.get("teacher"))
         # One teacher per virtual classroom. A bulk import shouldn't abort on a
@@ -1629,6 +1739,182 @@ def academic_structure(request):
         result["vcs"] += 1
 
     return _ok(**result)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/virtual-classroom/create/  — create one Virtual Classroom
+# ---------------------------------------------------------------------------
+def _vc_serialize(vc):
+    return {
+        "id": vc.id,
+        "subject": vc.subject.name if vc.subject_id else "",
+        "subjectId": vc.subject_id,
+        "section": vc.section.name if vc.section_id else "",
+        "sectionId": vc.section_id,
+        "grade": "Grade {}".format(vc.section.grade_level) if vc.section_id else "",
+        "teacher": vc.teacher.get_full_name() if vc.teacher_id else "",
+        "teacherId": vc.teacher_id,
+        "gradingPeriod": vc.grading_period,
+        "schedule": vc.schedule,
+        "themeColor": vc.theme_color,
+        "year": vc.academic_year.label if vc.academic_year_id else "",
+        "status": vc.get_status_display(),
+    }
+
+
+@login_required
+@require_POST
+def virtual_classroom_create(request):
+    """Create (or idempotently update) a single Virtual Classroom.
+
+    Unlike ``/api/academic-structure/`` -- which reconciles bulk dashboards --
+    this endpoint validates every required field and reports *why* a creation
+    was rejected, so a dashboard can show a real error instead of silently
+    dropping the classroom. It is open to anyone holding the
+    ``create_virtual_classroom`` permission (plus the roles whose dashboards
+    own academic structure), which is what lets an authorized teacher create
+    a classroom, not just a registrar.
+    """
+    user = request.user
+    allowed = (
+        user.is_superuser
+        or has_permission(user, "virtual_classrooms.create_virtual_classroom")
+        or user.groups.filter(
+            name__in=("system_admin", "registrar", "assistant_principal")
+        ).exists()
+    )
+    if not allowed:
+        _log(user, "api_denied:virtual_classroom_create")
+        return _err("You do not have permission to perform this action.", 403)
+
+    data = _payload(request)
+
+    # Academic year: explicit id/label wins, otherwise the active year.
+    year = None
+    raw_year = (
+        data.get("academic_year_id")
+        or data.get("academicYearId")
+        or data.get("academic_year")
+        or data.get("ay")
+        or data.get("year")
+    )
+    if raw_year not in (None, ""):
+        if str(raw_year).isdigit():
+            year = AcademicYear.objects.filter(pk=int(raw_year)).first()
+        else:
+            label = (
+                str(raw_year)
+                .replace("S.Y.", "")
+                .replace("SY", "")
+                .replace("–", "-")
+                .replace("—", "-")
+            )
+            label = "".join(label.split())
+            year = AcademicYear.objects.filter(label=label).first()
+    if year is None:
+        year = _active_year()
+    if year is None:
+        return _err("No active academic year is configured yet.", 409)
+
+    grade = data.get("grade")
+    if grade in (None, ""):
+        grade = None
+
+    section = resolve_section(
+        year,
+        section_id=data.get("section_id") or data.get("sectionId"),
+        name=data.get("section") or data.get("sectionName") or "",
+        grade=grade,
+    )
+    subject = resolve_subject(
+        year,
+        subject_id=data.get("subject_id") or data.get("subjectId"),
+        name=data.get("subject") or data.get("subjectName") or "",
+        grade=grade,
+    )
+    if section is None:
+        return _err(
+            "Select a valid section for {}.".format(year.label)
+        )
+    if subject is None:
+        return _err(
+            "Select a valid subject for {}.".format(year.label)
+        )
+
+    teacher = None
+    teacher_id = data.get("teacher_id") or data.get("teacherId")
+    if teacher_id not in (None, ""):
+        try:
+            teacher = User.objects.filter(
+                pk=int(teacher_id), groups__name="teacher", is_active=True
+            ).first()
+        except (TypeError, ValueError):
+            teacher = None
+        if teacher is None:
+            return _err("The selected teacher could not be found.")
+    raw_teacher = str(data.get("teacher") or "").strip()
+    if teacher is None and raw_teacher:
+        teacher = _resolve_teacher(raw_teacher)
+        if teacher is None:
+            return _err(
+                "The teacher '{}' could not be found.".format(raw_teacher)
+            )
+
+    existing_classroom = VirtualClassroom.objects.filter(
+        academic_year=year,
+        section=section,
+        subject=subject,
+        grading_period=normalize_grading_period(
+            data.get("gradingPeriod") or data.get("grading_period") or data.get("period") or ""
+        ),
+    ).first()
+    old_teacher_id = existing_classroom.teacher_id if existing_classroom else None
+    try:
+        vc, created = create_virtual_classroom(
+            academic_year=year,
+            section=section,
+            subject=subject,
+            teacher=teacher,
+            grading_period=(
+                data.get("gradingPeriod")
+                or data.get("grading_period")
+                or data.get("period")
+                or ""
+            ),
+            schedule=(
+                data.get("schedule")
+                or data.get("teacherSchedule")
+                or data.get("classSchedule")
+                or ""
+            ),
+            theme_color=data.get("color") or data.get("themeColor"),
+        )
+    except ValidationError as exc:
+        return _err("; ".join(exc.messages))
+
+    if created or (vc.teacher_id and vc.teacher_id != old_teacher_id):
+        try:
+            from apps.communication.notifications import notify_teacher_classroom_assignment
+
+            notify_teacher_classroom_assignment(vc, assigned_by=user)
+        except Exception:
+            pass
+
+    _log(
+        user,
+        "virtual_classroom_created" if created else "virtual_classroom_updated",
+        entity_type="VirtualClassroom",
+        entity_id=vc.pk,
+    )
+    return _ok(
+        created=created,
+        virtualClassroom=_vc_serialize(vc),
+        message=(
+            "Virtual classroom created successfully."
+            if created
+            else "Virtual classroom updated successfully."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -2145,6 +2431,8 @@ def classroom_detail(request, vc_id):
                 else ""
             ),
             "topic": placement.topic.name,
+            "size": resource_size_bytes(placement.resource),
+            "sizeLabel": resource_size_label(placement.resource),
             "uploadedBy": _full_name(placement.resource.uploaded_by),
             "sharedToRepository": placement.resource.share_to_repository,
             "placedAt": placement.placed_at.strftime("%b %d, %Y") if placement.placed_at else "",
@@ -2227,12 +2515,14 @@ def classroom_detail(request, vc_id):
                 submission_rows.append(
                     {
                         "studentId": sp.pk,
+                        "submissionId": None,
                         "name": _student_name(sp),
                         "status": "not-submitted",
                         "score": "—",
                         "time": "—",
                         "fileUrl": "",
                         "fileName": "",
+                        "viewUrl": "",
                     }
                 )
             else:
@@ -2240,6 +2530,7 @@ def classroom_detail(request, vc_id):
                 submission_rows.append(
                     {
                         "studentId": sp.pk,
+                        "submissionId": sub.pk,
                         "name": _student_name(sp),
                         "status": "late" if sub.is_late else "submitted",
                         "score": (
@@ -2254,6 +2545,10 @@ def classroom_detail(request, vc_id):
                         else "—",
                         "fileUrl": file_url,
                         "fileName": file_name,
+                        "viewUrl": reverse(
+                            "assessments:submission_review",
+                            args=[assessment.pk, sub.pk],
+                        ),
                     }
                 )
         assessments.append(
@@ -3049,6 +3344,21 @@ def notifications(request):
     except (TypeError, ValueError):
         limit = 20
     limit = max(1, min(limit, 100))
+    # There is no scheduler process in the pilot. The student's own bell poll
+    # (every 30s) delivers both the two-minute opening reminder and the
+    # availability notice as soon as its window opens. Both sweeps are
+    # idempotent and scoped to active assessments/classroom enrollments.
+    if getattr(request.user, "student_profile", None) is not None:
+        try:
+            from apps.assessments.services import (
+                trigger_availability_notifications,
+                trigger_opening_soon_notifications,
+            )
+
+            trigger_opening_soon_notifications()
+            trigger_availability_notifications()
+        except Exception:  # a notification sweep must never break the feed
+            pass
     qs = Notification.objects.filter(recipient=request.user).select_related("virtual_classroom")
     unread_count = qs.filter(is_read=False).count()
     from apps.communication import notifications as notif_service
@@ -3089,7 +3399,7 @@ def notifications_mark_all_read(request):
 # ---------------------------------------------------------------------------
 @login_required
 @require_POST
-@api_perm_required("create_assessment_custom", "upload_learning_resource", "manage_learning_resources")
+@api_perm_required("create_assessment_custom", "upload_learning_resource", "manage_learning_resources", allow_teacher=True)
 def teacher_content(request):
     data = _payload(request)
     vc = None
@@ -3101,6 +3411,13 @@ def teacher_content(request):
         vc = VirtualClassroom.objects.filter(pk=cid, teacher=request.user, status=STATUS_ACTIVE).first()
     if vc is None:
         return _err("Open a Virtual Classroom before adding or copying learning resources.", status=409)
+    requested_topic = None
+    if data.get("topic_id") and data.get("action") in ("resource", "link", "file", "upload"):
+        requested_topic = Topic.objects.filter(
+            pk=data["topic_id"], virtual_classroom=vc
+        ).first()
+        if requested_topic is None:
+            return _err("The selected topic was not found in this classroom.", 404)
 
     saved = {}
     topic = None
@@ -3126,7 +3443,10 @@ def teacher_content(request):
             rtype = "link"
         share = _share_flag(data)
         resource = LearningResource.objects.filter(
-            title=title, uploaded_by=request.user, external_link=link
+            title=title,
+            uploaded_by=request.user,
+            external_link=link,
+            share_to_repository=share,
         ).first()
         if resource is None:
             resource = LearningResource.objects.create(
@@ -3139,7 +3459,7 @@ def teacher_content(request):
             resource.save()
         saved["resource_id"] = resource.pk
         if data.get("topic_id"):
-            topic = Topic.objects.filter(pk=data["topic_id"], virtual_classroom=vc).first()
+            topic = requested_topic
         topic_name = (data.get("topic") or data.get("topic_name") or "").strip()
         if topic is None and topic_name:
             topic = Topic.objects.filter(virtual_classroom=vc, name=topic_name).first()
@@ -3167,7 +3487,7 @@ def teacher_content(request):
         if not title:
             title = uploads[0].name or "Untitled resource"
         rtype = data.get("type") or "document"
-        _RTYPE_ALIAS = {"doc": "document", "ppt": "presentation", "img": "image", "vid": "video", "aud": "audio", "lnk": "link"}
+        _RTYPE_ALIAS = {"doc": "document", "ppt": "presentation", "img": "image", "vid": "video", "aud": "audio", "lnk": "link", "scorm": "document"}
         rtype = _RTYPE_ALIAS.get(rtype, rtype)
         if rtype not in dict(LearningResource.RESOURCE_TYPE_CHOICES):
             rtype = "document"
@@ -3197,7 +3517,7 @@ def teacher_content(request):
             except Exception:
                 pass
         if data.get("topic_id"):
-            topic = Topic.objects.filter(pk=data["topic_id"], virtual_classroom=vc).first()
+            topic = requested_topic
         topic_name = (data.get("topic") or data.get("topic_name") or "").strip()
         if topic is None and topic_name:
             topic = Topic.objects.filter(virtual_classroom=vc, name=topic_name).first()
@@ -3250,19 +3570,14 @@ def _notify_classroom_change(vc, actor, kinds):
 # GET /api/learning-resources/ — the current teacher's learning resources
 # ---------------------------------------------------------------------------
 def _human_size(num):
-    try:
-        num = float(num)
-    except (TypeError, ValueError):
-        return ""
-    for unit in ("B", "KB", "MB", "GB"):
-        if num < 1024 or unit == "GB":
-            return ("%d %s" % (num, unit)) if unit == "B" else ("%.1f %s" % (num, unit))
-        num /= 1024.0
-    return ""
+    """Alias of the shared formatter so every resource payload agrees."""
+    return human_size(num)
 
 
 @login_required
 def learning_resources(request):
+    requested_vc = request.GET.get("vc_id") or request.GET.get("virtual_classroom_id")
+    requested_year_id = request.GET.get("academic_year_id")
     qs = (
         LearningResource.objects.filter(status=LearningResource.STATUS_ACTIVE)
         .select_related("subject", "uploaded_by")
@@ -3274,12 +3589,27 @@ def learning_resources(request):
         and not request.user.is_superuser
     )
     if is_teacher:
-        qs = qs.filter(
-            Q(uploaded_by_id=request.user.id)
-            | Q(subject__virtual_classrooms__teacher_id=request.user.id)
-        ).distinct()
+        from apps.accounts.models import teacher_subject_ids
+        teacher_subject_ids_for_repo = teacher_subject_ids(request.user)
+        if requested_vc:
+            # A classroom materials view stays limited to the caller's class.
+            qs = qs.filter(subject_id__in=teacher_subject_ids_for_repo).distinct()
+        else:
+            # The shared resource repository spans all subjects in the active
+            # school year. Assessment repository subject scoping is separate.
+            selected_year = None
+            if requested_year_id:
+                selected_year = AcademicYear.objects.filter(pk=requested_year_id).first()
+            if selected_year is None:
+                selected_year = AcademicYear.objects.filter(
+                    status=AcademicYear.STATUS_ACTIVE
+                ).order_by("-start_date", "-pk").first()
+            if selected_year:
+                qs = qs.filter(subject__academic_year=selected_year)
+            qs = qs.filter(share_to_repository=True).distinct()
+    else:
+        teacher_subject_ids_for_repo = set()
 
-    requested_vc = request.GET.get("vc_id") or request.GET.get("virtual_classroom_id")
     # Roles that see every classroom (as opposed to only their own). The System
     # Administrator holds every permission, so the shared repository must offer
     # the full classroom list and let the admin copy resources into any class.
@@ -3297,23 +3627,19 @@ def learning_resources(request):
                 pk=requested_vc, teacher=request.user
             ).values_list("pk", flat=True).first()
             if cid is None:
-                return _ok(resources=[], virtual_classrooms=[])
+                return _ok(resources=[], virtual_classrooms=[], repository_subjects=[])
         else:
             cid = requested_vc
         qs = qs.filter(placements__virtual_classroom_id=cid).distinct()
     else:
         # With no classroom filter this is the browse-all list.
         #   - Leadership/admin: every resource in the school.
-        #   - Teachers: the shared subject-level store plus their own uploads
-        #     (a fresh upload that is only visible in its class should still not
-        #     disappear from a teacher's view of the repository).
+        #   - Teachers: the shared archive across years plus their own uploads.
         #   - Everyone else (students etc.): shared resources only.
         if is_school_wide_viewer:
             pass
         elif is_teacher:
-            qs = qs.filter(
-                Q(share_to_repository=True) | Q(uploaded_by_id=request.user.id)
-            ).distinct()
+            qs = qs.filter(share_to_repository=True).distinct()
         else:
             qs = qs.filter(share_to_repository=True).distinct()
 
@@ -3358,7 +3684,9 @@ def learning_resources(request):
         items.append({
             "id": r.id,
             "title": r.title,
+            "subject_id": r.subject_id,
             "subject": r.subject.name if r.subject_id else "",
+            "grade_level": r.subject.grade_level if r.subject_id else None,
             "topic": topic,
             "type": alias,
             "icon": icon_map.get(alias, "fa-solid fa-file"),
@@ -3368,12 +3696,54 @@ def learning_resources(request):
             "uploaded_by": r.uploaded_by.email if r.uploaded_by_id else "",
             "created_at": r.created_at.strftime("%b %d, %Y"),
         })
-    vcs = VirtualClassroom.objects.filter(status="active")
+    vcs = VirtualClassroom.objects.filter(
+        status="active", academic_year__status=AcademicYear.STATUS_ACTIVE
+    )
     if not request.user.is_superuser and not request.user.groups.filter(name="system_admin").exists():
         vcs = vcs.filter(teacher=request.user)
-    vcs = vcs.select_related("subject", "section").order_by("subject__name", "section__name")
-    classrooms = [{"id": vc.id, "name": str(vc)} for vc in vcs]
-    return _ok(resources=items, virtual_classrooms=classrooms)
+    vcs = vcs.select_related(
+        "subject",
+        "subject__academic_year",
+        "section",
+        "section__academic_year",
+        "academic_year",
+    ).order_by("subject__name", "section__name")
+    classrooms = [{
+        "id": vc.id,
+        "name": str(vc),
+        "subject": vc.subject.name,
+        "subject_id": vc.subject_id,
+        "grade_level": vc.subject.grade_level,
+        "academic_year": vc.academic_year.label if vc.academic_year_id else "",
+    } for vc in vcs]
+    from apps.academic_structure.models import Subject
+    repository_subjects = []
+    if is_teacher:
+        repository_subject_ids = set(qs.values_list("subject_id", flat=True))
+        if not requested_vc:
+            selected_year = None
+            if requested_year_id:
+                selected_year = AcademicYear.objects.filter(pk=requested_year_id).first()
+            if selected_year is None:
+                selected_year = AcademicYear.objects.filter(
+                    status=AcademicYear.STATUS_ACTIVE
+                ).order_by("-start_date", "-pk").first()
+            if selected_year:
+                repository_subject_ids.update(
+                    Subject.objects.filter(academic_year=selected_year).values_list("pk", flat=True)
+                )
+        repository_subjects = [
+            {
+                "id": subject.id,
+                "name": subject.name,
+                "grade_level": subject.grade_level,
+                "grading_period": subject.grading_period,
+            }
+            for subject in Subject.objects.filter(
+                pk__in=repository_subject_ids,
+            ).select_related("academic_year").order_by("grade_level", "name", "grading_period", "pk")
+        ]
+    return _ok(resources=items, virtual_classrooms=classrooms, repository_subjects=repository_subjects)
 
 
 # ---------------------------------------------------------------------------
@@ -3381,22 +3751,38 @@ def learning_resources(request):
 # ---------------------------------------------------------------------------
 @login_required
 @require_POST
-@api_perm_required("manage_learning_resources", "upload_learning_resource")
+@api_perm_required("manage_learning_resources", "upload_learning_resource", allow_teacher=True)
 def attach_learning_resource(request):
     data = _payload(request)
     resource = LearningResource.objects.filter(
         pk=data.get("resource_id"), status=LearningResource.STATUS_ACTIVE
-    ).first()
+    ).select_related("subject").first()
     if resource is None:
         return _err("Learning resource not found.")
+    is_platform_admin = request.user.is_superuser or request.user.groups.filter(name="system_admin").exists()
+    if not is_platform_admin and not (
+        resource.share_to_repository or resource.uploaded_by_id == request.user.pk
+    ):
+        return _err("This resource is not available in your repository.", 403)
     vcs = VirtualClassroom.objects.filter(
-        pk=data.get("virtual_classroom_id"), status="active"
+        pk=data.get("virtual_classroom_id"),
+        status="active",
+        academic_year__status=AcademicYear.STATUS_ACTIVE,
     )
     if not request.user.is_superuser and not request.user.groups.filter(name="system_admin").exists():
         vcs = vcs.filter(teacher=request.user)
     vc = vcs.first()
     if vc is None:
         return _err("Virtual classroom not found.")
+    same_subject = (
+        resource.subject_id == vc.subject_id
+        or (
+            resource.subject.grade_level == vc.subject.grade_level
+            and resource.subject.name.strip().casefold() == vc.subject.name.strip().casefold()
+        )
+    )
+    if not same_subject:
+        return _err("Only resources for the same subject and grade can be selected.", 403)
     topic = Topic.objects.filter(virtual_classroom=vc).order_by("order").first()
     if topic is None:
         topic = Topic.objects.create(
@@ -3424,6 +3810,179 @@ def attach_learning_resource(request):
         created=created,
         virtual_classroom=str(vc),
     )
+
+
+@login_required
+@require_POST
+@api_perm_required("create_assessment_custom", allow_teacher=True)
+@transaction.atomic
+def assessment_repository_copy(request):
+    """Copy a shared archive assessment into this year's assessment builder."""
+    data = _payload(request)
+    try:
+        source_id = int(data.get("assessment_id"))
+        raw_ids = data.get("virtual_classroom_ids")
+        if isinstance(raw_ids, str):
+            raw_ids = json.loads(raw_ids)
+        target_ids = sorted({int(value) for value in (raw_ids or [])})
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return _err("Select an assessment and at least one destination classroom.", 400)
+    if not target_ids:
+        return _err("Select at least one destination classroom.", 400)
+
+    source = Assessment.objects.filter(
+        pk=source_id, share_to_repository=True
+    ).select_related("subject").prefetch_related("parts").first()
+    if source is None:
+        return _err("This archived assessment is no longer available.", 404)
+    classrooms = list(
+        VirtualClassroom.objects.filter(
+            pk__in=target_ids,
+            teacher=request.user,
+            status=VirtualClassroom.STATUS_ACTIVE,
+            academic_year__status=AcademicYear.STATUS_ACTIVE,
+        ).select_related("subject", "academic_year")
+    )
+    if len(classrooms) != len(target_ids):
+        return _err("One or more destination classrooms are unavailable.", 403)
+    compatible = [
+        vc for vc in classrooms
+        if vc.subject.grade_level == source.subject.grade_level
+        and vc.subject.name.strip().casefold() == source.subject.name.strip().casefold()
+    ]
+    if len(compatible) != len(classrooms):
+        return _err("Choose current-year classrooms for the assessment's subject and grade.", 400)
+
+    clones_by_subject = {}
+    cloned_ids = []
+    for vc in compatible:
+        clone = clones_by_subject.get(vc.subject_id)
+        if clone is None:
+            clone = Assessment.objects.create(
+                subject=vc.subject,
+                academic_year=vc.academic_year,
+                created_by=request.user,
+                title=source.title,
+                assessment_method=source.assessment_method,
+                assessment_type=source.assessment_type,
+                instructions=source.instructions,
+                lifecycle_stage=Assessment.STAGE_CREATED,
+                available_at=None,
+                submission_deadline=timezone.now() + timedelta(days=7),
+                time_limit_minutes=source.time_limit_minutes,
+                passing_score_percentage=source.passing_score_percentage,
+                accepted_file_format=source.accepted_file_format,
+                allow_submission_attachments=source.allow_submission_attachments,
+                allow_submission_links=source.allow_submission_links,
+                reveal_correct_answers=source.reveal_correct_answers,
+                share_to_repository=False,
+                status=Assessment.STATUS_ACTIVE,
+                notification_settings=source.notification_settings,
+            )
+            for part in source.parts.all():
+                AssessmentPart.objects.create(
+                    assessment=clone,
+                    question_type=part.question_type,
+                    question_text=part.question_text,
+                    order=part.order,
+                    items=part.items,
+                    attached_file=part.attached_file.name if part.attached_file else "",
+                )
+            clones_by_subject[vc.subject_id] = clone
+            cloned_ids.append(clone.pk)
+        # The assessment builder and classroom views discover assessments
+        # through these assignments, including when sections share a subject.
+        AssessmentAssignment.objects.get_or_create(
+            assessment=clone,
+            virtual_classroom=vc,
+            defaults={"assigned_by": request.user},
+        )
+
+    return _ok(
+        assessment_ids=cloned_ids,
+        assessment_url=reverse("assessments:assessment_detail", args=[cloned_ids[0]]),
+        copied_classrooms=len(compatible),
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/attendance/ — saved attendance for a date range, per learner
+# ---------------------------------------------------------------------------
+@login_required
+@require_GET
+@api_perm_required("view_attendance_records", "record_class_attendance")
+def attendance_calendar(request):
+    """The caller's saved attendance, keyed by date and learner.
+
+    The teacher dashboard used to paint its attendance calendar from the
+    browser's localStorage only: a record saved on the office machine was
+    invisible on the classroom laptop, and clearing site data wiped the view of
+    records that were safely in PostgreSQL. This endpoint is the read side of
+    ``POST /api/attendance/`` so the calendar is rebuilt from the database.
+
+    The response mirrors the shape the front end already stores::
+
+        {
+          "2026-09-01": {"<student id>": "P" | "L" | "A"},
+          "2026-09-01.sub": {"<student id>": {"sub": "late", "remark": "..."}},
+        }
+
+    Only the caller's own classrooms are read, and the range is capped at 365
+    days so the complete academic-year attendance view can be rebuilt.
+    """
+    from apps.attendance.models import AttendanceRecord, AttendanceSession
+
+    today = timezone.localdate()
+
+    def parse(value, fallback):
+        try:
+            return date.fromisoformat(str(value)[:10])
+        except (TypeError, ValueError):
+            return fallback
+
+    start = parse(request.GET.get("from"), today.replace(day=1))
+    end = parse(request.GET.get("to"), start + timedelta(days=31))
+    if end < start:
+        start, end = end, start
+    if (end - start).days > 365:
+        end = start + timedelta(days=365)
+
+    status_code = {
+        AttendanceRecord.PRESENT_ON_TIME: "P",
+        AttendanceRecord.PRESENT_LATE: "L",
+        AttendanceRecord.ABSENT_EXCUSED: "A",
+        AttendanceRecord.ABSENT_UNEXCUSED: "A",
+    }
+    sub_code = {
+        AttendanceRecord.PRESENT_ON_TIME: "ontime",
+        AttendanceRecord.PRESENT_LATE: "late",
+        AttendanceRecord.ABSENT_EXCUSED: "excused",
+        AttendanceRecord.ABSENT_UNEXCUSED: "unexcused",
+    }
+
+    sessions = AttendanceSession.objects.filter(
+        virtual_classroom__teacher=request.user,
+        virtual_classroom__status=STATUS_ACTIVE,
+        session_date__gte=start,
+        session_date__lte=end,
+    )
+    calendar = {}
+    records = (
+        AttendanceRecord.objects.filter(session__in=sessions)
+        .select_related("session")
+        .order_by("session__session_date", "pk")
+    )
+    for record in records:
+        code = status_code.get(record.status)
+        if code is None:
+            continue
+        day = record.session.session_date.isoformat()
+        calendar.setdefault(day, {})[str(record.student_id)] = code
+        calendar.setdefault(day + ".sub", {})[str(record.student_id)] = {
+            "sub": sub_code.get(record.status, "ontime"),
+            "remark": record.remark or "",
+        }
+    return _ok(from_date=start.isoformat(), to_date=end.isoformat(), calendar=calendar)
 
 
 # ---------------------------------------------------------------------------
@@ -3509,18 +4068,20 @@ def attendance(request):
             # e.g. an excused absence without the mandatory note/attachment.
             skipped += 1
             continue
-        # Bell notice: tell the student they were absent, and clear any stale
-        # notice when the teacher corrects the record to present/late. A
-        # notification failure must never break the attendance save itself.
-        is_absent = status in (AttendanceRecord.ABSENT_UNEXCUSED, AttendanceRecord.ABSENT_EXCUSED)
-        label = "absent (excused)" if status == AttendanceRecord.ABSENT_EXCUSED else "absent"
+        # Tell the student which attendance status was recorded, including
+        # present and late. A notification failure must never block the save.
+        label = {
+            AttendanceRecord.PRESENT_ON_TIME: "present",
+            AttendanceRecord.PRESENT_LATE: "late",
+            AttendanceRecord.ABSENT_EXCUSED: "absent (excused)",
+            AttendanceRecord.ABSENT_UNEXCUSED: "absent",
+        }.get(status, "updated")
         try:
             notif_service.sync_attendance_notification(
                 user_id=profile.user_id,
                 virtual_classroom=vc,
                 session=session,
-                is_absent=is_absent,
-                absent_label=label,
+                status_label=label,
             )
         except Exception:  # pragma: no cover - notification is an enhancement
             pass
@@ -3559,11 +4120,255 @@ def _assessment_image_data(value):
     return value
 
 
+def _compile_assessment_parts(data):
+    """Validate the builder payload and preserve its part/question identities."""
+    type_code = {
+        "mc": AssessmentPart.TYPE_MULTIPLE_CHOICE,
+        "multiple_choice": AssessmentPart.TYPE_MULTIPLE_CHOICE,
+        "tf": AssessmentPart.TYPE_TRUE_FALSE,
+        "true_false": AssessmentPart.TYPE_TRUE_FALSE,
+        "mt": AssessmentPart.TYPE_MATCHING,
+        "matching": AssessmentPart.TYPE_MATCHING,
+        "id": AssessmentPart.TYPE_IDENTIFICATION,
+        "identification": AssessmentPart.TYPE_IDENTIFICATION,
+        "sa": AssessmentPart.TYPE_SHORT_ANSWER,
+        "short": AssessmentPart.TYPE_SHORT_ANSWER,
+        "numeric": AssessmentPart.TYPE_NUMERIC,
+        "es": AssessmentPart.TYPE_ESSAY,
+        "essay": AssessmentPart.TYPE_ESSAY,
+        "pp": AssessmentPart.TYPE_POSITION_PAPER,
+        "cs": AssessmentPart.TYPE_CASE_STUDY,
+        "nr": AssessmentPart.TYPE_NARRATIVE_REPORT,
+        "pt": AssessmentPart.TYPE_ESSAY,
+    }
+    questions = data.get("questions")
+    if not isinstance(questions, list) or not questions:
+        raise ValidationError("Add at least one valid question before saving.")
+    part_specs = data.get("parts")
+    if part_specs is not None and not isinstance(part_specs, list):
+        raise ValidationError("Assessment parts must be a list.")
+    specs_by_id = {}
+    ordered_ids = []
+    for spec in part_specs or []:
+        if not isinstance(spec, dict) or not spec.get("id"):
+            raise ValidationError("Each assessment part must have an ID.")
+        token = str(spec["id"])
+        if token in specs_by_id:
+            raise ValidationError("Assessment part IDs must be unique.")
+        specs_by_id[token] = spec
+        ordered_ids.append(token)
+
+    grouped = {}
+    for index, question in enumerate(questions, start=1):
+        if not isinstance(question, dict):
+            raise ValidationError("Question {} is invalid.".format(index))
+        question_text = str(question.get("text") or question.get("question") or "").strip()
+        if not question_text:
+            raise ValidationError("Question {} needs question text.".format(index))
+        raw_type = str(question.get("type") or "mc").lower()
+        question_type = type_code.get(raw_type)
+        if question_type is None:
+            raise ValidationError("Question {} has an unsupported question type.".format(index))
+        raw_points = question.get("points", question.get("point", 1))
+        try:
+            point_value = Decimal(str(raw_points))
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValidationError("Question {} needs a whole-number point value.".format(index))
+        if (
+            isinstance(raw_points, bool)
+            or not point_value.is_finite()
+            or point_value != point_value.to_integral_value()
+        ):
+            raise ValidationError("Question {} needs a whole-number point value.".format(index))
+        points = int(point_value)
+        if points < 1 or points > 100:
+            raise ValidationError("Question {} points must be between 1 and 100.".format(index))
+        token = str(question.get("partId") or "legacy:" + question_type)
+        part_spec = specs_by_id.get(token)
+        if part_spec and part_spec.get("qtype"):
+            spec_type = type_code.get(str(part_spec["qtype"]).lower())
+            if spec_type != question_type:
+                raise ValidationError("Every question must match its assessment part type.")
+        group = grouped.setdefault(
+            token,
+            {
+                "token": token,
+                "label": str((specs_by_id.get(token) or {}).get("label") or ""),
+                "question_type": question_type,
+                "items": [],
+            },
+        )
+        if group["question_type"] != question_type:
+            raise ValidationError("Every question in a part must use the same question type.")
+
+        item = {"question": question_text, "point": points}
+        try:
+            image = _assessment_image_data(question.get("media"))
+            if image:
+                item["image"] = image
+            opt_images = question.get("optImgs") if isinstance(question.get("optImgs"), dict) else {}
+            if question_type == AssessmentPart.TYPE_MULTIPLE_CHOICE:
+                options = question.get("options")
+                if not isinstance(options, list):
+                    raise ValidationError("Question {} needs at least two choices.".format(index))
+                choices, choice_images, source_indexes = [], [], []
+                for source_index, raw_option in enumerate(options[:4]):
+                    letter = chr(65 + source_index)
+                    choice_image = _assessment_image_data(opt_images.get(letter, ""))
+                    option_text = str(raw_option or "").strip()
+                    if not option_text and not choice_image:
+                        continue
+                    choices.append(option_text or "Choice {}".format(letter))
+                    choice_images.append(choice_image)
+                    source_indexes.append(source_index)
+                if len(choices) < 2:
+                    raise ValidationError("Question {} needs at least two choices.".format(index))
+                try:
+                    correct_value = Decimal(str(question.get("correct", 0)))
+                except (InvalidOperation, TypeError, ValueError):
+                    raise ValidationError("Question {} has an invalid correct choice.".format(index))
+                if (
+                    not correct_value.is_finite()
+                    or correct_value != correct_value.to_integral_value()
+                ):
+                    raise ValidationError("Question {} has an invalid correct choice.".format(index))
+                correct_source = int(correct_value)
+                if correct_source not in source_indexes:
+                    raise ValidationError("Question {} must select one of its choices as correct.".format(index))
+                correct_index = source_indexes.index(correct_source)
+                item.update(
+                    choices=choices,
+                    choice_images=choice_images,
+                    correct_answer=choices[correct_index],
+                )
+            elif question_type == AssessmentPart.TYPE_TRUE_FALSE:
+                item["choices"] = ["True", "False"]
+                item["correct_answer"] = "False" if question.get("tf") is False else "True"
+            elif question_type in (
+                AssessmentPart.TYPE_IDENTIFICATION,
+                AssessmentPart.TYPE_SHORT_ANSWER,
+            ):
+                answers = question.get("answers") or question.get("accepted_answers")
+                if not answers:
+                    answers = [question.get("idAns") or question.get("saAns") or ""]
+                if isinstance(answers, str):
+                    answers = [answer.strip() for answer in answers.splitlines() if answer.strip()]
+                elif isinstance(answers, list):
+                    answers = [str(answer).strip() for answer in answers if str(answer).strip()]
+                else:
+                    raise ValidationError("Question {} accepted answers must be a list or text.".format(index))
+                if not answers:
+                    raise ValidationError("Question {} needs at least one accepted answer.".format(index))
+                item["accepted_answers"] = answers
+            elif question_type == AssessmentPart.TYPE_NUMERIC:
+                answer = question.get("answer", question.get("correct_answer"))
+                if answer in (None, ""):
+                    raise ValidationError("Question {} needs the correct numeric answer.".format(index))
+                try:
+                    numeric_answer = Decimal(str(answer))
+                    tolerance = Decimal(str(question.get("tolerance", 0)))
+                except (InvalidOperation, TypeError, ValueError):
+                    raise ValidationError("Question {} has an invalid numeric answer or tolerance.".format(index))
+                if not numeric_answer.is_finite() or not tolerance.is_finite():
+                    raise ValidationError("Question {} numeric values must be finite.".format(index))
+                if tolerance < 0:
+                    raise ValidationError("Question {} tolerance cannot be negative.".format(index))
+                item["correct_answer"] = str(answer)
+                item["tolerance"] = float(tolerance)
+            elif question_type == AssessmentPart.TYPE_MATCHING:
+                raw_pairs = question.get("matches") or question.get("match") or ""
+                if isinstance(raw_pairs, dict):
+                    pairs = list(raw_pairs.items())
+                else:
+                    pairs = []
+                    for line in str(raw_pairs).replace(";", "\n").splitlines():
+                        if not line.strip():
+                            continue
+                        left, separator, right = line.partition("=")
+                        if not separator or not left.strip() or not right.strip():
+                            raise ValidationError(
+                                "Matching question {} must use one 'Left = Right' pair per line.".format(index)
+                            )
+                        pairs.append((left.strip(), right.strip()))
+                if not pairs:
+                    raise ValidationError("Matching question {} needs at least one pair.".format(index))
+                premises = [str(left).strip() for left, _right in pairs]
+                matches = {str(left).strip(): str(right).strip() for left, right in pairs}
+                if len(matches) != len(premises) or any(not left or not right for left, right in matches.items()):
+                    raise ValidationError("Matching question {} has duplicate or empty pairs.".format(index))
+                item.update(
+                    premises=premises,
+                    targets=[str(right).strip() for _left, right in pairs],
+                    correct_matches=matches,
+                )
+            else:
+                item["grading_rubric"] = question.get("rubric") or []
+        except ValidationError as exc:
+            raise ValidationError("Question {}: {}".format(index, "; ".join(exc.messages)))
+
+        item_key = str(question.get("itemKey") or "").strip()
+        group["items"].append((item_key, item))
+
+    if ordered_ids:
+        missing_groups = set(grouped) - set(ordered_ids)
+        if missing_groups:
+            raise ValidationError("A question refers to an unknown assessment part.")
+        ordered_groups = []
+        for token in ordered_ids:
+            group = grouped.get(token)
+            if group is None:
+                continue
+            ordered_groups.append(group)
+    else:
+        ordered_groups = list(grouped.values())
+
+    for group in ordered_groups:
+        used_keys = {key for key, _item in group["items"] if key}
+        if len(used_keys) != sum(bool(key) for key, _item in group["items"]):
+            raise ValidationError("Question IDs must be unique within each part.")
+        next_number = 1
+        compiled_items = {}
+        for key, item in group["items"]:
+            if not key:
+                while "item_{}".format(next_number) in used_keys:
+                    next_number += 1
+                key = "item_{}".format(next_number)
+                used_keys.add(key)
+                next_number += 1
+            compiled_items[key] = item
+        group["items"] = compiled_items
+    return ordered_groups
+
+
+def _assessment_parts_changed(assessment, groups):
+    existing_parts = {part.pk: part for part in assessment.parts.all()}
+    wanted_ids = set()
+    for order, group in enumerate(groups):
+        token = group["token"]
+        part = None
+        if token.startswith("p") and token[1:].isdigit():
+            part = existing_parts.get(int(token[1:]))
+        if part is None:
+            return True
+        wanted_ids.add(part.pk)
+        if (
+            part.order != order
+            or part.question_type != group["question_type"]
+            or part.question_text != group["label"]
+            or (part.items or {}) != group["items"]
+        ):
+            return True
+    return wanted_ids != set(existing_parts)
+
+
 @login_required
 @require_POST
-@api_perm_required("update_assessment_custom", "archive_assessment_custom", "create_assessment_custom")
+@api_perm_required("update_assessment_custom", "archive_assessment_custom", "create_assessment_custom", allow_teacher=True)
+@transaction.atomic
 def assessments(request):
     data = _payload(request)
+    if not isinstance(data, dict):
+        return _err("Assessment data must be an object.", 400)
     title = (data.get("title") or "").strip()
     if not title:
         return _err("Assessment title is required.")
@@ -3619,6 +4424,61 @@ def assessments(request):
 
     available_at = _parse_dt(data.get("openDate"))
     submission_deadline = _parse_dt(data.get("deadline"))
+    reopen_assessment = data.get("reopen") is True or str(data.get("reopen") or "").lower() in {"1", "true", "yes", "on"}
+    if reopen_assessment and (
+        submission_deadline is None or submission_deadline <= timezone.now()
+    ):
+        return _err("Choose a future closing date to reopen this assessment.", 400)
+    time_limit = None
+    if "timeLimit" in data:
+        try:
+            time_limit_value = Decimal(str(data["timeLimit"]))
+        except (InvalidOperation, TypeError, ValueError):
+            return _err("Time limit must be a whole number between 1 and 300 minutes.", 400)
+        if (
+            isinstance(data["timeLimit"], bool)
+            or not time_limit_value.is_finite()
+            or time_limit_value != time_limit_value.to_integral_value()
+        ):
+            return _err("Time limit must be a whole number between 1 and 300 minutes.", 400)
+        time_limit = int(time_limit_value)
+        if not 1 <= time_limit <= 300:
+            return _err("Time limit must be between 1 and 300 minutes.", 400)
+    passing_score = None
+    if "passingScore" in data:
+        try:
+            passing_score_value = Decimal(str(data["passingScore"]))
+        except (InvalidOperation, TypeError, ValueError):
+            return _err("Passing score must be a whole number between 1 and 100.", 400)
+        if (
+            isinstance(data["passingScore"], bool)
+            or not passing_score_value.is_finite()
+            or passing_score_value != passing_score_value.to_integral_value()
+        ):
+            return _err("Passing score must be a whole number between 1 and 100.", 400)
+        passing_score = int(passing_score_value)
+        if not 1 <= passing_score <= 100:
+            return _err("Passing score must be between 1 and 100 percent.", 400)
+    assessment_options = {
+        "allowSubmissionAttachments": "allow_submission_attachments",
+        "allowSubmissionLinks": "allow_submission_links",
+        "revealCorrectAnswers": "reveal_correct_answers",
+        "shareToRepository": "share_to_repository",
+    }
+    for key in assessment_options:
+        if key in data and not isinstance(data[key], bool):
+            return _err("{} must be true or false.".format(key), 400)
+    accepted_file_format = None
+    if "acceptedFileFormat" in data:
+        if not isinstance(data["acceptedFileFormat"], str) or len(data["acceptedFileFormat"]) > 100:
+            return _err("Accepted file formats must be text up to 100 characters.", 400)
+        accepted_file_format = data["acceptedFileFormat"].strip()
+    groups = None
+    if "questions" in data:
+        try:
+            groups = _compile_assessment_parts(data)
+        except ValidationError as exc:
+            return _err("; ".join(exc.messages), 400)
 
     requested_assessment_id = data.get("assessment_id")
     if requested_assessment_id:
@@ -3634,13 +4494,52 @@ def assessments(request):
         ).first()
         if assessment is None:
             return _err("Assessment not found or you cannot edit it.", 403)
-        if assessment.title != title:
-            assessment.title = title
-            assessment.save(update_fields=["title"])
     else:
-        assessment = Assessment.objects.filter(
-            subject=vc.subject, created_by=request.user, title=title
-        ).order_by("-created_at").first()
+        # A title is display text, not an edit identifier. The teacher UI sends
+        # assessment_id for edits; without it this request is a new assessment,
+        # even when another assessment has the same title.
+        assessment = None
+    if assessment is None and groups is None:
+        return _err("Add at least one question before publishing an assessment.", 400)
+    if (
+        assessment is not None
+        and groups is not None
+        and _assessment_parts_changed(assessment, groups)
+        and (
+            Submission.objects.filter(
+                assessment_assignment__assessment=assessment
+            ).exists()
+            or AssessmentAttempt.objects.filter(
+                assignment__assessment=assessment
+            ).exists()
+        )
+    ):
+        return _err(
+            "Question content cannot be changed after students have started an attempt. "
+            "You can still update assessment settings without changing questions.",
+            409,
+        )
+    if (
+        assessment is not None
+        and Submission.objects.filter(assessment_assignment__assessment=assessment).exists()
+        and (
+            (passing_score is not None and passing_score != assessment.passing_score_percentage)
+            or method != assessment.assessment_method
+            or a_type != assessment.assessment_type
+        )
+    ):
+        return _err(
+            "Assessment type and passing score cannot be changed after a student submits.",
+            409,
+        )
+    if (
+        assessment is not None
+        and assessment.submission_deadline <= timezone.now()
+        and submission_deadline is not None
+        and submission_deadline > timezone.now()
+        and not reopen_assessment
+    ):
+        return _err("Select the reopen option to extend a closed assessment.", 400)
     if assessment is None:
         assessment = Assessment.objects.create(
             subject=vc.subject, academic_year=vc.academic_year, created_by=request.user, title=title,
@@ -3648,19 +4547,51 @@ def assessments(request):
             instructions=(data.get("instructions") or ""),
             available_at=available_at,
             submission_deadline=submission_deadline or (timezone.now() + timedelta(days=1)),
+            time_limit_minutes=time_limit or 60,
+            passing_score_percentage=passing_score or 60,
             lifecycle_stage=Assessment.STAGE_CREATED,
+            **{
+                field: data.get(key, field == "reveal_correct_answers")
+                for key, field in assessment_options.items()
+            },
+            accepted_file_format=accepted_file_format or "",
         )
     else:
         update_fields = []
-        if instructions := data.get("instructions"):
-            assessment.instructions = instructions
+        if assessment.title != title:
+            assessment.title = title
+            update_fields.append("title")
+        if "instructions" in data and assessment.instructions != str(data.get("instructions") or ""):
+            assessment.instructions = str(data.get("instructions") or "")
             update_fields.append("instructions")
+        for key, field in assessment_options.items():
+            if key in data and getattr(assessment, field) != data[key]:
+                setattr(assessment, field, data[key])
+                update_fields.append(field)
+        if accepted_file_format is not None and assessment.accepted_file_format != accepted_file_format:
+            assessment.accepted_file_format = accepted_file_format
+            update_fields.append("accepted_file_format")
+        if assessment.assessment_method != method:
+            assessment.assessment_method = method
+            update_fields.append("assessment_method")
+        if assessment.assessment_type != a_type:
+            assessment.assessment_type = a_type
+            update_fields.append("assessment_type")
+        if time_limit is not None and assessment.time_limit_minutes != time_limit:
+            assessment.time_limit_minutes = time_limit
+            update_fields.append("time_limit_minutes")
+        if passing_score is not None and assessment.passing_score_percentage != passing_score:
+            assessment.passing_score_percentage = passing_score
+            update_fields.append("passing_score_percentage")
         if available_at is not None:
             assessment.available_at = available_at
             update_fields.append("available_at")
         if submission_deadline is not None:
             assessment.submission_deadline = submission_deadline
             update_fields.append("submission_deadline")
+        if reopen_assessment and assessment.lifecycle_stage == Assessment.STAGE_COMPLETED:
+            assessment.lifecycle_stage = Assessment.STAGE_AVAILABLE
+            update_fields.append("lifecycle_stage")
         if update_fields:
             assessment.save(update_fields=update_fields)
 
@@ -3681,155 +4612,26 @@ def assessments(request):
     except Exception:
         pass
 
-    questions = data.get("questions") or []
-    if questions:
-        type_code = {
-            "mc": AssessmentPart.TYPE_MULTIPLE_CHOICE,
-            "multiple_choice": AssessmentPart.TYPE_MULTIPLE_CHOICE,
-            "tf": AssessmentPart.TYPE_TRUE_FALSE,
-            "true_false": AssessmentPart.TYPE_TRUE_FALSE,
-            "mt": AssessmentPart.TYPE_MATCHING,
-            "matching": AssessmentPart.TYPE_MATCHING,
-            "id": AssessmentPart.TYPE_IDENTIFICATION,
-            "identification": AssessmentPart.TYPE_IDENTIFICATION,
-            "sa": AssessmentPart.TYPE_SHORT_ANSWER,
-            "short": AssessmentPart.TYPE_SHORT_ANSWER,
-            "numeric": AssessmentPart.TYPE_NUMERIC,
-            "es": AssessmentPart.TYPE_ESSAY,
-            "essay": AssessmentPart.TYPE_ESSAY,
-            "pp": AssessmentPart.TYPE_POSITION_PAPER,
-            "cs": AssessmentPart.TYPE_CASE_STUDY,
-            "nr": AssessmentPart.TYPE_NARRATIVE_REPORT,
-            "pt": AssessmentPart.TYPE_ESSAY,
-        }
-        grouped = defaultdict(list)
-        for q in questions:
-            if not isinstance(q, dict):
-                continue
-            qtext = str(q.get("text") or q.get("question") or "").strip()
-            if not qtext:
-                continue
-            raw_type = str(q.get("type") or "mc").lower()
-            qtype = type_code.get(raw_type, AssessmentPart.TYPE_MULTIPLE_CHOICE)
-            points = int(q.get("points") or q.get("point") or 1)
-            options = q.get("options") or []
-            item = {"question": qtext, "point": points}
-            try:
-                media = q.get("media")
-                question_image = _assessment_image_data(media)
-                if question_image:
-                    item["image"] = question_image
-            except ValidationError as exc:
-                return _err("Question image: {}".format("; ".join(exc.messages)), 400)
-            if qtype == AssessmentPart.TYPE_MULTIPLE_CHOICE and options:
-                choices = []
-                choice_images = []
-                source_indexes = []
-                opt_images = q.get("optImgs") if isinstance(q.get("optImgs"), dict) else {}
-                for source_index, raw_option in enumerate(options[:4]):
-                    letter = chr(65 + source_index)
-                    try:
-                        image = _assessment_image_data(opt_images.get(letter, ""))
-                    except ValidationError as exc:
-                        return _err("Choice {} image: {}".format(letter, "; ".join(exc.messages)), 400)
-                    text = str(raw_option or "").strip()
-                    if not text and not image:
-                        continue
-                    choices.append(text or "Choice {}".format(letter))
-                    choice_images.append(image)
-                    source_indexes.append(source_index)
-                item["choices"] = choices
-                item["choice_images"] = choice_images
-                correct = q.get("correct", 0)
-                try:
-                    correct_source = int(correct)
-                except (TypeError, ValueError):
-                    correct_source = 0
-                selected_index = source_indexes.index(correct_source) if correct_source in source_indexes else 0
-                item["correct_answer"] = choices[selected_index] if choices else qtext
-            elif qtype == AssessmentPart.TYPE_TRUE_FALSE:
-                item["choices"] = ["True", "False"]
-                tf = q.get("tf")
-                item["correct_answer"] = ("False" if tf in (False, "False", "false") else "True") if tf is not None else "True"
-            elif qtype in (AssessmentPart.TYPE_IDENTIFICATION, AssessmentPart.TYPE_SHORT_ANSWER):
-                answers = q.get("answers") or q.get("accepted_answers") or []
-                if not answers:
-                    for key in ("idAns", "saAns"):
-                        if q.get(key):
-                            answers = [q[key]]
-                            break
-                if not answers:
-                    answers = [qtext]
-                item["accepted_answers"] = answers
-            elif qtype == AssessmentPart.TYPE_NUMERIC:
-                item["correct_answer"] = str(q.get("answer") or q.get("correct_answer") or "0")
-                item["tolerance"] = int(q.get("tolerance") or 0)
-            elif qtype == AssessmentPart.TYPE_MATCHING:
-                premises = q.get("premises") or []
-                targets = q.get("targets") or []
-                matches = q.get("matches") or {}
-                item.update({
-                    "premises": premises,
-                    "targets": targets,
-                    "correct_matches": matches,
-                })
+    if groups is not None:
+        existing_parts = {part.pk: part for part in assessment.parts.all()}
+        kept_ids = set()
+        for order, group in enumerate(groups):
+            part = None
+            token = group["token"]
+            if token.startswith("p") and token[1:].isdigit():
+                part = existing_parts.get(int(token[1:]))
+            if part is None:
+                part = AssessmentPart(assessment=assessment)
             else:
-                item["grading_rubric"] = q.get("rubric") or []
-            grouped[qtype].append((len(grouped[qtype]) + 1, item))
-
-        # Existing question parts keep their identity so historical submissions
-        # continue to point at the same records. Update only the image fields for
-        # a question edited in the builder; newly created assessments still use
-        # the full compiled question data below.
-        if assessment.parts.exists():
-            for question in questions:
-                if not isinstance(question, dict):
-                    continue
-                part_token = str(question.get("partId") or "")
-                item_key = str(question.get("itemKey") or "")
-                if not (part_token.startswith("p") and part_token[1:].isdigit() and item_key):
-                    continue
-                part = AssessmentPart.objects.filter(
-                    pk=part_token[1:], assessment=assessment
-                ).first()
-                if part is None or item_key not in (part.items or {}):
-                    continue
-                part_items = dict(part.items)
-                saved_item = dict(part_items[item_key])
-                try:
-                    image = _assessment_image_data(question.get("media"))
-                except ValidationError as exc:
-                    return _err("Question image: {}".format("; ".join(exc.messages)), 400)
-                if image:
-                    saved_item["image"] = image
-                else:
-                    saved_item.pop("image", None)
-                if isinstance(question.get("optImgs"), dict) and "choices" in saved_item:
-                    images = []
-                    for choice_index in range(len(saved_item.get("choices") or [])):
-                        letter = chr(65 + choice_index)
-                        try:
-                            images.append(_assessment_image_data(question["optImgs"].get(letter, "")))
-                        except ValidationError as exc:
-                            return _err("Choice {} image: {}".format(letter, "; ".join(exc.messages)), 400)
-                    if any(images):
-                        saved_item["choice_images"] = images
-                    else:
-                        saved_item.pop("choice_images", None)
-                part_items[item_key] = saved_item
-                if part_items[item_key] != part.items[item_key]:
-                    part.items = part_items
-                    part.save(update_fields=["items"])
-
-        if not assessment.parts.exists():
-            for qtype, pairs in grouped.items():
-                items = {f"item_{i}": item for i, item in pairs}
-                try:
-                    AssessmentPart.objects.create(
-                        assessment=assessment, question_type=qtype, order=assessment.parts.count(), items=items
-                    )
-                except ValidationError:
-                    continue
+                kept_ids.add(part.pk)
+            part.question_type = group["question_type"]
+            part.order = order
+            part.items = group["items"]
+            if not part.question_text:
+                part.question_text = group["label"]
+            part.save()
+            kept_ids.add(part.pk)
+        AssessmentPart.objects.filter(assessment=assessment).exclude(pk__in=kept_ids).delete()
 
     _log(request.user, f"assessment_saved:{title}", entity_type="Assessment", entity_id=assessment.pk)
     try:
@@ -3849,6 +4651,7 @@ def system_settings(request):
     data = _payload(request)
     cfg = SystemConfiguration.get_solo()
     changed = False
+    invalid = []
 
     def _int(key, lo, hi):
         nonlocal changed
@@ -3856,20 +4659,24 @@ def system_settings(request):
             try:
                 value = int(data[key])
             except (TypeError, ValueError):
+                invalid.append(f"{key} must be a whole number.")
                 return
-            if lo <= value <= hi:
-                setattr(cfg, {
-                    "sessionTimeout": "session_timeout_minutes",
-                    "lockoutThreshold": "account_lockout_threshold",
-                }.get(key, ""), value)
-                changed = True
+            if not lo <= value <= hi:
+                invalid.append(f"{key} must be between {lo} and {hi}.")
+                return
+            setattr(cfg, {
+                "sessionTimeout": "session_timeout_minutes",
+                "lockoutThreshold": "account_lockout_threshold",
+            }[key], value)
+            changed = True
 
     _int("sessionTimeout", 1, 120)
     _int("lockoutThreshold", 1, 20)
 
-    if data.get("timezone"):
-        cfg.timezone = data["timezone"]
-        changed = True
+    if invalid:
+        return _err(" ".join(invalid), 400)
+    if "registration" in data and data["registration"] not in dict(SystemConfiguration.REGISTRATION_CHOICES):
+        return _err("Select a valid user registration policy.", 400)
     if data.get("registration") in dict(SystemConfiguration.REGISTRATION_CHOICES):
         cfg.user_registration_policy = data["registration"]
         changed = True
@@ -3988,6 +4795,8 @@ def account_actions(request):
         required = "reset_account_password"
     elif action == "resend_verification":
         required = "resend_verification_email"
+    elif action == "delete_pending":
+        required = "archive_account"
     elif action == "generate_password":
         # No target user: just hand back a compliant password for the form.
         if not has_permission(request.user, "reset_account_password"):
@@ -4008,6 +4817,22 @@ def account_actions(request):
     user = _resolve_action_target(data)
     if user is None:
         return _err("No matching account was found.", 404)
+
+    if action == "delete_pending":
+        if user.status not in (
+            User.Status.PENDING_VERIFICATION,
+            User.Status.PENDING_PASSWORD_SETUP,
+        ):
+            return _err("Only pending accounts can be removed.", 409)
+        user_id, email = user.pk, user.email
+        _log(
+            request.user,
+            f"pending_account_removed:{email}",
+            entity_type="User",
+            entity_id=user_id,
+        )
+        user.delete()
+        return _ok(user_id=user_id, email=email)
 
     # An administrator locking or unlocking themselves would either lock
     # themselves out mid-session or hand their own account a password only they
@@ -4794,7 +5619,10 @@ def calendar(request, event_id=None):
 @login_required
 @require_GET
 def teacher_dashboard_snapshot(request):
-    if not (request.user.is_superuser or request.user.groups.filter(name="teacher").exists()):
+    if not (
+        request.user.is_superuser
+        or "teacher" in role_codes_for(request.user)
+    ):
         return _err("You do not have access to this dashboard.", 403)
     from apps.dashboards.context import teacher_context
 
@@ -4808,7 +5636,11 @@ def teacher_dashboard_snapshot(request):
 @login_required
 @require_GET
 def student_dashboard_snapshot(request):
-    if not (request.user.is_superuser or request.user.groups.filter(name="student").exists()):
+    if not (
+        request.user.is_superuser
+        or "student" in role_codes_for(request.user)
+        or getattr(request.user, "student_profile", None) is not None
+    ):
         return _err("You do not have access to this dashboard.", 403)
     from apps.dashboards.context import student_context
 

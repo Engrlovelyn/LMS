@@ -10,7 +10,8 @@ import json
 from decimal import Decimal
 
 from django.contrib.auth.models import Group
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -235,7 +236,8 @@ class AssessmentAttemptAutosaveTests(TestCase):
             items={"item_1": {"question": "Pick A", "choices": ["A", "B"], "correct_answer": "A", "point": 1}},
         )
         cls.student.user_permissions.add(
-            Permission.objects.get(codename="complete_assessment_custom")
+            Permission.objects.get(codename="complete_assessment_custom"),
+            Permission.objects.get(codename="view_assessment_custom"),
         )
         cls.teacher.user_permissions.add(
             Permission.objects.get(codename="create_assessment_custom")
@@ -312,6 +314,43 @@ class AssessmentAttemptAutosaveTests(TestCase):
         self.assertEqual(question["image"], image)
         self.assertEqual(question["choice_images"], [image, image])
 
+    def test_student_assessment_payload_includes_questions_from_every_part(self):
+        second_part = AssessmentPart.objects.create(
+            assessment=self.assessment,
+            question_type=AssessmentPart.TYPE_SHORT_ANSWER,
+            order=2,
+            question_text="Explain your answer",
+            items={
+                "item_1": {
+                    "question": "What is the result?",
+                    "accepted_answers": ["42"],
+                    "point": 2,
+                },
+                "item_2": {
+                    "question": "Why?",
+                    "accepted_answers": ["Because"],
+                    "point": 1,
+                },
+            },
+        )
+        self.client.force_login(self.student)
+        opened = self.client.get(
+            reverse("assessments:assessment_submit", args=[self.assessment.pk]),
+            {"assignment_id": self.assignment.pk, "format": "json"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(opened.status_code, 200, opened.content.decode())
+        payload = opened.json()
+        self.assertEqual(len(payload["parts"]), 2)
+        self.assertEqual(payload["parts"][0]["questions"][0]["question_text"], "Pick A")
+        self.assertEqual(
+            [question["fields"][0]["label"] for question in payload["parts"][1]["questions"]],
+            ["What is the result?", "Why?"],
+        )
+        self.assertEqual(payload["parts"][1]["question_text"], "Explain your answer")
+        self.assertEqual(second_part.items["item_2"]["question"], "Why?")
+
     def test_future_assessment_direct_url_is_rejected_without_starting_attempt(self):
         self.assessment.available_at = timezone.now() + datetime.timedelta(hours=1)
         self.assessment.save(update_fields=["available_at"])
@@ -334,6 +373,172 @@ class AssessmentAttemptAutosaveTests(TestCase):
         self.assertEqual(attempt.answers["part_{}__item_1".format(self.part.pk)], "B")
         self.assertFalse(Submission.objects.filter(assessment_assignment=self.assignment).exists())
 
+    def test_student_can_submit_quiz_and_duplicate_submit_is_rejected(self):
+        self.assessment.reveal_correct_answers = False
+        self.assessment.save(update_fields=["reveal_correct_answers"])
+        opened = self._open()
+        self.assertEqual(opened.status_code, 200, opened.content.decode())
+        attempt = AssessmentAttempt.objects.get(
+            assignment=self.assignment, student=self.profile
+        )
+        url = reverse("assessments:assessment_submit", args=[self.assessment.pk])
+        payload = {
+            "attempt_id": attempt.pk,
+            "answers": {"part_{}__item_1".format(self.part.pk): "A"},
+        }
+        submitted = self.client.post(
+            url + "?assignment_id={}&format=json".format(self.assignment.pk),
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(submitted.status_code, 200, submitted.content.decode())
+        self.assertTrue(submitted.json()["submitted"])
+        submission = Submission.objects.get(
+            assessment_assignment=self.assignment, student=self.profile
+        )
+        response = SubmissionResponse.objects.get(submission=submission, part=self.part)
+        self.assertEqual(response.response_data["item_1"], "A")
+        self.assertEqual(submission.total_score, 1)
+        attempt.refresh_from_db()
+        self.assertIsNotNone(attempt.submitted_at)
+        result_page = self.client.get(
+            reverse("assessments:assessment_result", args=[self.assessment.pk])
+        )
+        self.assertEqual(result_page.status_code, 200)
+        self.assertContains(result_page, "Review your answers")
+        self.assertContains(result_page, "Your answer")
+        self.assertContains(result_page, "Passed")
+        self.assertContains(result_page, "chosen to keep correct responses hidden")
+        self.assertNotContains(result_page, "Correct answer")
+
+        duplicate = self.client.post(
+            url + "?assignment_id={}&format=json".format(self.assignment.pk),
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(Submission.objects.filter(assessment_assignment=self.assignment).count(), 1)
+
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_written_submission_accepts_configured_file_and_link(self):
+        self.assessment.allow_submission_attachments = True
+        self.assessment.allow_submission_links = True
+        self.assessment.accepted_file_format = ".pdf"
+        self.assessment.save(update_fields=[
+            "allow_submission_attachments", "allow_submission_links", "accepted_file_format"
+        ])
+        essay = AssessmentPart.objects.create(
+            assessment=self.assessment,
+            question_type=AssessmentPart.TYPE_ESSAY,
+            order=2,
+            items={"item_1": {"question": "Explain your method.", "point": 5}},
+        )
+        opened = self._open()
+        self.assertEqual(opened.status_code, 200)
+        attempt = AssessmentAttempt.objects.get(assignment=self.assignment, student=self.profile)
+        response = self.client.post(
+            reverse("assessments:assessment_submit", args=[self.assessment.pk]),
+            {
+                "assignment_id": self.assignment.pk,
+                "attempt_id": attempt.pk,
+                "part_{}__item_1".format(self.part.pk): "A",
+                "part_{}__item_1".format(essay.pk): "I compared the two values.",
+                "submission_link": "https://example.edu/work/123",
+                "submission_file": SimpleUploadedFile("work.pdf", b"student work", content_type="application/pdf"),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        submission = Submission.objects.get(assessment_assignment=self.assignment, student=self.profile)
+        self.assertEqual(submission.submission_link, "https://example.edu/work/123")
+        self.assertTrue(submission.attached_file.name.endswith("work.pdf"))
+
+    def test_expired_timer_submits_saved_partial_answers(self):
+        opened = self._open()
+        self.assertEqual(opened.status_code, 200)
+        attempt = AssessmentAttempt.objects.get(assignment=self.assignment, student=self.profile)
+        attempt.expires_at = timezone.now() - datetime.timedelta(seconds=1)
+        attempt.answers = {}
+        attempt.save(update_fields=["expires_at", "answers"])
+        response = self.client.post(
+            reverse("assessments:assessment_submit", args=[self.assessment.pk])
+            + "?assignment_id={}&format=json".format(self.assignment.pk),
+            data=json.dumps({
+                "attempt_id": attempt.pk,
+                "answers": {},
+                "auto_submit": True,
+            }),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        self.assertTrue(response.json()["submitted"])
+        submission = Submission.objects.get(
+            assessment_assignment=self.assignment, student=self.profile
+        )
+        self.assertEqual(
+            SubmissionResponse.objects.get(submission=submission, part=self.part).response_data,
+            {"item_1": ""},
+        )
+
+    def test_html_timer_auto_submits_saved_partial_answers(self):
+        opened = self._open()
+        self.assertEqual(opened.status_code, 200)
+        attempt = AssessmentAttempt.objects.get(assignment=self.assignment, student=self.profile)
+        attempt.expires_at = timezone.now() - datetime.timedelta(seconds=1)
+        attempt.answers = {}
+        attempt.save(update_fields=["expires_at", "answers"])
+        response = self.client.post(
+            reverse("assessments:assessment_submit", args=[self.assessment.pk]),
+            {
+                "assignment_id": self.assignment.pk,
+                "attempt_id": attempt.pk,
+                "auto_submit": "1",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            Submission.objects.filter(
+                assessment_assignment=self.assignment, student=self.profile
+            ).exists()
+        )
+
+    def test_timer_can_submit_saved_answers_at_the_class_deadline(self):
+        opened = self._open()
+        self.assertEqual(opened.status_code, 200)
+        attempt = AssessmentAttempt.objects.get(assignment=self.assignment, student=self.profile)
+        deadline = timezone.now() - datetime.timedelta(seconds=2)
+        attempt.started_at = deadline - datetime.timedelta(minutes=1)
+        attempt.expires_at = deadline
+        attempt.answers = {"part_{}__item_1".format(self.part.pk): "A"}
+        attempt.save(update_fields=["started_at", "expires_at", "answers"])
+        self.assessment.submission_deadline = deadline
+        self.assessment.save(update_fields=["submission_deadline"])
+
+        response = self.client.post(
+            reverse("assessments:assessment_submit", args=[self.assessment.pk])
+            + "?assignment_id={}&format=json".format(self.assignment.pk),
+            data=json.dumps({
+                "attempt_id": attempt.pk,
+                "answers": {},
+                "auto_submit": True,
+            }),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        submission = Submission.objects.get(
+            assessment_assignment=self.assignment, student=self.profile
+        )
+        self.assertEqual(
+            SubmissionResponse.objects.get(submission=submission, part=self.part).response_data,
+            {"item_1": "A"},
+        )
+
     def test_refresh_resumes_the_same_clock_instead_of_starting_a_new_attempt(self):
         first = self._open()
         self.assertEqual(first.status_code, 200)
@@ -348,6 +553,17 @@ class AssessmentAttemptAutosaveTests(TestCase):
         self.assertEqual(AssessmentAttempt.objects.filter(assignment=self.assignment, student=self.profile).count(), 1)
         self.assertEqual(attempt.expires_at, expired_at)
         self.assertEqual(refreshed.context["remaining_seconds"], 0)
+
+    def test_configured_time_limit_controls_server_attempt_expiry(self):
+        self.assessment.time_limit_minutes = 15
+        self.assessment.save(update_fields=["time_limit_minutes"])
+        response = self._open()
+        self.assertEqual(response.status_code, 200)
+        attempt = AssessmentAttempt.objects.get(assignment=self.assignment, student=self.profile)
+        self.assertEqual(
+            attempt.expires_at - attempt.started_at,
+            datetime.timedelta(minutes=15),
+        )
 
     def test_autosave_rejects_another_students_attempt_and_unknown_question(self):
         self._open()
@@ -448,6 +664,12 @@ class _GradedAssessmentFixture(TestCase):
 
 
 class AutoGradeSubmissionTests(_GradedAssessmentFixture):
+    def test_numeric_answer_respects_configured_tolerance(self):
+        item = {"correct_answer": "10", "tolerance": 0.25}
+        self.assertTrue(SubmissionResponse._item_is_correct(item, Decimal("10.2")))
+        self.assertFalse(SubmissionResponse._item_is_correct(item, Decimal("10.3")))
+        self.assertFalse(SubmissionResponse._item_is_correct(item, "not a number"))
+
     def test_auto_grade_scores_objective_response(self):
         res = self.client.post(
             reverse(

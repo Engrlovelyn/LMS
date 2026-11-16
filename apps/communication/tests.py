@@ -9,6 +9,7 @@ since being enrolled and therefore has not joined the classroom room yet.
 
 import datetime
 import json
+from unittest.mock import patch
 
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import AnonymousUser, Group
@@ -561,6 +562,32 @@ class NotificationBellTests(TestCase):
         self.assertTrue(n.is_read)
         self.assertIsNotNone(n.read_at)
 
+    def test_material_notification_access_uses_shared_enrollment_import(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        notification = Notification.objects.create(
+            recipient=self.student_a,
+            virtual_classroom=self.vc,
+            notification_type=Notification.TYPE_MATERIAL,
+            source_type="resource",
+            source_id=123,
+            title="New learning material",
+        )
+
+        self.assertTrue(svc.can_access(notification, self.student_a))
+
+    def test_student_profile_can_open_dashboard_without_student_group(self):
+        student_group = Group.objects.get(name="student")
+        self.student_a.groups.remove(student_group)
+        self.client.login(username=self.student_a.email, password="pw")
+
+        dashboard = self.client.get(reverse("dashboards:student"))
+        snapshot = self.client.get(reverse("api_student_dashboard"))
+
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertEqual(snapshot.status_code, 200, snapshot.content)
+
     def test_announcement_click_lands_on_the_specific_row(self):
         from apps.communication import notifications as svc
         from apps.communication.models import Notification
@@ -650,7 +677,7 @@ class NotificationBellTests(TestCase):
             2,
         )
 
-    def test_future_assessment_does_not_notify_until_available(self):
+    def test_future_assessment_notifies_schedule_and_availability_separately(self):
         from apps.assessments.models import Assessment, AssessmentAssignment
         from apps.communication import notifications as svc
         from apps.communication.models import Notification
@@ -670,13 +697,152 @@ class NotificationBellTests(TestCase):
         assignment = AssessmentAssignment.objects.create(
             assessment=assessment, virtual_classroom=self.vc, assigned_by=self.teacher
         )
-        self.assertEqual(svc.notify_assessment_assignment(assignment), 0)
+        self.assertEqual(svc.notify_assessment_assignment(assignment), 2)
         self.assertEqual(
             Notification.objects.filter(
-                notification_type="assessment", source_id=assessment.pk
+                notification_type="assessment",
+                source_type="assessment_schedule",
+                source_id=assignment.pk,
             ).count(),
+            2,
+        )
+        schedule_notice = Notification.objects.get(
+            recipient=self.student_a,
+            source_type="assessment_schedule",
+            source_id=assignment.pk,
+        )
+        self.assertIn("available", schedule_notice.message)
+        assessment.available_at = timezone.now() - datetime.timedelta(minutes=1)
+        assessment.save(update_fields=["available_at"])
+        self.assertEqual(svc.notify_assessment_available(assessment), 2)
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type="assessment",
+                source_type="assessment",
+                source_id=assessment.pk,
+            ).count(),
+            2,
+        )
+
+    def test_assessment_opening_reminder_is_sent_two_minutes_before_and_is_idempotent(self):
+        from apps.assessments.models import Assessment, AssessmentAssignment
+        from apps.assessments.services import trigger_opening_soon_notifications
+        from apps.communication import notifications as notif_service
+        from apps.communication.models import Notification
+
+        now = timezone.now()
+        assessment = Assessment.objects.create(
+            subject=self.subject,
+            academic_year=self.year,
+            created_by=self.teacher,
+            title="Opening Reminder Quiz",
+            assessment_method=Assessment.METHOD_QUIZ,
+            assessment_type=Assessment.TYPE_WRITTEN_ORAL,
+            status=Assessment.STATUS_ACTIVE,
+            submission_deadline=now + datetime.timedelta(days=2),
+            available_at=now + datetime.timedelta(minutes=3),
+        )
+        assignment = AssessmentAssignment.objects.create(
+            assessment=assessment, virtual_classroom=self.vc, assigned_by=self.teacher
+        )
+
+        with patch("apps.assessments.services.timezone.now", return_value=now):
+            self.assertEqual(trigger_opening_soon_notifications(assessment)["created"], 0)
+            assessment.available_at = now + datetime.timedelta(minutes=2)
+            assessment.save(update_fields=["available_at"])
+            self.assertEqual(trigger_opening_soon_notifications(assessment)["created"], 2)
+            self.assertEqual(trigger_opening_soon_notifications(assessment)["created"], 0)
+
+        notices = Notification.objects.filter(
+            source_type="assessment_opening_soon", source_id=assignment.pk
+        )
+        self.assertEqual(set(notices.values_list("recipient_id", flat=True)), {self.student_a.pk, self.student_b.pk})
+        self.assertIn("about 2 minutes", notices.first().message)
+        target = notif_service.notification_target(
+            notices.get(recipient=self.student_a), self.student_a
+        )
+        self.assertIn("notification_classroom={}".format(self.vc.pk), target)
+        self.assertIn("notification_record={}".format(assessment.pk), target)
+
+    def test_student_notification_poll_triggers_opening_reminder(self):
+        from apps.assessments.models import Assessment, AssessmentAssignment
+        from apps.communication.models import Notification
+
+        now = timezone.now()
+        assessment = Assessment.objects.create(
+            subject=self.subject,
+            academic_year=self.year,
+            created_by=self.teacher,
+            title="Polling Reminder Quiz",
+            assessment_method=Assessment.METHOD_QUIZ,
+            assessment_type=Assessment.TYPE_WRITTEN_ORAL,
+            status=Assessment.STATUS_ACTIVE,
+            submission_deadline=now + datetime.timedelta(days=2),
+            available_at=now + datetime.timedelta(minutes=2),
+        )
+        assignment = AssessmentAssignment.objects.create(
+            assessment=assessment, virtual_classroom=self.vc, assigned_by=self.teacher
+        )
+        self.client.force_login(self.student_a)
+        response = self.client.get(reverse("api_notifications"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Notification.objects.filter(
+            recipient=self.student_a,
+            source_type="assessment_opening_soon",
+            source_id=assignment.pk,
+        ).exists())
+
+    def test_attendance_notice_includes_present_and_refreshes_on_status_change(self):
+        from apps.attendance.models import AttendanceSession
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        session = AttendanceSession.objects.create(
+            virtual_classroom=self.vc,
+            session_date=timezone.localdate(),
+            created_by=self.teacher,
+        )
+        self.assertEqual(
+            svc.sync_attendance_notification(
+                user_id=self.student_a.pk,
+                virtual_classroom=self.vc,
+                session=session,
+                status_label="present",
+            ),
+            1,
+        )
+        notice = Notification.objects.get(recipient=self.student_a, source_id=session.pk)
+        self.assertEqual(notice.title, "Marked Present")
+        notice.is_read = True
+        notice.save(update_fields=["is_read"])
+        self.assertEqual(
+            svc.sync_attendance_notification(
+                user_id=self.student_a.pk,
+                virtual_classroom=self.vc,
+                session=session,
+                status_label="late",
+            ),
             0,
         )
+        notice.refresh_from_db()
+        self.assertEqual(notice.title, "Marked Late")
+        self.assertFalse(notice.is_read)
+
+    def test_assigned_teacher_receives_a_classroom_notification(self):
+        from apps.communication import notifications as svc
+        from apps.communication.models import Notification
+
+        self.assertEqual(svc.notify_teacher_classroom_assignment(self.vc, assigned_by=self.outsider), 1)
+        notice = Notification.objects.get(
+            recipient=self.teacher,
+            notification_type=Notification.TYPE_CLASSROOM,
+            source_type="classroom_assignment",
+            source_id=self.vc.pk,
+        )
+        self.assertIn("assigned", notice.title.lower())
+        self.assertIn("notification_classroom={}".format(self.vc.pk), svc.notification_target(notice, self.teacher))
+        self.assertTrue(svc.can_access(notice, self.teacher))
 
 
 class MessageableContactsTests(TestCase):
@@ -738,3 +904,30 @@ class MessageableContactsTests(TestCase):
         self.assertEqual(opened.status_code, 200)
         self.assertTrue(opened.json()["ok"])
         self.assertNotIn(self.archived.pk, {c["id"] for c in messageable_contacts(self.teacher)[0]})
+
+    def test_student_profile_without_role_group_can_send_private_and_group_messages(self):
+        from apps.communication.models import GroupMessage, PrivateMessage
+
+        self.pending.status = User.Status.ACTIVE
+        self.pending.save(update_fields=["status", "is_active"])
+        self.client.force_login(self.pending)
+        summary = self.client.get(reverse("api_messages"))
+        self.assertEqual(summary.status_code, 200)
+        data = summary.json()
+        self.assertIn(self.teacher.pk, {c["id"] for c in data["contacts"]})
+
+        private = self.client.post(
+            reverse("api_messages"),
+            data={"recipient_id": self.teacher.pk, "body": "Hello teacher"},
+        )
+        group = self.client.post(
+            reverse("api_messages"),
+            data={"classroom_id": self.vc.pk, "body": "Hello class"},
+        )
+
+        self.assertEqual(private.status_code, 200, private.content)
+        self.assertTrue(private.json()["ok"])
+        self.assertEqual(group.status_code, 200, group.content)
+        self.assertTrue(group.json()["ok"])
+        self.assertTrue(PrivateMessage.objects.filter(sender=self.pending, recipient=self.teacher).exists())
+        self.assertTrue(GroupMessage.objects.filter(sender=self.pending, virtual_classroom=self.vc).exists())

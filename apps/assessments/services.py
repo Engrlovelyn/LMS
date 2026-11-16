@@ -87,6 +87,46 @@ def trigger_availability_notifications(assessment=None):
     return summary
 
 
+def trigger_opening_soon_notifications(assessment=None):
+    """Notify enrolled students during the two minutes before an assessment opens.
+
+    The student notification feed polls every 30 seconds, so calling this sweep
+    from that endpoint delivers the reminder close to its scheduled time without
+    requiring a separate scheduler process. The producer is idempotent per
+    assignment and recipient.
+    """
+    now = timezone.now()
+    assessments = Assessment.objects.filter(
+        status=Assessment.STATUS_ACTIVE,
+        available_at__gt=now,
+        available_at__lte=now + timedelta(minutes=2),
+        available_at__isnull=False,
+    )
+    if assessment is not None:
+        assessments = assessments.filter(pk=assessment.pk)
+
+    summary = {"created": 0, "already": 0, "assessments": 0}
+    for item in assessments:
+        if not item.notification_settings.get("notify_on_availability", True):
+            continue
+        assignments = item.assignments.select_related("virtual_classroom").all()
+        if not assignments:
+            continue
+        summary["assessments"] += 1
+        from apps.communication import notifications as notif_service
+
+        for assignment in assignments:
+            created = notif_service.notify_assessment_opening_soon(assignment)
+            summary["created"] += created
+            summary["already"] += max(
+                0,
+                assignment.virtual_classroom.enrollments.filter(
+                    status=VirtualClassroomEnrollment.STATUS_ACTIVE
+                ).count() - created,
+            )
+    return summary
+
+
 def trigger_deadline_notifications(assessment=None):
     """
     Create 'deadline upcoming/nearing' notifications per the configured
@@ -208,6 +248,7 @@ def run_assessment_notifications(assessment=None):
     """Run all rule-(j) notification producers for assessments."""
     return {
         "availability": trigger_availability_notifications(assessment),
+        "opening_soon": trigger_opening_soon_notifications(assessment),
         "deadline": trigger_deadline_notifications(assessment),
         "missed": trigger_missed_notifications(assessment),
     }

@@ -11,6 +11,7 @@ Covers the presentation-feedback fixes:
 """
 
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -124,6 +125,19 @@ class AttendanceWorkflowTestCase(TestCase):
         response = self.client.get(self._record_url() + "?date=2026-06-08")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "absent_excused")
+
+    @patch("apps.attendance.views.timezone.localdate", return_value=date(2026, 11, 6))
+    def test_record_attendance_defaults_to_today(self, _localdate):
+        response = self.client.get(self._record_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["session_date"], "2026-11-06")
+        self.assertContains(response, 'value="2026-11-06"')
+
+    @patch("apps.attendance.views.timezone.localdate", return_value=date(2026, 11, 6))
+    def test_record_attendance_keeps_requested_date(self, _localdate):
+        response = self.client.get(self._record_url() + "?date=2026-06-08")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["session_date"], "2026-06-08")
 
     def test_session_update_associates_controls_by_form_attribute(self):
         session = self._session(day=5)

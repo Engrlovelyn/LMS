@@ -46,3 +46,86 @@ html {
     touch-action: manipulation;
   }
 }
+
+/* 4. Header must fit a phone.
+
+   The dashboards lay the header out as [hamburger][brand][flex spacer][bell]
+   [profile]. The brand block is `white-space:nowrap` and cannot shrink, so on
+   narrow screens it pushed the notification and profile buttons past the right
+   edge. Because `body { overflow-x:hidden }` hides that overflow instead of
+   scrolling, the bell and profile controls were simply unreachable on a phone.
+   Letting the brand shrink and dropping its wordmark on the smallest screens
+   keeps every control on-screen. */
+@media (max-width: 600px) {
+  .brand-block {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    gap: 8px !important;
+    padding-left: 10px !important;
+    padding-right: 8px !important;
+  }
+  .brand-logos { flex: 0 0 auto !important; }
+  .brand-text {
+    max-width: none !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .header-main {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    gap: 6px !important;
+    padding: 0 8px !important;
+  }
+  .header-right { flex: 0 0 auto !important; margin-left: auto !important; }
+  .profile-btn { flex: 0 0 auto !important; }
+}
+
+@media (max-width: 420px) {
+  .brand-text { display: none !important; }
+  .brand-block { padding-right: 6px !important; }
+}
+
+/* 5. Notification panel must stay on screen.
+
+   `.notif-panel` is a fixed 330px box anchored under the header with no height
+   bound, so a few notifications - or one long activity sentence rendered
+   without a `min-width:0` wrapper - either ran past the bottom of the viewport
+   (unreachable, because the page underneath does not scroll) or pushed its text
+   outside the card. Bounding the panel to the space below the header and
+   letting the list scroll keeps every row readable, and the wrapping rules keep
+   a long announcement inside its own row instead of widening the card. */
+.notif-panel {
+  max-height: calc(100vh - var(--header-h, 64px) - 24px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+.notif-panel .notif-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card-bg, #fff);
+}
+.notif-panel .notif-item,
+.notif-panel .log-item {
+  align-items: flex-start;
+}
+.notif-panel .notif-item > div:last-child,
+.notif-panel .log-item > div:last-child {
+  flex: 1;
+  min-width: 0;
+}
+.notif-panel .notif-text {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+.notif-panel .notif-time { flex: 0 0 auto; }
+
+@media (max-width: 600px) {
+  .notif-panel {
+    max-height: calc(100vh - var(--header-h, 64px) - 16px) !important;
+  }
+}

@@ -1,0 +1,62 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ resource.title }} · Material Preview</title>
+  <script src="{% static 'js/document_preview.bundle.js' %}"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#f1f5f9;color:#172033;font:15px Arial,sans-serif}
+    main{max-width:1100px;margin:auto}.heading{margin-bottom:18px}.heading h1{font-size:22px;margin:0 0 6px}.heading p{color:#64748b;margin:0}
+    iframe,video{display:block;width:100%;height:78vh;border:1px solid #dbe2ea;border-radius:10px;background:#fff}
+    a{color:#2563eb}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;border:1px solid #dbe2ea;border-radius:10px;padding:24px;line-height:1.7}
+    .message{padding:20px;background:#fff;border:1px solid #dbe2ea;border-radius:10px}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="heading">
+      <h1>{{ resource.title }}</h1>
+      <p>Learning material preview</p>
+      <a id="downloadOriginal" href="#" style="display:none;margin-top:10px">Download original file</a>
+    </header>
+    <section id="preview" class="message" role="status" aria-live="polite">Loading document preview…</section>
+  </main>
+  <script>
+    (function(){
+      const host=document.getElementById('preview');
+      const esc=function(value){return String(value||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});};
+      const safe=function(value){try{const url=new URL(value,window.location.origin);return url.protocol==='http:'||url.protocol==='https:'?url.href:'';}catch(e){return '';}};
+      function show(data){
+        const ext=String(data.extension||'').toLowerCase(), file=safe(data.preview_file_url), link=safe(data.external_url);
+        const download=safe(data.download_url), original=download?'<p style="margin:0 0 12px"><a href="'+esc(download)+'">Download original file</a></p>':'';
+        const downloadLink=document.getElementById('downloadOriginal');
+        if(downloadLink&&download){downloadLink.href=download;downloadLink.style.display='inline-block';}
+        if(data.office_pdf_url&&(ext==='docx'||ext==='pptx')) host.innerHTML='<iframe title="Document preview" src="'+esc(data.office_pdf_url)+'"></iframe>';
+        else if(ext==='docx'&&file&&typeof window.tassRenderDocumentPreview==='function'){
+          const stage=document.createElement('div');
+          stage.className='message';
+          stage.textContent='Loading full document preview…';
+          host.innerHTML=original;
+          host.appendChild(stage);
+          window.tassRenderDocumentPreview(file,stage).catch(function(error){
+            stage.textContent=(error&&error.message)||'The full document preview could not be rendered.';
+          });
+        }
+        else if(data.html&&(ext==='docx'||ext==='pptx')){const frame=document.createElement('iframe');frame.title='Formatted document preview';frame.setAttribute('sandbox','');frame.srcdoc=data.html;host.innerHTML=original+'<p class="message">This is a best-effort browser rendering. Install Microsoft Word or LibreOffice on the server for a page-faithful preview.</p>';host.appendChild(frame);}
+        else if(data.text&&(ext==='docx'||ext==='pptx'||ext==='txt'||ext==='md'||ext==='csv')) host.innerHTML='<pre>'+esc(data.text)+'</pre>';
+        else if((ext==='pdf'||data.resource_type==='pdf')&&file) host.innerHTML='<iframe title="PDF preview" src="'+esc(file)+'"></iframe>';
+        else if(['jpg','jpeg','png','gif','webp','bmp'].includes(ext)&&file) host.innerHTML='<div class="message" style="text-align:center"><img src="'+esc(file)+'" alt="Material image" style="max-width:100%;max-height:76vh;object-fit:contain"></div>';
+        else if(['mp4','mov','avi','webm'].includes(ext)&&file) host.innerHTML='<video controls playsinline src="'+esc(file)+'"></video>';
+        else if(['mp3','wav','m4a','aac','ogg'].includes(ext)&&file) host.innerHTML='<div class="message"><audio controls style="width:100%" src="'+esc(file)+'"></audio></div>';
+        else if(link) host.innerHTML='<div class="message"><p>This material is hosted externally.</p><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Open external material</a></div>';
+        else host.innerHTML='<div class="message">A preview is not available for this file format.</div>';
+      }
+      fetch('{{ preview_url|escapejs }}',{credentials:'same-origin',headers:{Accept:'application/json'}})
+        .then(function(response){if(!response.ok)throw new Error('This resource is unavailable or you no longer have access.');return response.json();})
+        .then(show).catch(function(error){host.textContent=error.message||'Could not load this preview.';});
+    })();
+  </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
-{% extends "base.html" %}
+{% extends "assessments/student_page_base.html" %}
 {% block title %}{{ assessment.title }} — Your Answers{% endblock %}
 {% block extra_head %}
+{{ block.super }}
 <style>
   :root {
     --gf-bg: #f8f9fa;
@@ -31,7 +32,7 @@
   .gf-meta-row { display:flex; flex-wrap:wrap; gap:12px; margin-top:14px; font-size:13px; color:var(--gf-subtext); }
   .gf-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:#f1f3f4; font-weight:500; }
 
-  .gf-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  .gf-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
   .gf-stat { background:var(--gf-card); border:1px solid var(--gf-border); border-radius:8px; padding:16px 18px; text-align:center; box-shadow:0 1px 2px rgba(60,64,67,.15); }
   .gf-stat-val { font-size:28px; font-weight:400; color:var(--gf-text); }
   .gf-stat-lbl { font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--gf-subtext); margin-top:4px; }
@@ -70,9 +71,55 @@
 
   @media (max-width:680px){
     .gf-title { font-size:26px; }
-    .gf-stats { grid-template-columns:1fr; }
+    .gf-stats { grid-template-columns:repeat(2,1fr); }
     .gf-ans-grid { grid-template-columns:1fr; }
     .gf-q-top { flex-direction:column; }
+  }
+  .gf-wrap { max-width:1080px; padding:18px 0 42px; }
+  .gf-header-card,.gf-stat,.gf-remarks,.gf-part {
+    border:1px solid var(--card-border);
+    border-radius:14px;
+    box-shadow:0 6px 22px rgba(15,35,65,.06);
+  }
+  .gf-header-accent { height:6px; background:linear-gradient(90deg,var(--blue),#22a877); }
+  .gf-header-body { padding:24px 28px; }
+  .gf-title { color:var(--navy); font-size:27px; font-weight:750; }
+  .gf-subtitle,.gf-meta-row,.gf-part-sub { color:var(--text-muted); }
+  .gf-pill { background:var(--accent); color:var(--navy); border:1px solid var(--card-border); }
+  .gf-stat { text-align:left; }
+  .gf-stat-val { color:var(--navy); font-weight:750; }
+  .gf-stat-lbl { letter-spacing:.4px; }
+  .gf-part-hd { background:var(--accent); }
+  .gf-part-title { color:var(--navy); font-size:16px; font-weight:700; }
+  .gf-part-score { color:#166534; background:#dcfce7; }
+  .gf-q-num { background:#e8f0fb; color:var(--blue); font-weight:700; }
+  .gf-ans { border-radius:10px; }
+  .gf-ans-hd { background:var(--accent); letter-spacing:.4px; }
+  .gf-q-status { border-radius:999px; }
+  .gf-footer { text-align:left; }
+  .gf-back { border-radius:9px; color:var(--blue); box-shadow:none; }
+  .gf-wrap { max-width:1120px; padding:28px 18px 48px; }
+  .gf-header-card { border-radius:18px; background:linear-gradient(135deg,#fff 0%,#f7fbff 100%); }
+  .gf-header-accent { height:7px; background:linear-gradient(90deg,#2563eb 0%,#38bdf8 52%,#22c55e 100%); }
+  .gf-header-body { padding:30px 32px; }
+  .gf-eyebrow { color:var(--blue); font-size:11px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; margin-bottom:8px; }
+  .gf-title { font-size:30px; line-height:1.2; }
+  .gf-stats { gap:14px; }
+  .gf-stat { position:relative; overflow:hidden; border-radius:16px; padding:20px; }
+  .gf-stat:before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:linear-gradient(180deg,#2563eb,#22a877); }
+  .gf-stat-val { font-size:30px; line-height:1.2; }
+  .gf-stat-lbl { font-weight:700; }
+  .gf-part { border-radius:16px; }
+  .gf-part-hd { padding:18px 22px; }
+  .gf-q { padding:22px; }
+  .gf-ans { background:#fff; }
+  .gf-ans-body { min-height:56px; }
+  .gf-footer { display:flex; justify-content:flex-start; }
+  .gf-back { padding:11px 16px; font-weight:700; }
+  @media (max-width:680px) {
+    .gf-wrap { padding:18px 12px 32px; }
+    .gf-header-body { padding:22px; }
+    .gf-title { font-size:25px; }
   }
 </style>
 {% endblock %}
@@ -81,8 +128,9 @@
   <div class="gf-header-card">
     <div class="gf-header-accent"></div>
     <div class="gf-header-body">
+      <div class="gf-eyebrow"><i class="fa-solid fa-chart-column"></i> Assessment results</div>
       <div class="gf-title">{{ assessment.title }}</div>
-      <div class="gf-subtitle">Review your answers, correct responses, and feedback.</div>
+      <div class="gf-subtitle">Review your answers and feedback.{% if reveal_correct_answers %} Correct responses are shown below.{% else %} Your teacher has chosen to keep correct responses hidden.{% endif %}</div>
       <div class="gf-meta-row">
         <div class="gf-pill"><i class="fa-solid fa-book"></i> {{ assessment.subject.name }}</div>
         {% if classroom %}<div class="gf-pill"><i class="fa-solid fa-users"></i> {{ classroom }}</div>{% endif %}
@@ -104,6 +152,10 @@
     <div class="gf-stat">
       <div class="gf-stat-val" style="font-size:22px;">{{ grading_status }}</div>
       <div class="gf-stat-lbl">Grading Status</div>
+    </div>
+    <div class="gf-stat">
+      <div class="gf-stat-val" style="font-size:22px;">{{ pass_status }}</div>
+      <div class="gf-stat-lbl">Passing score: {{ assessment.passing_score_percentage }}%</div>
     </div>
   </div>
 
@@ -147,12 +199,12 @@
             {% if row.answer %}{{ row.answer|linebreaksbr }}{% else %}<span style="color:var(--gf-subtext);font-style:italic;">No answer provided</span>{% endif %}
           </div>
         </div>
-        <div class="gf-ans">
+        {% if reveal_correct_answers %}<div class="gf-ans">
           <div class="gf-ans-hd"><i class="fa-solid fa-circle-check"></i> Correct answer</div>
           <div class="gf-ans-body">
             {% if row.correct %}{{ row.correct|linebreaksbr }}{% else %}<span style="color:var(--gf-subtext);font-style:italic;">To be graded by teacher</span>{% endif %}
           </div>
-        </div>
+        </div>{% endif %}
       </div>
       {% if row.feedback %}
       <div class="gf-feedback">
@@ -170,7 +222,7 @@
   {% endfor %}
 
   <div class="gf-footer">
-    <a class="gf-back" href="javascript:history.back()"><i class="fa-solid fa-arrow-left"></i> Go back</a>
+    <a class="gf-back" href="{% url 'dashboards:student' %}"><i class="fa-solid fa-arrow-left"></i> Back to Student Dashboard</a>
   </div>
 </div>
 {% endblock %}

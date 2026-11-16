@@ -22,9 +22,9 @@ def assessment_window(assessment, now=None):
 
 
 def assessment_time_limit(assessment):
-    """Current classroom rule: examinations get 90 minutes, other quizzes 60."""
-    minutes = 90 if assessment.assessment_method == Assessment.METHOD_EXAMINATION else 60
-    return timedelta(minutes=minutes)
+    """Return the time limit configured by the teacher for this assessment."""
+    minutes = assessment.time_limit_minutes or 60
+    return timedelta(minutes=max(1, minutes))
 
 
 def attempt_expiry(assessment, started_at):

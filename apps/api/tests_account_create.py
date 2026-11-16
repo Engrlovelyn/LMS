@@ -4,6 +4,7 @@ Covers the failures reported from the dashboard: a new employee never reached
 PostgreSQL, and no verification mail ever arrived.
 """
 
+import json
 from unittest import mock
 
 from django.test import TestCase
@@ -14,9 +15,10 @@ from apps.accounts.models import (
     EmployeeProfile,
     Role,
     RoleAssignment,
+    TeacherSubject,
     User,
 )
-from apps.academic_structure.models import AcademicYear
+from apps.academic_structure.models import AcademicYear, Subject
 
 
 class AccountCreateTests(TestCase):
@@ -75,7 +77,7 @@ class AccountCreateTests(TestCase):
 
         self.assertTrue(
             RoleAssignment.objects.filter(
-                user=user, academic_year=self.year, role__code=Role.Code.TEACHER
+                user=user, academic_year__isnull=True, role__code=Role.Code.TEACHER
             ).exists()
         )
 
@@ -97,10 +99,71 @@ class AccountCreateTests(TestCase):
         user = User.objects.get(email="new.teacher@test.local")
         self.assertEqual(
             RoleAssignment.objects.filter(
-                user=user, academic_year=self.year
+                user=user, academic_year__isnull=True
             ).count(),
             2,
         )
+
+    def test_account_creation_does_not_require_an_active_academic_year(self):
+        AcademicYear.objects.filter(pk=self.year.pk).update(
+            status=AcademicYear.STATUS_ARCHIVED
+        )
+        with mock.patch(
+            "apps.accounts.email_branding.send_html_email", return_value=1
+        ):
+            response = self.post()
+
+        self.assertEqual(response.status_code, 200, response.content)
+        user = User.objects.get(email="new.teacher@test.local")
+        self.assertTrue(
+            RoleAssignment.objects.filter(
+                user=user, role__code=Role.Code.TEACHER, academic_year__isnull=True
+            ).exists()
+        )
+
+    def test_account_sync_revokes_only_the_requested_role_assignment(self):
+        user = User.objects.create_user(
+            email="existing.teacher@test.local",
+            password="FixturePass123!",
+            status=User.Status.ACTIVE,
+        )
+        EmployeeProfile.objects.create(
+            user=user,
+            employee_number="EMP-EXISTING",
+            first_name="Existing",
+            last_name="Teacher",
+        )
+        teacher_role, _ = Role.objects.get_or_create(code=Role.Code.TEACHER)
+        principal_role, _ = Role.objects.get_or_create(code=Role.Code.PRINCIPAL)
+        RoleAssignment.objects.create(
+            user=user, role=teacher_role, academic_year=None
+        )
+        RoleAssignment.objects.create(
+            user=user, role=principal_role, academic_year=None
+        )
+
+        response = self.client.post(
+            reverse("api_accounts"),
+            data=json.dumps({
+                "accounts": [{
+                    "email": user.email,
+                    "name": "Existing Teacher",
+                    "emp": "EMP-EXISTING",
+                    "role": "Principal",
+                    "revoked_roles": ["Teacher"],
+                }]
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertFalse(
+            RoleAssignment.objects.filter(user=user, role=teacher_role).exists()
+        )
+        self.assertTrue(
+            RoleAssignment.objects.filter(user=user, role=principal_role).exists()
+        )
+        self.assertTrue(Role.objects.filter(pk=teacher_role.pk).exists())
 
     # -- verification mail ------------------------------------------------
     def test_sends_one_verification_token_and_reports_success(self):
@@ -320,3 +383,157 @@ class ResendVerificationTests(TestCase):
     def test_unknown_email_is_404(self):
         response = self.client.post(self.url, data={"email": "ghost@test.local"})
         self.assertEqual(response.status_code, 404)
+
+
+class TeacherSubjectCreationTests(TestCase):
+    """A teacher can be given subjects while the account is created."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.year = AcademicYear.objects.create(
+            label="2026-2027", start_date="2026-08-01", end_date="2027-03-31",
+            status=AcademicYear.STATUS_ACTIVE,
+        )
+        cls.other_year = AcademicYear.objects.create(
+            label="2025-2026", start_date="2025-08-01", end_date="2026-03-31",
+            status=AcademicYear.STATUS_ARCHIVED,
+        )
+        for code in (Role.Code.TEACHER, Role.Code.PRINCIPAL):
+            Role.objects.get_or_create(code=code)
+        cls.filipino = Subject.objects.create(
+            academic_year=cls.year, name="Filipino 1", grade_level=7
+        )
+        cls.science = Subject.objects.create(
+            academic_year=cls.year, name="Science 1", grade_level=7
+        )
+        cls.old_subject = Subject.objects.create(
+            academic_year=cls.other_year, name="Old Subject", grade_level=7
+        )
+        cls.admin = User.objects.create_user(
+            email="admin@test.local", password="AdminPass123!", is_superuser=True
+        )
+        cls.admin.status = User.Status.ACTIVE
+        cls.admin.save()
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+        self.url = reverse("api_account_create")
+
+    def post(self, **overrides):
+        data = {
+            "name": "Maria Santos",
+            "email": "maria@test.local",
+            "emp": "EMP-2026-010",
+            "role": "Teacher",
+            "contact": "09171234567",
+        }
+        data.update(overrides)
+        with mock.patch("apps.accounts.email_branding.send_html_email", return_value=1):
+            return self.client.post(
+                self.url,
+                data=json.dumps(data),
+                content_type="application/json",
+            )
+
+    def test_creation_saves_selected_subjects(self):
+        response = self.post(subjects=[self.filipino.id, self.science.id])
+        self.assertEqual(response.status_code, 200, response.content)
+        user = User.objects.get(email="maria@test.local")
+        self.assertEqual(
+            set(
+                TeacherSubject.objects.filter(user=user).values_list(
+                    "subject_id", flat=True
+                )
+            ),
+            {self.filipino.id, self.science.id},
+        )
+        self.assertEqual(
+            set(response.json()["subjects"]), {self.filipino.id, self.science.id}
+        )
+
+    def test_creation_rejects_subject_from_another_year(self):
+        response = self.post(subjects=[self.old_subject.id])
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("subjects", response.json()["errors"])
+        self.assertFalse(User.objects.filter(email="maria@test.local").exists())
+
+    def test_non_teacher_does_not_get_subject_assignments(self):
+        response = self.post(role="High School Principal", subjects=[self.filipino.id])
+        self.assertEqual(response.status_code, 200, response.content)
+        user = User.objects.get(email="maria@test.local")
+        self.assertFalse(TeacherSubject.objects.filter(user=user).exists())
+
+
+class AccountSubjectsEndpointTests(TestCase):
+    """Only the System Administrator may change a teacher's subject scope."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.year = AcademicYear.objects.create(
+            label="2026-2027", start_date="2026-08-01", end_date="2027-03-31",
+            status=AcademicYear.STATUS_ACTIVE,
+        )
+        cls.other_year = AcademicYear.objects.create(
+            label="2025-2026", start_date="2025-08-01", end_date="2026-03-31",
+            status=AcademicYear.STATUS_ARCHIVED,
+        )
+        Role.objects.get_or_create(code=Role.Code.TEACHER)
+        cls.filipino = Subject.objects.create(
+            academic_year=cls.year, name="Filipino 1", grade_level=7
+        )
+        cls.science = Subject.objects.create(
+            academic_year=cls.year, name="Science 1", grade_level=7
+        )
+        cls.old_subject = Subject.objects.create(
+            academic_year=cls.other_year, name="Old Subject", grade_level=7
+        )
+        cls.teacher = User.objects.create_user(
+            email="teacher@test.local", password="TeachPass123!"
+        )
+        cls.teacher.status = User.Status.ACTIVE
+        cls.teacher.save()
+        RoleAssignment.objects.create(
+            user=cls.teacher,
+            role=Role.objects.get(code=Role.Code.TEACHER),
+            academic_year=cls.year,
+        )
+        cls.admin = User.objects.create_user(
+            email="admin@test.local", password="AdminPass123!", is_superuser=True
+        )
+        cls.admin.status = User.Status.ACTIVE
+        cls.admin.save()
+        cls.url = reverse("api_account_subjects")
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def post(self, **data):
+        body = {"user_id": self.teacher.pk}
+        body.update(data)
+        return self.client.post(
+            self.url, data=json.dumps(body), content_type="application/json"
+        )
+
+    def test_replaces_subject_set(self):
+        TeacherSubject.objects.create(user=self.teacher, subject=self.filipino)
+        response = self.post(subject_ids=[self.science.id])
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            list(
+                TeacherSubject.objects.filter(user=self.teacher).values_list(
+                    "subject_id", flat=True
+                )
+            ),
+            [self.science.id],
+        )
+
+    def test_rejects_subject_from_another_year(self):
+        response = self.post(subject_ids=[self.old_subject.id])
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(TeacherSubject.objects.filter(user=self.teacher).exists())
+
+    def test_teacher_cannot_change_their_own_subjects(self):
+        self.client.force_login(self.teacher)
+        response = self.post(subject_ids=[self.filipino.id])
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(TeacherSubject.objects.filter(user=self.teacher).exists())

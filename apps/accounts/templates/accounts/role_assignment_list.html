@@ -4,7 +4,7 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Role Assignments</h1>
-    <p class="page-sub">Assign institutional roles to users for an academic year.</p>
+    <p class="page-sub">Assign persistent institutional roles to user accounts.</p>
   </div>
   <a class="btn btn-outline" href="{% url 'accounts:employee_account_list' %}">
     <i class="fa-solid fa-arrow-left"></i> Back to Accounts
@@ -50,7 +50,6 @@
           <tr>
             <th>User</th>
             <th>Role</th>
-            <th>Academic Year</th>
             <th></th>
           </tr>
         </thead>
@@ -59,7 +58,6 @@
           <tr>
             <td>{{ assignment.user.email }}</td>
             <td><span class="pill pill-blue">{{ assignment.role }}</span></td>
-            <td>{{ assignment.academic_year }}</td>
             <td class="text-right">
               <form method="post" action="{% url 'accounts:role_assignment_remove' assignment.pk %}" style="display:inline;">
                 {% csrf_token %}

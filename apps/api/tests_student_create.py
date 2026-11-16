@@ -83,7 +83,24 @@ class StudentCreateTests(TestCase):
 
         self.assertTrue(
             RoleAssignment.objects.filter(
-                user=user, academic_year=self.year, role__code=Role.Code.STUDENT
+                user=user, academic_year__isnull=True, role__code=Role.Code.STUDENT
+            ).exists()
+        )
+
+    def test_student_account_creation_does_not_require_an_active_academic_year(self):
+        AcademicYear.objects.filter(pk=self.year.pk).update(
+            status=AcademicYear.STATUS_ARCHIVED
+        )
+        with mock.patch(
+            "apps.accounts.email_branding.send_html_email", return_value=1
+        ):
+            response = self.post()
+
+        self.assertEqual(response.status_code, 200, response.content)
+        user = User.objects.get(email="new.student@test.local")
+        self.assertTrue(
+            RoleAssignment.objects.filter(
+                user=user, role__code=Role.Code.STUDENT, academic_year__isnull=True
             ).exists()
         )
 

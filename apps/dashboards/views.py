@@ -5,6 +5,8 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from apps.accounts.decorators import has_role
+from apps.accounts.context_processors import ROLE_DASHBOARD_URLS, get_user_role
 from . import context as dashboards_context
 
 
@@ -16,9 +18,25 @@ def hub(request):
 
 
 def _require_role(user, role_code):
-    if user.is_authenticated and user.is_superuser:
+    # Student accounts are identified by their one-to-one profile throughout
+    # the enrollment and notification flows. Keep dashboard access consistent
+    # with those flows if a student's role group was not synchronized.
+    if role_code == "student" and getattr(user, "student_profile", None) is not None:
         return True
-    return user.groups.filter(name=role_code).exists()
+    return has_role(user, role_code)
+
+
+def _deny_dashboard_access(request):
+    """Send signed-in users to their own dashboard when a stale/wrong-role URL is opened."""
+    role = get_user_role(request.user)
+    if not role and getattr(request.user, "student_profile", None) is not None:
+        role = "student"
+    dashboard_name = ROLE_DASHBOARD_URLS.get(role)
+    if dashboard_name:
+        target = reverse(dashboard_name)
+        if request.path != target:
+            return redirect(target)
+    return HttpResponseForbidden("You do not have access to this dashboard.")
 
 
 @ensure_csrf_cookie
@@ -26,7 +44,7 @@ def _require_role(user, role_code):
 @login_required
 def system_admin(request, route=None):
     if not _require_role(request.user, "system_admin"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
+        return _deny_dashboard_access(request)
     ctx = dashboards_context.system_admin_context(request.user)
     return render(request, "frontend/system_admin.html", ctx)
 
@@ -36,7 +54,7 @@ def system_admin(request, route=None):
 @login_required
 def registrar(request, route=None):
     if not _require_role(request.user, "registrar"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
+        return _deny_dashboard_access(request)
     ctx = dashboards_context.registrar_context(request.user)
     return render(request, "frontend/registrar.html", ctx)
 
@@ -46,7 +64,7 @@ def registrar(request, route=None):
 @login_required
 def teacher(request, route=None):
     if not _require_role(request.user, "teacher"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
+        return _deny_dashboard_access(request)
     ctx = dashboards_context.teacher_context(request.user)
     return render(request, "frontend/teacher.html", ctx)
 
@@ -62,13 +80,19 @@ def principal(request, route=None):
     campus is not a different screen, it is a different set of rows: which
     grade bands, sections, classrooms and announcements get loaded is decided
     per-request in ``principal_context`` from the caller's campus scope.
+
+    ``?year=<id>`` is the Academic Year filter. It re-scopes the payload server
+    side, so the numbers behind the filter are the numbers of the year the
+    filter names -- not the active year relabelled.
     """
     if not (
         _require_role(request.user, "principal")
         or _require_role(request.user, "elementary_principal")
     ):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
-    ctx = dashboards_context.principal_context(request.user)
+        return _deny_dashboard_access(request)
+    ctx = dashboards_context.principal_context(
+        request.user, academic_year=request.GET.get("year")
+    )
     return render(request, "frontend/principal.html", ctx)
 
 
@@ -77,7 +101,7 @@ def principal(request, route=None):
 @login_required
 def academic_coordinator(request, route=None):
     if not _require_role(request.user, "assistant_principal"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
+        return _deny_dashboard_access(request)
     ctx = dashboards_context.assistant_principal_context(request.user)
     return render(request, "frontend/academic_coordinator.html", ctx)
 
@@ -98,7 +122,9 @@ def live_dashboard_data(request):
         or _require_role(user, "elementary_principal")
         or _require_role(user, "quality_audit")
     ):
-        ctx = dashboards_context.principal_context(user)
+        ctx = dashboards_context.principal_context(
+            user, academic_year=request.GET.get("year")
+        )
     elif _require_role(user, "assistant_principal"):
         ctx = dashboards_context.assistant_principal_context(user)
     elif _require_role(user, "student"):
@@ -128,7 +154,7 @@ def academic_coordinator_data(request):
 @login_required
 def student(request, route=None):
     if not _require_role(request.user, "student"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
+        return _deny_dashboard_access(request)
     ctx = dashboards_context.student_context(request.user)
     return render(request, "frontend/student.html", ctx)
 
@@ -154,6 +180,8 @@ def tass_administrator(request, route=None):
 @login_required
 def quality_audit(request, route=None):
     if not _require_role(request.user, "quality_audit"):
-        return HttpResponseForbidden("You do not have access to this dashboard.")
-    ctx = dashboards_context.principal_context(request.user)
+        return _deny_dashboard_access(request)
+    ctx = dashboards_context.principal_context(
+        request.user, academic_year=request.GET.get("year")
+    )
     return render(request, "frontend/principal.html", ctx)

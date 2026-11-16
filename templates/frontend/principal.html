@@ -17,6 +17,7 @@
 <script src="{% static 'js/empty_state.js' %}"></script>
 <script src="{% static 'js/demographics.js' %}"></script>
 <script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/document_preview.bundle.js' %}"></script>
 <style>
 :root {
   --navy: #111111; --blue: #f59e0b; --sky: #fbbf24; --light-blue: #fef3c7; --accent: #fff7ed;
@@ -82,7 +83,7 @@ header { position:fixed; top:0; left:0; right:0; z-index:200; height:var(--heade
 .sidebar-inner { flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
 .sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:rgba(255,255,255,0.3); text-transform:uppercase; padding:10px 10px 5px; white-space:nowrap; opacity:0; transition:opacity 0.15s; }
 .sidebar:hover .sidebar-section-label, body.sidebar-expanded .sidebar .sidebar-section-label { opacity:1; transition-delay:0.07s; }
-.nav-item { display:flex; align-items:center; gap:0; padding:5px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; }
+.nav-item { display:flex; align-items:center; gap:0; padding:5px 0; border-radius:10px; cursor:pointer; color:var(--sidebar-text); font-size:13px; font-weight:500; transition:all .18s; border:none; background:none; text-align:left; width:100%; white-space:nowrap; overflow:hidden; position:relative; text-decoration:none; }
 .nav-item-icon { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); display:flex; align-items:center; justify-content:center; font-size:15.5px; flex-shrink:0; transition:color .18s; }
 .nav-item-label { opacity:0; transition:opacity 0.15s; padding-right:12px; }
 .sidebar:hover .nav-item-label, body.sidebar-expanded .sidebar .nav-item-label { opacity:1; transition-delay:0.07s; }
@@ -767,6 +768,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="profile-panel-role">{{ user_role_label }}</div>
     </div>
     <button class="profile-menu-item" onclick="openProfile();closeAllPanels()"><i class="fa-solid fa-user" style="width:16px"></i> My Profile</button>
+    <button class="profile-menu-item" onclick="window.location.href='/accounts/sessions/'"><i class="fa-solid fa-laptop" style="width:16px"></i> Device Logs</button>
     <button class="profile-menu-item" onclick="showView('settings');closeAllPanels()"><i class="fa-solid fa-gear" style="width:16px"></i> Settings</button>
     <button class="profile-menu-item danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Log Out</button>
   </div>
@@ -774,72 +776,77 @@ html,body{ width:100%; overflow-x:hidden; }
 
 <div class="layout">
   <!-- SIDEBAR -->
+  {% if is_quality_audit %}
+  {% url 'dashboards:quality_audit' as principal_dashboard_url %}
+  {% else %}
+  {% url 'dashboards:principal' as principal_dashboard_url %}
+  {% endif %}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
     
     <div class="sidebar-label">Main</div>
-    <button class="nav-item active" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></button>
+    <a class="nav-item active" href="{{ principal_dashboard_url }}" onclick="showView('dashboard')"><div class="nav-item-icon"><i class="fa-solid fa-house"></i></div><span class="nav-item-label">Dashboard</span></a>
     <button class="nav-item" onclick="openProfile();closeAllPanels()"><div class="nav-item-icon"><i class="fa-solid fa-user"></i></div><span class="nav-item-label">Profile</span></button>
     
     <div class="sidebar-label">People</div>
     {% if perms.accounts.view_employee_account %}
-    <button class="nav-item" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Activity</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}teachers/" onclick="showView('teachers')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Teacher Activity</span></a>
     {% endif %}
     {% if perms.virtual_classrooms.view_virtual_classroom %}
-    <button class="nav-item" onclick="showView('classes')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}classes/" onclick="showView('classes')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard"></i></div><span class="nav-item-label">Virtual Classrooms</span></a>
     {% endif %}
     {% if perms.accounts.view_student_record %}
-    <button class="nav-item" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Students</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}students/" onclick="showView('students')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Students</span></a>
     {% endif %}
     {% if perms.assessments.view_student_performance_tracking %}
-    <button class="nav-item" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}enrollment/" onclick="showView('enrollment')"><div class="nav-item-icon"><i class="fa-solid fa-door-open"></i></div><span class="nav-item-label">Enrollment Status</span></a>
     {% endif %}
     {% if perms.accounts.view_student_record %}
-    <button class="nav-item" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}demographics/" onclick="showView('demographics')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Demographics</span></a>
     {% endif %}
     {% if perms.accounts.view_employee_account %}
-    <button class="nav-item" onclick="showView('staffdemographics')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Staff Demographics</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}staffdemographics/" onclick="showView('staffdemographics')"><div class="nav-item-icon"><i class="fa-solid fa-chalkboard-user"></i></div><span class="nav-item-label">Staff Demographics</span></a>
     {% endif %}
     
     <div class="sidebar-label">Academic</div>
     {% if perms.academic_structure.view_section_custom %}
-    <button class="nav-item" onclick="showView('sections')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sections</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}sections/" onclick="showView('sections')"><div class="nav-item-icon"><i class="fa-solid fa-layer-group"></i></div><span class="nav-item-label">Sections</span></a>
     {% endif %}
     {% if perms.academic_structure.view_subject_custom %}
-    <button class="nav-item" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}subjects/" onclick="showView('subjects')"><div class="nav-item-icon"><i class="fa-solid fa-book"></i></div><span class="nav-item-label">Subjects</span></a>
     {% endif %}
     {% if not is_quality_audit %}
     {% if perms.teaching_learning.view_download_learning_resource or perms.teaching_learning.access_subject_level_repository %}
-    <button class="nav-item" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Material Repository</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}materials/" onclick="showView('materials')"><div class="nav-item-icon"><i class="fa-solid fa-folder-open"></i></div><span class="nav-item-label">Material Repository</span></a>
     {% endif %}
     {% if perms.assessments.view_assessment_custom %}
-    <button class="nav-item" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}assessments/" onclick="showView('assessments')"><div class="nav-item-icon"><i class="fa-solid fa-file-pen"></i></div><span class="nav-item-label">Assessment Repository</span></a>
     {% endif %}
     {% endif %}
     {% if perms.assessments.view_student_performance_tracking %}
-    <button class="nav-item" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Performance</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}performance/" onclick="showView('performance')"><div class="nav-item-icon"><i class="fa-solid fa-user-graduate"></i></div><span class="nav-item-label">Student Performance</span></a>
     {% endif %}
     
     <div class="sidebar-label">Insights</div>
     {% if perms.attendance.view_attendance_records %}
-    <button class="nav-item" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}attendance/" onclick="showView('attendance')"><div class="nav-item-icon"><i class="fa-solid fa-calendar-check"></i></div><span class="nav-item-label">Attendance Overview</span></a>
     {% endif %}
     {% if perms.analytics.view_school_wide_analytics or perms.analytics.view_class_level_analytics %}
-    <button class="nav-item" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}reports/" onclick="showView('reports')"><div class="nav-item-icon"><i class="fa-solid fa-chart-line"></i></div><span class="nav-item-label">Analytics &amp; Reports</span></a>
     {% endif %}
     
     <div class="sidebar-label">Activity</div>
     {% if perms.analytics.monitor_student_activity_logs %}
-    <button class="nav-item" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}activitylog/" onclick="showView('activitylog')"><div class="nav-item-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><span class="nav-item-label">Activity Log</span></a>
     {% endif %}
     {% if not is_quality_audit %}
     {% if perms.communication.view_announcements_custom %}
-    <button class="nav-item" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}announcements/" onclick="showView('announcements')"><div class="nav-item-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="nav-item-label">Announcements</span></a>
     {% endif %}
     {% endif %}
     
     <div class="sidebar-label">Settings</div>
-    <button class="nav-item" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></button>
+    <a class="nav-item" href="{{ principal_dashboard_url }}settings/" onclick="showView('settings')"><div class="nav-item-icon"><i class="fa-solid fa-gear"></i></div><span class="nav-item-label">Settings</span></a>
     <div class="sidebar-spacer"></div>
     </div>
   </aside>
@@ -868,12 +875,11 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="dash-filter-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:18px;">
         <span style="font-size:12.5px;font-weight:700;color:var(--navy);display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-filter" style="color:var(--blue);"></i>Filters</span>
         <label style="font-size:12px;font-weight:600;color:var(--gray-500);">Academic Year</label>
-        <select id="ayFilterSel" class="form-control" style="width:170px;padding:7px 10px;">
-          <option value="S.Y. 2023-2024">S.Y. 2023-2024</option>
-          <option value="S.Y. 2024-2025">S.Y. 2024-2025</option>
-          <option value="S.Y. 2025-2026">S.Y. 2025-2026</option>
-          <option value="S.Y. 2026-2027">S.Y. 2026-2027</option>
-        </select>
+        <!-- Options are the school years that actually exist, filled from
+             dashboard_json.yearOptions by the backend bridge. The four
+             hardcoded "S.Y. 20xx-20xx" entries that used to sit here matched no
+             row, so applying the filter only changed the label on screen. -->
+        <select id="ayFilterSel" class="form-control" style="width:170px;padding:7px 10px;"></select>
         <button class="btn btn-primary btn-sm" onclick="applyAYFilter()"><i class="fa-solid fa-check"></i> Apply</button>
         <span id="ayFilterStatus" style="font-size:12px;color:var(--text-muted);"></span>
       </div>
@@ -1117,6 +1123,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="card">
         <div class="card-body">
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="repoGradePage" style="width:130px;max-width:100%;" onchange="renderMaterials()"><option value="">All Grades</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
             <select class="form-control" id="repoSubjectPage" style="width:170px;max-width:100%;" onchange="renderMaterials()"><option value="">All Subjects</option></select>
             <select class="form-control" id="repoTypePage" style="width:150px;max-width:100%;" onchange="renderMaterials()">
               <option value="all">All Types</option><option value="pdf">PDF</option><option value="ppt">Presentation</option><option value="doc">Word Doc</option><option value="vid">Video</option><option value="img">Image</option><option value="aud">Audio</option><option value="lnk">Link</option>
@@ -1141,6 +1148,7 @@ html,body{ width:100%; overflow-x:hidden; }
       <div class="card">
         <div class="card-body">
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select class="form-control" id="assessRepoGradePage" style="width:130px;max-width:100%;" onchange="renderAssessments()"><option value="">All Grades</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
             <select class="form-control" id="assessRepoTypePage" style="width:170px;max-width:100%;" onchange="renderAssessments()"><option value="">All Types</option></select>
             <select class="form-control" id="assessRepoStatusPage" style="width:140px;max-width:100%;" onchange="renderAssessments()"><option value="">All Status</option><option>Graded</option><option>Pending</option></select>
             <input class="form-control" id="assessRepoSearchPage" placeholder="Search assessment..." style="flex:1;min-width:220px" oninput="renderAssessments()">
@@ -1736,6 +1744,7 @@ function showView(id) {
 function openTeacherDetail(tid) {
   const t = teacherData.find(x => x.id === tid);
   if (!t) return;
+  window.__TASS_OPEN_TEACHER_ID = tid;
   currentTeacherId = tid;
   document.getElementById('tbAvatar').textContent = t.initials;
   document.getElementById('tbName').textContent = t.name;
@@ -1908,7 +1917,7 @@ function openPrincipalClassroom(vcId) {
         }).join('') : '<span style="color:var(--text-muted);">No resources under this topic yet.</span>') + '</div></div>';
       }).join('') : empty('No topics have been created in this classroom yet.');
       const assessmentRows = assessments.length ? '<div style="overflow-x:auto;"><table class="attend-table"><thead><tr><th>Assessment</th><th>Type</th><th>Status</th><th>Submissions</th><th>Graded</th></tr></thead><tbody>' + assessments.map(a => '<tr><td>' + escHtml(a.title) + '</td><td>' + escHtml(a.method) + '</td><td>' + escHtml(a.status) + '</td><td>' + (a.submitted || 0) + ' / ' + (a.students || 0) + '</td><td>' + (a.graded || 0) + '</td></tr>').join('') + '</tbody></table></div>' : empty('No assessments have been assigned to this classroom yet.');
-      const announcementRows = announcements.length ? announcements.map(a => '<div class="card" style="margin-bottom:8px;"><div class="card-body"><div style="font-size:12px;color:var(--text-muted);">' + escHtml(a.postedBy) + ' ? ' + escHtml(a.postedAt) + '</div><div style="margin-top:6px;white-space:pre-wrap;">' + escHtml(a.content) + '</div>' + (a.attachmentUrl ? '<a class="btn btn-outline btn-sm" style="margin-top:8px;" href="' + escHtml(a.attachmentUrl) + '" target="_blank" rel="noopener">View attachment</a>' : '') + '</div></div>').join('') : empty('No announcements have been posted in this classroom yet.');
+        const announcementRows = announcements.length ? announcements.map(a => '<div class="card" style="margin-bottom:8px;"><div class="card-body"><div style="font-size:12px;color:var(--text-muted);">' + escHtml(a.postedBy) + ' ? ' + escHtml(a.postedAt) + '</div><div style="margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;">' + escHtml(a.content) + '</div>' + (a.attachmentUrl ? '<a class="btn btn-outline btn-sm" style="margin-top:8px;" href="' + escHtml(a.attachmentUrl) + '" target="_blank" rel="noopener">View attachment</a>' : '') + '</div></div>').join('') : empty('No announcements have been posted in this classroom yet.');
       const recent = attendance.recent || [];
       const attendanceRows = recent.length ? '<div style="overflow-x:auto;"><table class="attend-table"><thead><tr><th>Date</th><th>Recorded By</th><th>Present</th><th>Total</th></tr></thead><tbody>' + recent.map(a => '<tr><td>' + escHtml(a.date) + '</td><td>' + escHtml(a.recordedBy || '?') + '</td><td>' + (a.present || 0) + '</td><td>' + (a.total || 0) + '</td></tr>').join('') + '</tbody></table></div>' : empty('No attendance sessions have been recorded in this classroom yet.');
       body.innerHTML = stats + section('Students', studentRows) + section('Topics & Resources', contentRows) + section('Assessments', assessmentRows) + section('Announcements', announcementRows) + section('Attendance', attendanceRows);
@@ -1968,6 +1977,7 @@ function renderMaterials(filter) {
   if (!repoResourcesLoaded && !REPO_RESOURCES.length) loadRepoResources(true);
 
   const q = (document.getElementById('repoSearchPage')?.value || '').toLowerCase();
+  const grade = document.getElementById('repoGradePage')?.value || '';
   const subject = document.getElementById('repoSubjectPage')?.value || '';
   const type = document.getElementById('repoTypePage')?.value || 'all';
 
@@ -1978,6 +1988,7 @@ function renderMaterials(filter) {
   }
 
   const items = all.filter(r =>
+    (!grade || parseInt(String(r.grade_level || r.gradeLevel || '').replace(/\D+/g, ''), 10) === parseInt(grade.replace(/\D+/g, ''), 10)) &&
     (!subject || r.subject === subject) &&
     (type === 'all' || !type || r.type === type) &&
     (!q || [r.title, r.topic, r.subject, r.meta, r.uploaded_by].join(' ').toLowerCase().includes(q))
@@ -2016,6 +2027,7 @@ function viewRepoResource(id) {
     '<div class="modal-overlay open" id="prinRepoViewModal" onclick="if(event.target===this)document.getElementById(\'prinRepoViewModal\').remove()"><div class="modal-box">' +
       '<div class="modal-title"><i class="fa-solid fa-eye" style="color:var(--blue);margin-right:8px"></i>Learning Material Details</div>' +
       '<div class="modal-sub">Read-only preview of a resource shared to the school repository.</div>' +
+      '<div id="prinRepoPreviewBody" style="margin:8px 0 14px;min-height:60px;"><div style="padding:18px;text-align:center;color:var(--text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading preview…</div></div>' +
       '<div style="display:flex;align-items:center;gap:12px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;margin:14px 0 6px;">' +
         '<i class="' + escHtml(r.icon || 'fa-solid fa-file') + '" style="font-size:22px;color:' + escHtml(r.color || '#fbbf24') + '"></i>' +
         '<div style="min-width:0;"><div style="font-size:13.5px;font-weight:700;color:var(--navy);">' + escHtml(r.title) + '</div>' +
@@ -2034,6 +2046,25 @@ function viewRepoResource(id) {
       '</div>' +
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
+  loadPrincipalRepoPreview(r);
+}
+
+function loadPrincipalRepoPreview(r){
+  var box=document.getElementById('prinRepoPreviewBody'); if(!box)return;
+  fetch('/teaching/resources/'+encodeURIComponent(r.id)+'/preview/',{credentials:'same-origin',headers:{Accept:'application/json'}})
+    .then(function(response){if(!response.ok)throw new Error('Preview is unavailable.');return response.json();})
+    .then(function(data){
+      var url=data.preview_file_url||'', ext=String(data.extension||'').toLowerCase();
+      if(data.office_pdf_url&&(ext==='docx'||ext==='pptx')) box.innerHTML='<iframe title="Document preview" src="'+escHtml(data.office_pdf_url)+'" style="width:100%;height:50vh;border:1px solid var(--card-border);border-radius:12px;background:#fff"></iframe>';
+      else if(ext==='docx'&&url&&typeof window.tassRenderDocumentPreview==='function'){
+        box.innerHTML='<div style="max-height:50vh;overflow:auto;padding:16px;background:#e8edf4;border:1px solid var(--card-border);border-radius:12px">Loading full document preview…</div>';
+        window.tassRenderDocumentPreview(url,box.firstElementChild,'50vh').catch(function(error){box.textContent=(error&&error.message)||'The full document preview could not be rendered.';});
+      }
+      else if(data.html&&(ext==='docx'||ext==='pptx')) box.innerHTML='<iframe sandbox="" title="Formatted document preview" srcdoc="'+escHtml(data.html)+'" style="width:100%;height:50vh;border:1px solid var(--card-border);border-radius:12px;background:#e8edf4"></iframe>';
+      else if(ext==='pdf'&&url) box.innerHTML='<iframe title="PDF preview" src="'+escHtml(url)+'" style="width:100%;height:50vh;border:1px solid var(--card-border);border-radius:12px;background:#fff"></iframe>';
+      else if(data.text) box.innerHTML='<pre style="max-height:50vh;overflow:auto;white-space:pre-wrap;padding:16px;background:var(--accent);border:1px solid var(--card-border);border-radius:12px">'+escHtml(data.text)+'</pre>';
+      else box.innerHTML='<div style="padding:16px;color:var(--text-muted)">Preview is unavailable for this file type. Use Download to open the original file.</div>';
+    }).catch(function(error){box.textContent=error.message||'Could not load preview.';});
 }
 
 function downloadRepoResourceReport() {
@@ -2098,6 +2129,7 @@ function renderAssessments(){
   populateAssessRepoTypes();
 
   const q = (document.getElementById('assessRepoSearchPage')?.value || '').toLowerCase();
+  const grade = document.getElementById('assessRepoGradePage')?.value || '';
   const type = document.getElementById('assessRepoTypePage')?.value || '';
   const status = document.getElementById('assessRepoStatusPage')?.value || '';
 
@@ -2107,6 +2139,7 @@ function renderAssessments(){
   }
 
   const items = assessmentData.filter(a =>
+    (!grade || parseInt(String(a.grade || a.gradeLevel || (String(a.cls || a.class || '').match(/(?:grade\s*|\bG)(\d+)/i) || [])[1] || '').replace(/\D+/g, ''), 10) === parseInt(grade.replace(/\D+/g, ''), 10)) &&
     (!type || a.type === type) &&
     (!status || a.status === status) &&
     (!q || [a.title, a.type, a.teacher, a.cls].join(' ').toLowerCase().includes(q))
@@ -2569,7 +2602,7 @@ function renderStudents(){
       ? all.filter(function (r) { return studentLevelCode(r.grade) === prinStudentLevel; })
       : all;
   }
-  var rows = dirFilter(filtered, q && q.value, ['name', 'lrn', 'section', 'email', 'status']).slice().sort(function(a,b){var ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10),gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);ga=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;gb=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;if(ga!==gb)return ga-gb;var sex=function(r){return r.sex==='M'?0:(r.sex==='F'?1:2);};if(sex(a)!==sex(b))return sex(a)-sex(b);return String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'})||String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});});
+  var rows = dirFilter(filtered, q && q.value, ['name', 'lrn', 'section', 'email', 'status']).slice().sort(function(a,b){var ga=parseInt(String(a.grade||'').replace(/\D+/g,''),10),gb=parseInt(String(b.grade||'').replace(/\D+/g,''),10);ga=isNaN(ga)?Number.MAX_SAFE_INTEGER:ga;gb=isNaN(gb)?Number.MAX_SAFE_INTEGER:gb;if(ga!==gb)return ga-gb;return String(a.last||'').localeCompare(String(b.last||''),undefined,{sensitivity:'base'})||String(a.first||'').localeCompare(String(b.first||''),undefined,{sensitivity:'base'});});
   var grid = document.getElementById('studentsStats');
   var sub = document.getElementById('studentsSub');
   var ttl = document.getElementById('studentsTableTitle');
@@ -3157,21 +3190,53 @@ function showToast(msg, type='success'){
 }
 
 // ── ACADEMIC YEAR FILTER ──
+// The filter is a real query: it asks the server for the same dashboard payload
+// scoped to the chosen school year and re-applies it, so every panel (stats,
+// classes, roster, attendance, materials, assessments) shows that year's rows.
+function populateAYFilter(data){
+  var sel=document.getElementById('ayFilterSel'); if(!sel) return;
+  var options=(data&&data.yearOptions)||[];
+  var current=(data&&data.yearId!=null)?String(data.yearId):'';
+  var keep=current||sel.value||'';
+  sel.innerHTML='';
+  options.forEach(function(y){
+    var o=document.createElement('option');
+    o.value=String(y.id);
+    o.textContent=y.status&&y.status!=='Active'?(y.label+' (Archived)'):y.label;
+    sel.appendChild(o);
+  });
+  if(!options.length){
+    var o=document.createElement('option');
+    o.value=''; o.textContent=data&&data.yearLabel?data.yearLabel:'No academic year';
+    sel.appendChild(o);
+  }
+  if(keep){ sel.value=keep; }
+  if(!sel.value&&sel.options.length){ sel.selectedIndex=0; }
+}
 function applyAYFilter(){
   var sel=document.getElementById('ayFilterSel'); if(!sel) return;
   var ay=sel.value;
   try{ localStorage.setItem('tass_ay_filter', ay); }catch(e){}
-  document.querySelectorAll('[data-ay]').forEach(function(el){ el.textContent=ay; });
-  var st=document.getElementById('ayFilterStatus'); if(st) st.textContent='Showing '+ay+'.';
-  if(typeof initDashboardCharts==='function') initDashboardCharts();
-  if(typeof renderDashTeacherList==='function') renderDashTeacherList();
-  showToast('Academic Year filter applied — '+ay,'success');
+  var st=document.getElementById('ayFilterStatus');
+  if(st) st.textContent='Loading…';
+  fetch('/dashboards/live-data/?year='+encodeURIComponent(ay),{credentials:'same-origin',headers:{Accept:'application/json'}})
+    .then(function(r){ if(!r.ok) throw new Error('That academic year could not be loaded.'); return r.json(); })
+    .then(function(data){
+      if(typeof window.applyPrincipalPayload==='function') window.applyPrincipalPayload(data);
+      populateAYFilter(data);
+      if(st) st.textContent='Showing '+(data&&data.yearLabel?data.yearLabel:'')+'.';
+      showToast('Academic Year filter applied — '+(data&&data.yearLabel?data.yearLabel:''),'success');
+    })
+    .catch(function(err){
+      if(st) st.textContent='';
+      showToast((err&&err.message)||'Could not apply the Academic Year filter.','error');
+    });
 }
 (function(){
+  // Restore the year the user last applied, but only if it still exists; the
+  // real option list arrives with the dashboard payload.
   var saved=null; try{ saved=localStorage.getItem('tass_ay_filter'); }catch(e){}
-  var sel=document.getElementById('ayFilterSel');
-  if(sel && saved){ var exists=[].slice.call(sel.options).some(function(o){return o.value===saved;}); if(exists) sel.value=saved; }
-  if(saved){ document.querySelectorAll('[data-ay]').forEach(function(el){ el.textContent=saved; }); var st=document.getElementById('ayFilterStatus'); if(st) st.textContent='Showing '+saved+'.'; }
+  window.__principalSavedYear=saved||null;
 })();
 
 // ── CLICK OUTSIDE ──
@@ -3936,7 +4001,7 @@ window.tassClamp=function(el,min,max){if(!el)return 0;var v=Math.floor(parseInt(
   if (window.__TASS_ROUTER__) return; window.__TASS_ROUTER__ = true;
   var ORIG = window.showView;
   if (typeof ORIG !== 'function') return;
-  var NAV = {'activitylog':1,'attendance':1,'classes':1,'dashboard':1,'performance':1,'reports':1,'sections':1,'settings':1,'students':1,'subjects':1,'teachers':1};
+  var NAV = {'activitylog':1,'announcements':1,'assessments':1,'attendance':1,'classes':1,'dashboard':1,'demographics':1,'enrollment':1,'materials':1,'performance':1,'reports':1,'sections':1,'settings':1,'staffdemographics':1,'students':1,'subjects':1,'teachers':1,'teacher-detail':1};
   function base(){ var parts = window.location.pathname.split('/').filter(Boolean); return '/' + parts.slice(0,2).join('/') + '/'; }
   function current(){ var p = window.location.pathname, b = base(); var rest = p.indexOf(b) === 0 ? p.slice(b.length) : p; return rest.replace(/^\/+|\/+$/g, '').split('/')[0]; }
   function isRoutable(id){ if (!id || !NAV[id]) return false; var el = document.getElementById('view-' + id); return !!(el && el.classList && el.classList.contains('view')); }
@@ -4038,6 +4103,19 @@ window.applyPrincipalPayload = function(data) {
   var ay = data.yearLabel;
   if (ay) document.querySelectorAll('[data-ay]').forEach(function(el2){ el2.textContent = ay; });
 
+  // Academic Year filter: real options, and the year the user last applied is
+  // restored on the next visit (one extra fetch, guarded so it cannot loop).
+  if (typeof populateAYFilter === 'function') populateAYFilter(data);
+  if (!window.__principalYearRestored) {
+    window.__principalYearRestored = true;
+    var savedYear = window.__principalSavedYear;
+    if (savedYear && data.yearId != null && String(savedYear) !== String(data.yearId)) {
+      var yearSel = document.getElementById('ayFilterSel');
+      var hasSaved = yearSel ? [].slice.call(yearSel.options).some(function (o) { return o.value === String(savedYear); }) : false;
+      if (hasSaved) { yearSel.value = String(savedYear); applyAYFilter(); }
+    }
+  }
+
   if (data.announcements && Array.isArray(data.announcements) && document.getElementById('announcementList')){
     // Backend is authoritative: replace any client-side list (including a stale
     // cache) rather than only filling an empty one.
@@ -4124,8 +4202,11 @@ window.csrfToken = (function () {
 <script src="/static/js/profile_bridge.js?v=4"></script>
 <script src="{% static 'js/tass_live.js' %}"></script>
 <script src="{% static 'js/tass_poll.js' %}"></script>
-<script>window.onTassPollRefresh = function(){ return fetch("/dashboards/live-data/",{credentials:"same-origin",cache:"no-store",headers:{"Accept":"application/json"}}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d)window.applyPrincipalPayload(d);}).catch(function(){}); };</script>
+<script>window.onTassPollRefresh = function(){ var yearSel=document.getElementById('ayFilterSel'); var year=yearSel&&yearSel.value; var url="/dashboards/live-data/"+(year?"?year="+encodeURIComponent(year):""); return fetch(url,{credentials:"same-origin",cache:"no-store",headers:{"Accept":"application/json"}}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d)window.applyPrincipalPayload(d);}).catch(function(){}); };</script>
 <script src="/static/js/pilot_guard.js"></script>
 <script src="{% static 'js/notifications.js' %}?v=3"></script>
+{{ menu_permission_codenames|json_script:"menu-permission-codenames" }}
+<script src="{% static 'js/menu_permissions.js' %}" defer></script>
+<script src="{% static 'js/refresh_state.js' %}?v=1"></script>
 </body>
 </html>

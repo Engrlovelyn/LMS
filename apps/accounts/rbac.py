@@ -125,6 +125,7 @@ ROLE_PERMISSIONS = {
         "attendance.view_attendance_records",
         "analytics.view_school_wide_analytics",
         "analytics.generate_attendance_trend_analytics",
+        "analytics.manage_sf_report_templates",
         "analytics.generate_sf_reports",
     },
     "principal": {

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Year Rollover - {{ source_year.label }}{% endblock %}
+{% block title %}Year Carry Over - {{ source_year.label }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1 class="page-title">Year Rollover</h1>
+    <h1 class="page-title">Year Carry Over</h1>
     <p class="page-sub">Copy sections, subjects and virtual classrooms from {{ source_year.label }} into the active school year.</p>
   </div>
   <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">
@@ -28,7 +28,7 @@
 
 <div class="card">
   <div class="card-header">
-    <div class="card-title"><i class="fa-solid fa-copy"></i> Rollover Details</div>
+    <div class="card-title"><i class="fa-solid fa-copy"></i> Carry Over Details</div>
   </div>
   <div class="card-body">
     <form method="post" novalidate>
@@ -57,7 +57,7 @@
       <div class="form-actions">
         <a class="btn btn-outline" href="{% url 'academic:academic_year_list' %}">Cancel</a>
         <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-copy"></i> Rollover
+          <i class="fa-solid fa-copy"></i> Carry Over
         </button>
       </div>
     </form>
