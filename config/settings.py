@@ -238,9 +238,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "static"
 ]
 
-# Render's build command may not run collectstatic, so serve source assets via
-# Django's staticfiles finders as a production-safe fallback.
-WHITENOISE_USE_FINDERS = not DEBUG
+# Serve tracked source assets even when Render's build command omits collectstatic.
+WHITENOISE_USE_FINDERS = True
 
 # Media files (User-uploaded files)
 MEDIA_URL = '/media/'
