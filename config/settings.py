@@ -59,6 +59,10 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+if RENDER_EXTERNAL_HOSTNAME:
+    render_origin = f"https://{RENDER_EXTERNAL_HOSTNAME}"
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
 if not DEBUG:
     SECURE_COOKIES = os.getenv("SECURE_COOKIES", "False") == "True"
     SESSION_COOKIE_SECURE = SECURE_COOKIES
