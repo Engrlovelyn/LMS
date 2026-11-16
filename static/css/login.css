@@ -32,7 +32,7 @@ a { color: inherit; }
   position: fixed; inset: 0 auto 0 0; width: 55%;
   background:
     linear-gradient(160deg, rgba(17,17,17,.55) 0%, rgba(17,17,17,.60) 45%, rgba(245,158,11,.45) 100%),
-    url('../images/login-hero.png');
+    url('../dashboards/img/login_bg.png');
   background-size: cover;
   background-position: center;
   display: flex; align-items: center; justify-content: center;
